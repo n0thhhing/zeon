@@ -141,17 +141,328 @@ const p16x8x4 = VectorArray(p16x8, 4);
 const p64x1x4 = VectorArray(p64x1, 4);
 const p64x2x4 = VectorArray(p64x2, 4);
 
-// Vector long move
+inline fn PromoteInt(comptime T: type) type {
+    var type_info = @typeInfo(T);
+    var child_info = @typeInfo(std.meta.Child(T));
+    child_info.Int.bits *= 2;
+    type_info.Vector.child = @Type(child_info);
+    return @Type(type_info);
+}
 
+/// Absolute difference(modular) between arguments
+inline fn abd(a: anytype, b: anytype) @TypeOf(a, b) {
+    const T = @TypeOf(a, b);
+    const Child = std.meta.Child(T);
+    const typeInfo = @typeInfo(Child);
+    switch (typeInfo) {
+        inline .Int => {
+            switch (typeInfo.Int.signedness) {
+                .unsigned => {
+                    // Since unsigned numbers cannot be negative, we subtract the
+                    // smaller elemant from the larger in order to prevent overflows
+                    // when calculating the difference, saving us the trouble of
+                    // casting to a larger signed type when subtracting. Because
+                    // of ReleaseFast optimizations, this probably will be compacted
+                    // down to one instruction(uabd v0.8b, v0.8b, v1.8b in my case),
+                    // so technically @min and @max dont matter here, but zig will
+                    // throw an overflow error if we simply did @abs(a - b).
+                    const max: T = @max(a, b);
+                    const min: T = @min(a, b);
+                    return @abs(max -% min);
+                },
+                .signed => {
+                    return @truncate(
+                        @as(
+                            PromoteInt(T),
+                            @bitCast(
+                                @abs(@as(PromoteInt(T), a) -% @as(PromoteInt(T), b)),
+                            ),
+                        ),
+                    );
+                },
+            }
+        },
+        inline .Float => {
+            // Floats dont have modular subtraction,
+            // so we just assume there wont be an overflow here.
+            return @abs(a - b);
+        },
+        else => unreachable,
+    }
+}
+
+test abd {
+    const i8x1 = @Vector(1, i8);
+    const i8x2 = @Vector(2, i8);
+    const u8x1 = @Vector(1, u8);
+    const f32x1 = @Vector(1, f32);
+
+    const a1: i8x1 = .{127};
+    const b1: i8x1 = .{-1};
+    try expectEqual(i8x1{-128}, abd(a1, b1));
+
+    const a2: u8x1 = .{0};
+    const b2: u8x1 = .{2};
+    try expectEqual(u8x1{2}, abd(a2, b2));
+
+    const a3: i8x1 = .{-128};
+    const b3: i8x1 = .{127};
+    try expectEqual(i8x1{-1}, abd(a3, b3));
+
+    const a4: f32x1 = .{3.4028235e38};
+    const b4: f32x1 = .{-1};
+    try expectEqual(f32x1{std.math.floatMax(f32)}, abd(a4, b4));
+
+    const a5: i8x1 = .{127};
+    const b5: i8x1 = .{-3};
+    try expectEqual(i8x1{-126}, abd(a5, b5));
+
+    const a6: i8x2 = .{ -65, -75 };
+    const b6: i8x2 = .{ 65, 75 };
+    try expectEqual(i8x2{ -126, -106 }, abd(a6, b6));
+}
+
+/// Get high elements of a i8x16 vector
+pub inline fn vget_high_s8(vec: i8x16) i8x8 {
+    return @shuffle(
+        i8,
+        vec,
+        undefined,
+        i8x8{ 8, 9, 10, 11, 12, 13, 14, 15 },
+    );
+}
+
+/// Get high elements of a i16x8 vector
+pub inline fn vget_high_s16(vec: i16x8) i16x4 {
+    return @shuffle(
+        i16,
+        vec,
+        undefined,
+        i16x4{ 4, 5, 6, 7 },
+    );
+}
+
+/// Get high elements of a i32x4 vector
+pub inline fn vget_high_s32(vec: i32x4) i32x2 {
+    return @shuffle(
+        i32,
+        vec,
+        undefined,
+        i32x2{ 2, 3 },
+    );
+}
+
+/// Get high elements of a i64x2 vector
+pub inline fn vget_high_s64(vec: i64x2) i64x1 {
+    return @shuffle(
+        i64,
+        vec,
+        undefined,
+        i64x1{1},
+    );
+}
+
+/// Get high elements of a f16x8 vector
+pub inline fn vget_high_f16(vec: f16x8) f16x4 {
+    return @shuffle(
+        f16,
+        vec,
+        undefined,
+        f16x4{ 4, 5, 6, 7 },
+    );
+}
+
+/// Get high elements of a f32x4 vector
+pub inline fn vget_high_f32(vec: f32x4) f32x2 {
+    return @shuffle(
+        f32,
+        vec,
+        undefined,
+        f32x2{ 2, 3 },
+    );
+}
+
+/// Get high elements of a f64x2 vector
+pub inline fn vget_high_f64(vec: f64x2) f64x1 {
+    return @shuffle(
+        f64,
+        vec,
+        undefined,
+        f64x1{1},
+    );
+}
+
+/// Get high elements of a u8x16 vector
+pub inline fn vget_high_u8(vec: u8x16) u8x8 {
+    return @shuffle(
+        u8,
+        vec,
+        undefined,
+        u8x8{ 8, 9, 10, 11, 12, 13, 14, 15 },
+    );
+}
+
+/// Get high elements of a u16x8 vector
+pub inline fn vget_high_u16(vec: u16x8) u16x4 {
+    return @shuffle(
+        u16,
+        vec,
+        undefined,
+        u16x4{ 4, 5, 6, 7 },
+    );
+}
+
+/// Get high elements of a u32x4 vector
+pub inline fn vget_high_u32(vec: u32x4) u32x2 {
+    return @shuffle(
+        u32,
+        vec,
+        undefined,
+        u32x2{ 2, 3 },
+    );
+}
+
+/// Get high elements of a u64x2 vector
+pub inline fn vget_high_u64(vec: u64x2) u64x1 {
+    return @shuffle(
+        u64,
+        vec,
+        undefined,
+        u64x1{1},
+    );
+}
+
+/// Get high elements of a p8x16 vector
+pub inline fn vget_high_p8(vec: p8x16) p8x8 {
+    return @shuffle(
+        u8,
+        vec,
+        undefined,
+        p8x8{ 8, 9, 10, 11, 12, 13, 14, 15 },
+    );
+}
+
+/// Get high elements of a u16x8 vector
+pub inline fn vget_high_p16(vec: p16x8) p16x4 {
+    return @shuffle(
+        u16,
+        vec,
+        undefined,
+        p16x4{ 4, 5, 6, 7 },
+    );
+}
+
+// Get low elements of a i8x16 vector
+pub inline fn vget_low_s8(vec: i8x16) i8x8 {
+    return @shuffle(
+        i8,
+        vec,
+        undefined,
+        i8x8{ 0, 1, 2, 3, 4, 5, 6, 7 },
+    );
+}
+
+// Get low elements of a i16x4 vector
+pub inline fn vget_low_s16(vec: i16x8) i16x4 {
+    return @shuffle(
+        i16,
+        vec,
+        undefined,
+        i16x4{ 0, 1, 2, 3 },
+    );
+}
+
+// Get low elements of a i32x4 vector
+pub inline fn vget_low_s32(vec: i32x4) i32x2 {
+    return @shuffle(
+        i32,
+        vec,
+        undefined,
+        i32x2{ 0, 1 },
+    );
+}
+
+// Get low elements of a i64x2 vector
+pub inline fn vget_low_s64(vec: i64x2) i64x1 {
+    return @shuffle(
+        i64,
+        vec,
+        undefined,
+        i64x1{0},
+    );
+}
+
+// Get low elements of a u8x16 vector
+pub inline fn vget_low_u8(vec: u8x16) u8x8 {
+    return @shuffle(
+        u8,
+        vec,
+        undefined,
+        u8x8{ 0, 1, 2, 3, 4, 5, 6, 7 },
+    );
+}
+
+// Get low elements of a u16x8 vector
+pub inline fn vget_low_u16(vec: u16x8) u16x4 {
+    return @shuffle(
+        u16,
+        vec,
+        undefined,
+        u16x4{ 0, 1, 2, 3 },
+    );
+}
+
+// Get low elements of a u32x4 vector
+pub inline fn vget_low_u32(vec: u32x4) u32x2 {
+    return @shuffle(
+        u32,
+        vec,
+        undefined,
+        u32x2{ 0, 1 },
+    );
+}
+
+// Get low elements of a u64x2 vector
+pub inline fn vget_low_u64(vec: u64x2) u64x1 {
+    return @shuffle(
+        u64,
+        vec,
+        undefined,
+        u64x1{0},
+    );
+}
+
+// Get low elements of a p8x16 vector
+pub inline fn vget_low_p8(vec: p8x16) p8x8 {
+    return @shuffle(
+        p8,
+        vec,
+        undefined,
+        p8x8{ 0, 1, 2, 3, 4, 5, 6, 7 },
+    );
+}
+
+// Get low elements of a p16x8 vector
+pub inline fn vget_low_p16(vec: p16x8) p16x4 {
+    return @shuffle(
+        p16,
+        vec,
+        undefined,
+        p16x4{ 0, 1, 2, 3 },
+    );
+}
+
+/// Vector long move
 pub inline fn vmovl_s8(a: i8x8) i16x8 {
     return @intCast(a);
 }
 
 test vmovl_s8 {
     const v: i8x8 = .{ 0, -1, -2, -3, -4, -5, -6, -7 };
-    try expectEqual(@as(i16x8, .{ 0, -1, -2, -3, -4, -5, -6, -7 }), vmovl_s8(v));
+    try expectEqual(i16x8{ 0, -1, -2, -3, -4, -5, -6, -7 }, vmovl_s8(v));
 }
 
+/// Vector long move
 pub inline fn vmovl_s16(a: i16x4) i32x4 {
     return @intCast(a);
 }
@@ -161,6 +472,7 @@ test vmovl_s16 {
     try expectEqual(@as(i32x4, .{ 0, -1, -2, -3 }), vmovl_s16(v));
 }
 
+/// Vector long move
 pub inline fn vmovl_s32(a: i32x2) i64x2 {
     return @intCast(a);
 }
@@ -170,6 +482,7 @@ test vmovl_s32 {
     try expectEqual(@as(i32x2, .{ 0, -1 }), vmovl_s32(v));
 }
 
+/// Vector long move
 pub inline fn vmovl_u8(a: u8x8) u16x8 {
     return @intCast(a);
 }
@@ -179,6 +492,7 @@ test vmovl_u8 {
     try expectEqual(@as(u16x8, .{ 0, 1, 2, 3, 4, 5, 6, 7 }), vmovl_u8(v));
 }
 
+/// Vector long move
 pub inline fn vmovl_u16(a: u16x4) u32x4 {
     return @intCast(a);
 }
@@ -188,6 +502,7 @@ test vmovl_u16 {
     try expectEqual(@as(u32x4, .{ 0, 1, 2, 3 }), vmovl_u16(v));
 }
 
+/// Vector long move
 pub inline fn vmovl_u32(a: u32x2) u64x2 {
     return @intCast(a);
 }
@@ -197,21 +512,81 @@ test vmovl_u32 {
     try expectEqual(@as(u32x2, .{ 0, 1 }), vmovl_u32(v));
 }
 
-// Signed multiply long
+/// Vector long move
+pub inline fn vmovl_high_s8(a: i8x16) i16x8 {
+    return vmovl_s8(vget_high_s8(a));
+}
 
+test vmovl_high_s8 {
+    const v: i8x16 = .{ 0, -1, -2, -3, -4, -5, -6, -7, 0, -1, -2, -3, -4, -5, -6, -7 };
+    try expectEqual(i16x8{ 0, -1, -2, -3, -4, -5, -6, -7 }, vmovl_high_s8(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_s16(a: i16x8) i32x4 {
+    return vmovl_s16(vget_high_s16(a));
+}
+
+test vmovl_high_s16 {
+    const v: i16x8 = .{ 0, -1, -2, -3, 0, -1, -2, -3 };
+    try expectEqual(@as(i32x4, .{ 0, -1, -2, -3 }), vmovl_high_s16(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_s32(a: i32x4) i64x2 {
+    return vmovl_s32(vget_high_s32(a));
+}
+
+test vmovl_high_s32 {
+    const v: i32x4 = .{ 0, -1, 0, -1 };
+    try expectEqual(@as(i32x2, .{ 0, -1 }), vmovl_high_s32(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_u8(a: u8x16) u16x8 {
+    return vmovl_u8(vget_high_u8(a));
+}
+
+test vmovl_high_u8 {
+    const v: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
+    try expectEqual(@as(u16x8, .{ 0, 1, 2, 3, 4, 5, 6, 7 }), vmovl_high_u8(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_u16(a: u16x8) u32x4 {
+    return vmovl_u16(vget_high_u16(a));
+}
+
+test vmovl_high_u16 {
+    const v: u16x8 = .{ 0, 1, 2, 3, 0, 1, 2, 3 };
+    try expectEqual(@as(u32x4, .{ 0, 1, 2, 3 }), vmovl_high_u16(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_u32(a: u32x4) u64x2 {
+    return vmovl_u32(vget_high_u32(a));
+}
+
+test vmovl_high_u32 {
+    const v: u32x4 = .{ 0, 1, 0, 1 };
+    try expectEqual(@as(u32x2, .{ 0, 1 }), vmovl_high_u32(v));
+}
+
+/// Signed multiply long
 pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
-    return a * b;
+    return @as(i16x8, a) * @as(i16x8, b);
 }
 
 test vmull_s8 {
-    const a: i8x8 = .{ 0, -1, -2, -3, -4, -5, -6, -7 };
-    const b: i8x8 = @splat(5);
+    const a: i8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 127 };
+    const b: i8x8 = @splat(2);
 
-    try expectEqual(i16x8{ 0, -1 * 5, -2 * 5, -3 * 5, -4 * 5, -5 * 5, -6 * 5, -7 * 5 }, vmull_s8(a, b));
+    try expectEqual(i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_s8(a, b));
 }
 
+/// Signed multiply long
 pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
-    return a * b;
+    return @as(i32x4, a) * @as(i32x4, b);
 }
 
 test vmull_s16 {
@@ -221,8 +596,9 @@ test vmull_s16 {
     try expectEqual(i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, vmull_s16(a, b));
 }
 
+/// Signed multiply long
 pub inline fn vmull_s32(a: i32x2, b: i32x2) i64x2 {
-    return a * b;
+    return @as(i64x2, a) * @as(i64x2, b);
 }
 
 test vmull_s32 {
@@ -232,10 +608,9 @@ test vmull_s32 {
     try expectEqual(i32x2{ 0, -1 * 5 }, vmull_s32(a, b));
 }
 
-// Unsigned multiply long
-
+/// Unsigned multiply long
 pub inline fn vmull_u8(a: u8x8, b: u8x8) u16x8 {
-    return a * b;
+    return @as(u16x8, a) * @as(u16x8, b);
 }
 
 test vmull_u8 {
@@ -245,8 +620,9 @@ test vmull_u8 {
     try expectEqual(u16x8{ 0, 1 * 5, 2 * 5, 3 * 5, 4 * 5, 5 * 5, 6 * 5, 7 * 5 }, vmull_u8(a, b));
 }
 
+/// Unsigned multiply long
 pub inline fn vmull_u16(a: u16x4, b: u16x4) u32x4 {
-    return a * b;
+    return @as(u32x4, a) * @as(u32x4, b);
 }
 
 test vmull_u16 {
@@ -256,21 +632,93 @@ test vmull_u16 {
     try expectEqual(u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, vmull_u16(a, b));
 }
 
+/// Unsigned multiply long
 pub inline fn vmull_u32(a: u32x2, b: u32x2) u64x2 {
-    return a * b;
+    return @as(u64x2, a) * @as(u64x2, b);
 }
 
 test vmull_u32 {
     const a: u32x2 = .{ 0, 1 };
     const b: u32x2 = @splat(5);
 
-    try expectEqual(u32x2{ 0, 1 * 5 }, vmull_u32(a, b));
+    try expectEqual(u64x2{ 0, 1 * 5 }, vmull_u32(a, b));
 }
 
-// Absolute difference between the arguments
+/// Signed multiply long
+pub inline fn vmull_high_s8(a: i8x16, b: i8x16) i16x8 {
+    return vmull_s8(vget_high_s8(a), vget_high_s8(b));
+}
 
+test vmull_high_s8 {
+    const a: i8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 127 };
+    const b: i8x16 = @splat(2);
+
+    try expectEqual(i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_high_s8(a, b));
+}
+
+/// Signed multiply long
+pub inline fn vmull_high_s16(a: i16x8, b: i16x8) i32x4 {
+    return vmull_s16(vget_high_s16(a), vget_high_s16(b));
+}
+
+test vmull_high_s16 {
+    const a: i16x8 = .{ 0, -1, -2, -3, 0, -1, -2, -3 };
+    const b: i16x8 = @splat(5);
+
+    try expectEqual(i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, vmull_high_s16(a, b));
+}
+
+/// Signed multiply long
+pub inline fn vmull_high_s32(a: i32x4, b: i32x4) i64x2 {
+    return vmull_s32(vget_high_s32(a), vget_high_s32(b));
+}
+
+test vmull_high_s32 {
+    const a: i32x4 = .{ 0, -1, -2, -3 };
+    const b: i32x4 = @splat(5);
+
+    try expectEqual(i64x2{ -2 * 5, -3 * 5 }, vmull_high_s32(a, b));
+}
+
+/// Unsigned multiply long
+pub inline fn vmull_high_u8(a: u8x16, b: u8x16) u16x8 {
+    return vmull_s8(vget_high_u8(a), vget_high_s8(b));
+}
+
+test vmull_high_u8 {
+    const a: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 127 };
+    const b: u8x16 = @splat(2);
+
+    try expectEqual(u16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_high_u8(a, b));
+}
+
+/// Unsigned multiply long
+pub inline fn vmull_high_u16(a: u16x8, b: u16x8) u32x4 {
+    return vmull_u16(vget_high_u16(a), vget_high_u16(b));
+}
+
+test vmull_high_u16 {
+    const a: u16x8 = .{ 0, 1, 2, 3, 0, 1, 2, 3 };
+    const b: u16x8 = @splat(5);
+
+    try expectEqual(u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, vmull_high_u16(a, b));
+}
+
+/// Unsigned multiply long
+pub inline fn vmull_high_u32(a: u32x4, b: u32x4) u64x2 {
+    return vmull_u32(vget_high_u32(a), vget_high_u32(b));
+}
+
+test vmull_high_u32 {
+    const a: u32x4 = .{ 0, 1, 2, 3 };
+    const b: u32x4 = @splat(5);
+
+    try expectEqual(u32x2{ 2 * 5, 3 * 5 }, vmull_high_u32(a, b));
+}
+
+/// Absolute difference between two i8x8 vectors
 pub inline fn vabd_s8(a: i8x8, b: i8x8) i8x8 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabd_s8 {
@@ -282,8 +730,9 @@ test vabd_s8 {
     try expectEqual(expected, vabd_s8(a, b));
 }
 
+/// Absolute difference between two i16x4 vectors
 pub inline fn vabd_s16(a: i16x4, b: i16x4) i16x4 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabd_s16 {
@@ -295,8 +744,9 @@ test vabd_s16 {
     try expectEqual(expected, vabd_s16(a, b));
 }
 
+/// Absolute difference between two i32x2 vectors
 pub inline fn vabd_s32(a: i32x2, b: i32x2) i32x2 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabd_s32 {
@@ -308,18 +758,11 @@ test vabd_s32 {
     try expectEqual(expected, vabd_s32(a, b));
 }
 
-// Since unsigned integers cannot represent negative values, we have to cast
-// the vectors to a larger signed integer in order safely handle any negative differences
-// during subtraction. After calculating the absolute value, we truncate the result
-// back to the original unsigned type to ensure it fits within the valid range.
-// Zig might optimize this to a single instruction(uabd.8b v0, v0, v1 in my case)
-// ReleaseFast, so it shouldnt have any overhead from casting
+/// Absolute difference between two u8x8 vectors
 pub inline fn vabd_u8(a: u8x8, b: u8x8) u8x8 {
-    return @truncate(@abs(@as(i16x8, @intCast(a)) - @as(i16x8, @intCast(b))));
+    return abd(a, b);
 }
 
-// This has a bit more cases than vabd_s#, to test for overflows,
-// which shouldnt happen with the above implementation
 test vabd_u8 {
     const a: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
     const b: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
@@ -347,8 +790,9 @@ test vabd_u8 {
     try expectEqual(expected5, vabd_u8(a5, b5));
 }
 
+/// Absolute difference between two u16x4 vectors
 pub inline fn vabd_u16(a: u16x4, b: u16x4) u16x4 {
-    return @truncate(@abs(@as(i32x4, @intCast(a)) - @as(i32x4, @intCast(b))));
+    return abd(a, b);
 }
 
 test vabd_u16 {
@@ -360,8 +804,9 @@ test vabd_u16 {
     try expectEqual(expected, vabd_u16(a, b));
 }
 
+/// Absolute difference between two u32x2 vectors
 pub inline fn vabd_u32(a: u32x2, b: u32x2) u32x2 {
-    return @truncate(@abs(@as(i64x2, @intCast(a)) - @as(i64x2, @intCast(b))));
+    return abd(a, b);
 }
 
 test vabd_u32 {
@@ -373,8 +818,9 @@ test vabd_u32 {
     try expectEqual(expected, vabd_u32(a, b));
 }
 
+/// Absolute difference between two f32x2 vectors
 pub inline fn vabd_f32(a: f32x2, b: f32x2) f32x2 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabd_f32 {
@@ -386,8 +832,9 @@ test vabd_f32 {
     try expectEqual(expected, vabd_f32(a, b));
 }
 
+/// Absolute difference between two f64x1 vectors
 pub inline fn vabd_f64(a: f64x1, b: f64x1) f64x1 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabd_f64 {
@@ -399,10 +846,9 @@ test vabd_f64 {
     try expectEqual(expected, vabd_f64(a, b));
 }
 
-// signed absolute difference and accumulate (128-bit)
-
+/// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_s8(a: i8x16, b: i8x16) i8x16 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabdq_s8 {
@@ -414,8 +860,9 @@ test vabdq_s8 {
     try expectEqual(expected, vabdq_s8(a, b));
 }
 
+/// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_s16(a: i16x8, b: i16x8) i16x8 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabdq_s16 {
@@ -427,8 +874,9 @@ test vabdq_s16 {
     try expectEqual(expected, vabdq_s16(a, b));
 }
 
+/// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_s32(a: i32x4, b: i32x4) i32x4 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabdq_s32 {
@@ -440,22 +888,15 @@ test vabdq_s32 {
     try expectEqual(expected, vabdq_s32(a, b));
 }
 
-// Computes the absolute difference between two vectors of unsigned integers (16 elements).
-// Since unsigned integers cannot represent negative values, we split the vector into two
-// smaller chunks of 8 elements each (to stay within the 128-bit SIMD limit).
-// Each chunk is cast to a signed integer type to safely handle negative differences during subtraction.
-// After calculating the absolute value, we truncate the result back to the original unsigned type.
-// Zig might optimize this to SIMD instructions for each chunk in ReleaseFast mode(resulted
-// in a total of 5 instructions). Note that this wont be as fast as c's vabdq_u8 because it uses
-// more logic to achieve the same result
+/// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u8(a: u8x16, b: u8x16) u8x16 {
     const a_lo = vget_low_u8(a);
     const a_hi = vget_high_u8(a);
     const b_lo = vget_low_u8(b);
     const b_hi = vget_high_u8(b);
 
-    const result_lo: u8x8 = @truncate(@abs(@as(@Vector(8, i16), @intCast(a_lo)) - @as(@Vector(8, i16), @intCast(b_lo))));
-    const result_hi: u8x8 = @truncate(@abs(@as(@Vector(8, i16), @intCast(a_hi)) - @as(@Vector(8, i16), @intCast(b_hi))));
+    const result_lo: u8x8 = @truncate(@abs(@as(i16x8, a_lo) - @as(i16x8, b_lo)));
+    const result_hi: u8x8 = @truncate(@abs(@as(i16x8, a_hi) - @as(i16x8, b_hi)));
 
     return .{
         result_lo[0],
@@ -504,14 +945,15 @@ test vabdq_u8 {
     try expectEqual(expected5, vabdq_u8(a5, b5));
 }
 
+/// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u16(a: u16x8, b: u16x8) u16x8 {
     const a_lo = vget_low_u16(a);
     const a_hi = vget_high_u16(a);
     const b_lo = vget_low_u16(b);
     const b_hi = vget_high_u16(b);
 
-    const result_lo: u16x4 = @truncate(@abs(@as(@Vector(4, i32), @intCast(a_lo)) - @as(@Vector(4, i32), @intCast(b_lo))));
-    const result_hi: u16x4 = @truncate(@abs(@as(@Vector(4, i32), @intCast(a_hi)) - @as(@Vector(4, i32), @intCast(b_hi))));
+    const result_lo: u16x4 = @truncate(@abs(@as(i32x4, a_lo) - @as(i32x4, b_lo)));
+    const result_hi: u16x4 = @truncate(@abs(@as(i32x4, a_hi) - @as(i32x4, b_hi)));
 
     return .{
         result_lo[0],
@@ -534,14 +976,15 @@ test vabdq_u16 {
     try expectEqual(expected, vabdq_u16(a, b));
 }
 
+/// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u32(a: u32x4, b: u32x4) u32x4 {
     const a_lo = vget_low_u32(a);
     const a_hi = vget_high_u32(a);
     const b_lo = vget_low_u32(b);
     const b_hi = vget_high_u32(b);
 
-    const result_lo: u32x2 = @truncate(@abs(@as(i64x2, @intCast(a_lo)) - @as(i64x2, @intCast(b_lo))));
-    const result_hi: u32x2 = @truncate(@abs(@as(i64x2, @intCast(a_hi)) - @as(i64x2, @intCast(b_hi))));
+    const result_lo: u32x2 = @truncate(@abs(@as(i64x2, a_lo) - @as(i64x2, b_lo)));
+    const result_hi: u32x2 = @truncate(@abs(@as(i64x2, a_hi) - @as(i64x2, b_hi)));
 
     return .{
         result_lo[0],
@@ -560,6 +1003,7 @@ test vabdq_u32 {
     try expectEqual(expected, vabdq_u32(a, b));
 }
 
+/// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_f32(a: f32x4, b: f32x4) f32x4 {
     return @abs(a - b);
 }
@@ -573,6 +1017,7 @@ test vabdq_f32 {
     try expectEqual(expected, vabdq_f32(a, b));
 }
 
+/// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_f64(a: f64x2, b: f64x2) f64x2 {
     return @abs(a - b);
 }
@@ -586,8 +1031,7 @@ test vabdq_f64 {
     try expectEqual(expected, vabdq_f64(a, b));
 }
 
-// Signed Absolute difference Long
-
+/// Signed Absolute difference Long
 pub inline fn vabdl_s8(a: i8x8, b: i8x8) i16x8 {
     return @abs(a - b);
 }
@@ -601,6 +1045,7 @@ test vabdl_s8 {
     try expectEqual(expected, vabdl_s8(a, b));
 }
 
+/// Signed Absolute difference Long
 pub inline fn vabdl_s16(a: i16x4, b: i16x4) i32x4 {
     return @abs(a - b);
 }
@@ -614,6 +1059,7 @@ test vabdl_s16 {
     try expectEqual(expected, vabdl_s16(a, b));
 }
 
+/// Signed Absolute difference Long
 pub inline fn vabdl_s32(a: i32x2, b: i32x2) i64x2 {
     return @abs(a - b);
 }
@@ -627,6 +1073,7 @@ test vabdl_s32 {
     try expectEqual(expected, vabdl_s32(a, b));
 }
 
+/// Signed Absolute difference Long
 pub inline fn vabdl_u8(a: u8x8, b: u8x8) u16x8 {
     return @bitCast(@abs(@as(i16x8, @intCast(a)) - @as(i16x8, @intCast(b))));
 }
@@ -658,6 +1105,7 @@ test vabdl_u8 {
     try expectEqual(expected5, vabdl_u8(a5, b5));
 }
 
+/// Signed Absolute difference Long
 pub inline fn vabdl_u16(a: u16x4, b: u16x4) u32x4 {
     return @bitCast(@abs(@as(i32x4, @intCast(a)) - @as(i32x4, @intCast(b))));
 }
@@ -671,6 +1119,7 @@ test vabdl_u16 {
     try expectEqual(expected, vabdl_u16(a, b));
 }
 
+/// Signed Absolute difference Long
 pub inline fn vabdl_u32(a: u32x2, b: u32x2) u64x2 {
     return @bitCast(@abs(@as(i64x2, @intCast(a)) - @as(i64x2, @intCast(b))));
 }
@@ -684,19 +1133,14 @@ test vabdl_u32 {
     try expectEqual(expected, vabdl_u32(a, b));
 }
 
-// Signed Absolute difference and Accumulate
-
-// Computes the vector absolute difference and accumulate (VABA) for signed 8-bit integers.
-// To safely handle overflow, we cast the vectors to a larger signed integer type (i16)
-// for subtraction and absolute value calculations, and then truncate the result back to i8.
-// This approach prevents overflow issues during intermediate computations.
+/// Signed Absolute difference and Accumulate
 pub inline fn vaba_s8(acc: i8x8, a: i8x8, b: i8x8) i8x8 {
-    const result = @as(i16x8, @intCast(acc)) + @as(i16x8, @bitCast(@abs(@as(i16x8, @abs(@as(i16x8, a) - @as(i16x8, b))))));
-    return @truncate(result);
+    return vabd_s8(a, b) +% acc;
 }
 
 test vaba_s8 {
     const acc: i8x8 = .{ 10, 20, 30, 40, 50, 60, 70, 80 };
+
     const a: i8x8 = .{ -5, -15, -25, -35, -45, -55, -65, -75 };
     const b: i8x8 = .{ 5, 15, 25, 35, 45, 55, 65, 75 };
     const expected: i8x8 = .{ 20, 50, 80, 110, -116, -86, -56, -26 };
@@ -715,80 +1159,9 @@ test vaba_s8 {
 
     const acc4: i8x8 = .{ -10, 10, -20, 20, -30, 30, -40, 40 };
     const a4: i8x8 = .{ -128, -64, -32, -16, 16, 32, 64, 127 };
-    const b4: i8x8 = .{ 127, 64, 32, 16, -16, -32, -64, -128 };
-    const expected4: i8x8 = .{ -11, -118, 44, 52, 2, 94, 88, 39 };
+    const b4: i8x8 = .{ 127, 63, 32, 16, -16, -32, -64, -128 };
+
+    const expected4: i8x8 = .{ -11, -119, 44, 52, 2, 94, 88, 39 };
 
     try expectEqual(expected4, vaba_s8(acc4, a4, b4));
-}
-
-pub inline fn vaba_s16(acc: i16x4, a: i16x4, b: i16x4) i16x4 {
-    const result = @as(i32x4, @intCast(acc)) + @as(i32x4, @bitCast(@abs(@as(i32x4, @abs(@as(i32x4, a) - @as(i32x4, b))))));
-    return @truncate(result);
-}
-
-test vaba_s16 {
-    const acc: i16x4 = .{ 10, 20, 30, 40 };
-    const a: i16x4 = .{ -5, -15, -25, -35 };
-    const b: i16x4 = .{ 5, 15, 25, 35 };
-    const expected: i16x4 = .{ 20, 50, 80, 110 };
-
-    try expectEqual(expected, vaba_s16(acc, a, b));
-}
-
-// Get high elements of a vector
-
-pub inline fn vget_high_u8(vec: u8x16) u8x8 {
-    return @shuffle(
-        u8,
-        vec,
-        undefined,
-        std.simd.iota(u8, 8) + @as(u8x8, @splat(8)),
-    );
-}
-
-pub inline fn vget_high_u16(vec: u16x8) u16x4 {
-    return @shuffle(
-        u8,
-        vec,
-        undefined,
-        std.simd.iota(u16, 4) + @as(u16x4, @splat(4)),
-    );
-}
-
-pub inline fn vget_high_u32(vec: u32x4) u32x2 {
-    return @shuffle(
-        u8,
-        vec,
-        undefined,
-        std.simd.iota(u32, 2) + @as(u32x2, @splat(2)),
-    );
-}
-
-// Get high elements of a vector
-
-pub inline fn vget_low_u8(vec: u8x16) u8x8 {
-    return @shuffle(
-        u8,
-        vec,
-        undefined,
-        std.simd.iota(u8, 8),
-    );
-}
-
-pub inline fn vget_low_u16(vec: u16x8) u16x4 {
-    return @shuffle(
-        u8,
-        vec,
-        undefined,
-        std.simd.iota(u16, 4),
-    );
-}
-
-pub inline fn vget_low_u32(vec: u32x4) u32x2 {
-    return @shuffle(
-        u8,
-        vec,
-        undefined,
-        std.simd.iota(u32, 2),
-    );
 }
