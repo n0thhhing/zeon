@@ -2,42 +2,42 @@ const std = @import("std");
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
 
-const p8 = u8;
-const p16 = u16;
-const p64 = u64;
-const p128 = u128;
+pub const p8 = u8;
+pub const p16 = u16;
+pub const p64 = u64;
+pub const p128 = u128;
 
-const i8x8 = @Vector(8, i8);
-const i8x16 = @Vector(16, i8);
-const i16x4 = @Vector(4, i16);
-const i16x8 = @Vector(8, i16);
-const i32x2 = @Vector(2, i32);
-const i32x4 = @Vector(4, i32);
-const i64x1 = @Vector(1, i64);
-const i64x2 = @Vector(2, i64);
+pub const i8x8 = @Vector(8, i8);
+pub const i8x16 = @Vector(16, i8);
+pub const i16x4 = @Vector(4, i16);
+pub const i16x8 = @Vector(8, i16);
+pub const i32x2 = @Vector(2, i32);
+pub const i32x4 = @Vector(4, i32);
+pub const i64x1 = @Vector(1, i64);
+pub const i64x2 = @Vector(2, i64);
 
-const u8x8 = @Vector(8, u8);
-const u8x16 = @Vector(16, u8);
-const u16x4 = @Vector(4, u16);
-const u16x8 = @Vector(8, u16);
-const u32x2 = @Vector(2, u32);
-const u32x4 = @Vector(4, u32);
-const u64x1 = @Vector(1, u64);
-const u64x2 = @Vector(2, u64);
+pub const u8x8 = @Vector(8, u8);
+pub const u8x16 = @Vector(16, u8);
+pub const u16x4 = @Vector(4, u16);
+pub const u16x8 = @Vector(8, u16);
+pub const u32x2 = @Vector(2, u32);
+pub const u32x4 = @Vector(4, u32);
+pub const u64x1 = @Vector(1, u64);
+pub const u64x2 = @Vector(2, u64);
 
-const f16x4 = @Vector(4, f16);
-const f16x8 = @Vector(8, f16);
-const f32x2 = @Vector(2, f32);
-const f32x4 = @Vector(4, f32);
-const f64x1 = @Vector(1, f64);
-const f64x2 = @Vector(2, f64);
+pub const f16x4 = @Vector(4, f16);
+pub const f16x8 = @Vector(8, f16);
+pub const f32x2 = @Vector(2, f32);
+pub const f32x4 = @Vector(4, f32);
+pub const f64x1 = @Vector(1, f64);
+pub const f64x2 = @Vector(2, f64);
 
-const p8x8 = @Vector(8, p8);
-const p8x16 = @Vector(16, p8);
-const p16x4 = @Vector(4, p16);
-const p16x8 = @Vector(8, p16);
-const p64x1 = @Vector(1, p64);
-const p64x2 = @Vector(2, p64);
+pub const p8x8 = @Vector(8, p8);
+pub const p8x16 = @Vector(16, p8);
+pub const p16x4 = @Vector(4, p16);
+pub const p16x8 = @Vector(8, p16);
+pub const p64x1 = @Vector(1, p64);
+pub const p64x2 = @Vector(2, p64);
 
 inline fn VectorArray(comptime T: type, comptime length: usize) type {
     return struct {
@@ -45,104 +45,105 @@ inline fn VectorArray(comptime T: type, comptime length: usize) type {
     };
 }
 
-const i8x8x2 = VectorArray(i8x8, 2);
-const i8x16x2 = VectorArray(i8x16, 2);
-const i16x4x2 = VectorArray(i16x4, 2);
-const i16x8x2 = VectorArray(i16x8, 2);
-const i32x2x2 = VectorArray(i32x2, 2);
-const i32x4x2 = VectorArray(i32x4, 2);
-const i64x1x2 = VectorArray(i64x1, 2);
-const i64x2x2 = VectorArray(i64x2, 2);
+pub const i8x8x2 = VectorArray(i8x8, 2);
+pub const i8x16x2 = VectorArray(i8x16, 2);
+pub const i16x4x2 = VectorArray(i16x4, 2);
+pub const i16x8x2 = VectorArray(i16x8, 2);
+pub const i32x2x2 = VectorArray(i32x2, 2);
+pub const i32x4x2 = VectorArray(i32x4, 2);
+pub const i64x1x2 = VectorArray(i64x1, 2);
+pub const i64x2x2 = VectorArray(i64x2, 2);
 
-const u8x8x2 = VectorArray(u8x8, 2);
-const u8x16x2 = VectorArray(u8x16, 2);
-const u16x4x2 = VectorArray(u16x4, 2);
-const u16x8x2 = VectorArray(u16x8, 2);
-const u32x2x2 = VectorArray(u32x2, 2);
-const u32x4x2 = VectorArray(u32x4, 2);
-const u64x1x2 = VectorArray(u64x1, 2);
-const u64x2x2 = VectorArray(u64x2, 2);
+pub const u8x8x2 = VectorArray(u8x8, 2);
+pub const u8x16x2 = VectorArray(u8x16, 2);
+pub const u16x4x2 = VectorArray(u16x4, 2);
+pub const u16x8x2 = VectorArray(u16x8, 2);
+pub const u32x2x2 = VectorArray(u32x2, 2);
+pub const u32x4x2 = VectorArray(u32x4, 2);
+pub const u64x1x2 = VectorArray(u64x1, 2);
+pub const u64x2x2 = VectorArray(u64x2, 2);
 
-const f16x4x2 = VectorArray(f16x4, 2);
-const f16x8x2 = VectorArray(f16x8, 2);
-const f32x2x2 = VectorArray(f32x2, 2);
-const f32x4x2 = VectorArray(f32x4, 2);
-const f64x1x2 = VectorArray(f64x1, 2);
-const f64x2x2 = VectorArray(f64x2, 2);
+pub const f16x4x2 = VectorArray(f16x4, 2);
+pub const f16x8x2 = VectorArray(f16x8, 2);
+pub const f32x2x2 = VectorArray(f32x2, 2);
+pub const f32x4x2 = VectorArray(f32x4, 2);
+pub const f64x1x2 = VectorArray(f64x1, 2);
+pub const f64x2x2 = VectorArray(f64x2, 2);
 
-const p8x8x2 = VectorArray(p8x8, 2);
-const p8x16x2 = VectorArray(p8x16, 2);
-const p16x4x2 = VectorArray(p16x4, 2);
-const p16x8x2 = VectorArray(p16x8, 2);
-const p64x1x2 = VectorArray(p64x1, 2);
-const p64x2x2 = VectorArray(p64x2, 2);
+pub const p8x8x2 = VectorArray(p8x8, 2);
+pub const p8x16x2 = VectorArray(p8x16, 2);
+pub const p16x4x2 = VectorArray(p16x4, 2);
+pub const p16x8x2 = VectorArray(p16x8, 2);
+pub const p64x1x2 = VectorArray(p64x1, 2);
+pub const p64x2x2 = VectorArray(p64x2, 2);
 
-const i8x8x3 = VectorArray(i8x8, 3);
-const i8x16x3 = VectorArray(i8x16, 3);
-const i16x4x3 = VectorArray(i16x4, 3);
-const i16x8x3 = VectorArray(i16x8, 3);
-const i32x2x3 = VectorArray(i32x2, 3);
-const i32x4x3 = VectorArray(i32x4, 3);
-const i64x1x3 = VectorArray(i64x1, 3);
-const i64x2x3 = VectorArray(i64x2, 3);
+pub const i8x8x3 = VectorArray(i8x8, 3);
+pub const i8x16x3 = VectorArray(i8x16, 3);
+pub const i16x4x3 = VectorArray(i16x4, 3);
+pub const i16x8x3 = VectorArray(i16x8, 3);
+pub const i32x2x3 = VectorArray(i32x2, 3);
+pub const i32x4x3 = VectorArray(i32x4, 3);
+pub const i64x1x3 = VectorArray(i64x1, 3);
+pub const i64x2x3 = VectorArray(i64x2, 3);
 
-const u8x8x3 = VectorArray(u8x8, 3);
-const u8x16x3 = VectorArray(u8x16, 3);
-const u16x4x3 = VectorArray(u16x4, 3);
-const u16x8x3 = VectorArray(u16x8, 3);
-const u32x2x3 = VectorArray(u32x2, 3);
-const u32x4x3 = VectorArray(u32x4, 3);
-const u64x1x3 = VectorArray(u64x1, 3);
-const u64x2x3 = VectorArray(u64x2, 3);
+pub const u8x8x3 = VectorArray(u8x8, 3);
+pub const u8x16x3 = VectorArray(u8x16, 3);
+pub const u16x4x3 = VectorArray(u16x4, 3);
+pub const u16x8x3 = VectorArray(u16x8, 3);
+pub const u32x2x3 = VectorArray(u32x2, 3);
+pub const u32x4x3 = VectorArray(u32x4, 3);
+pub const u64x1x3 = VectorArray(u64x1, 3);
+pub const u64x2x3 = VectorArray(u64x2, 3);
 
-const f16x4x3 = VectorArray(f16x4, 3);
-const f16x8x3 = VectorArray(f16x8, 3);
-const f32x2x3 = VectorArray(f32x2, 3);
-const f32x4x3 = VectorArray(f32x4, 3);
-const f64x1x3 = VectorArray(f64x1, 3);
-const f64x2x3 = VectorArray(f64x2, 3);
+pub const f16x4x3 = VectorArray(f16x4, 3);
+pub const f16x8x3 = VectorArray(f16x8, 3);
+pub const f32x2x3 = VectorArray(f32x2, 3);
+pub const f32x4x3 = VectorArray(f32x4, 3);
+pub const f64x1x3 = VectorArray(f64x1, 3);
+pub const f64x2x3 = VectorArray(f64x2, 3);
 
-const p8x8x3 = VectorArray(p8x8, 3);
-const p8x16x3 = VectorArray(p8x16, 3);
-const p16x4x3 = VectorArray(p16x4, 3);
-const p16x8x3 = VectorArray(p16x8, 3);
-const p64x1x3 = VectorArray(p64x1, 3);
-const p64x2x3 = VectorArray(p64x2, 3);
+pub const p8x8x3 = VectorArray(p8x8, 3);
+pub const p8x16x3 = VectorArray(p8x16, 3);
+pub const p16x4x3 = VectorArray(p16x4, 3);
+pub const p16x8x3 = VectorArray(p16x8, 3);
+pub const p64x1x3 = VectorArray(p64x1, 3);
+pub const p64x2x3 = VectorArray(p64x2, 3);
 
-const i8x8x4 = VectorArray(i8x8, 4);
-const i8x16x4 = VectorArray(i8x16, 4);
-const i16x4x4 = VectorArray(i16x4, 4);
-const i16x8x4 = VectorArray(i16x8, 4);
-const i32x2x4 = VectorArray(i32x2, 4);
-const i32x4x4 = VectorArray(i32x4, 4);
-const i64x1x4 = VectorArray(i64x1, 4);
-const i64x2x4 = VectorArray(i64x2, 4);
+pub const i8x8x4 = VectorArray(i8x8, 4);
+pub const i8x16x4 = VectorArray(i8x16, 4);
+pub const i16x4x4 = VectorArray(i16x4, 4);
+pub const i16x8x4 = VectorArray(i16x8, 4);
+pub const i32x2x4 = VectorArray(i32x2, 4);
+pub const i32x4x4 = VectorArray(i32x4, 4);
+pub const i64x1x4 = VectorArray(i64x1, 4);
+pub const i64x2x4 = VectorArray(i64x2, 4);
 
-const u8x8x4 = VectorArray(u8x8, 4);
-const u8x16x4 = VectorArray(u8x16, 4);
-const u16x4x4 = VectorArray(u16x4, 4);
-const u16x8x4 = VectorArray(u16x8, 4);
-const u32x2x4 = VectorArray(u32x2, 4);
-const u32x4x4 = VectorArray(u32x4, 4);
-const u64x1x4 = VectorArray(u64x1, 4);
-const u64x2x4 = VectorArray(u64x2, 4);
+pub const u8x8x4 = VectorArray(u8x8, 4);
+pub const u8x16x4 = VectorArray(u8x16, 4);
+pub const u16x4x4 = VectorArray(u16x4, 4);
+pub const u16x8x4 = VectorArray(u16x8, 4);
+pub const u32x2x4 = VectorArray(u32x2, 4);
+pub const u32x4x4 = VectorArray(u32x4, 4);
+pub const u64x1x4 = VectorArray(u64x1, 4);
+pub const u64x2x4 = VectorArray(u64x2, 4);
 
-const f16x4x4 = VectorArray(f16x4, 4);
-const f16x8x4 = VectorArray(f16x8, 4);
-const f32x2x4 = VectorArray(f32x2, 4);
-const f32x4x4 = VectorArray(f32x4, 4);
-const f64x1x4 = VectorArray(f64x1, 4);
-const f64x2x4 = VectorArray(f64x2, 4);
+pub const f16x4x4 = VectorArray(f16x4, 4);
+pub const f16x8x4 = VectorArray(f16x8, 4);
+pub const f32x2x4 = VectorArray(f32x2, 4);
+pub const f32x4x4 = VectorArray(f32x4, 4);
+pub const f64x1x4 = VectorArray(f64x1, 4);
+pub const f64x2x4 = VectorArray(f64x2, 4);
 
-const p8x8x4 = VectorArray(p8x8, 4);
-const p8x16x4 = VectorArray(p8x16, 4);
-const p16x4x4 = VectorArray(p16x4, 4);
-const p16x8x4 = VectorArray(p16x8, 4);
-const p64x1x4 = VectorArray(p64x1, 4);
-const p64x2x4 = VectorArray(p64x2, 4);
+pub const p8x8x4 = VectorArray(p8x8, 4);
+pub const p8x16x4 = VectorArray(p8x16, 4);
+pub const p16x4x4 = VectorArray(p16x4, 4);
+pub const p16x8x4 = VectorArray(p16x8, 4);
+pub const p64x1x4 = VectorArray(p64x1, 4);
+pub const p64x2x4 = VectorArray(p64x2, 4);
 
-inline fn PromoteInt(comptime T: type) type {
+inline fn PromoteVector(comptime T: type) type {
     var type_info = @typeInfo(T);
+    comptime assert(type_info == .Vector);
     var child_info = @typeInfo(std.meta.Child(T));
     child_info.Int.bits *= 2;
     type_info.Vector.child = @Type(child_info);
@@ -153,41 +154,31 @@ inline fn PromoteInt(comptime T: type) type {
 inline fn abd(a: anytype, b: anytype) @TypeOf(a, b) {
     const T = @TypeOf(a, b);
     const Child = std.meta.Child(T);
-    const typeInfo = @typeInfo(Child);
-    switch (typeInfo) {
-        inline .Int => {
-            switch (typeInfo.Int.signedness) {
-                .unsigned => {
-                    // Since unsigned numbers cannot be negative, we subtract the
-                    // smaller elemant from the larger in order to prevent overflows
-                    // when calculating the difference, saving us the trouble of
-                    // casting to a larger signed type when subtracting. Because
-                    // of ReleaseFast optimizations, this probably will be compacted
-                    // down to one instruction(uabd v0.8b, v0.8b, v1.8b in my case),
-                    // so technically @min and @max dont matter here, but zig will
-                    // throw an overflow error if we simply did @abs(a - b).
-                    const max: T = @max(a, b);
-                    const min: T = @min(a, b);
-                    return @abs(max -% min);
-                },
-                .signed => {
-                    return @truncate(
-                        @as(
-                            PromoteInt(T),
-                            @bitCast(
-                                @abs(@as(PromoteInt(T), a) -% @as(PromoteInt(T), b)),
-                            ),
-                        ),
-                    );
-                },
-            }
-        },
-        inline .Float => {
-            // Floats dont have modular subtraction,
-            // so we just assume there wont be an overflow here.
-            return @abs(a - b);
-        },
-        else => unreachable,
+    const type_info = @typeInfo(Child);
+    if (type_info == .Int) {
+        switch (type_info.Int.signedness) {
+            inline .unsigned => {
+                // Since unsigned numbers cannot be negative, we subtract the
+                // smaller elemant from the larger in order to prevent overflows
+                // when calculating the difference, saving us the trouble of
+                // casting to a larger signed type when subtracting.
+                const max: T = @max(a, b);
+                const min: T = @min(a, b);
+                return @abs(max -% min);
+            },
+            inline .signed => {
+                return @truncate(
+                    @as(
+                        PromoteVector(T),
+                        @bitCast(@abs(@as(PromoteVector(T), a) -% @as(PromoteVector(T), b))),
+                    ),
+                );
+            },
+        }
+    } else {
+        // Floats dont have modular subtraction,
+        // so we just assume there wont be an overflow here.
+        return @abs(a - b);
     }
 }
 
@@ -1230,7 +1221,7 @@ test vaddlv_u32 {
 
 /// Unsigned Add Long across Vector
 pub inline fn vaddlvq_s8(a: i8x16) i16 {
-    return @reduce(.Add, @as(PromoteInt(i8x16), a));
+    return @reduce(.Add, @as(PromoteVector(i8x16), a));
 }
 
 test vaddlvq_s8 {
@@ -1241,7 +1232,7 @@ test vaddlvq_s8 {
 
 /// Unsigned Add Long across Vector
 pub inline fn vaddlvq_s16(a: i16x8) i32 {
-    return @reduce(.Add, @as(PromoteInt(i16x8), a));
+    return @reduce(.Add, @as(PromoteVector(i16x8), a));
 }
 
 test vaddlvq_s16 {
@@ -1252,7 +1243,7 @@ test vaddlvq_s16 {
 
 /// Unsigned Add Long across Vector
 pub inline fn vaddlvq_s32(a: i32x4) i64 {
-    return @reduce(.Add, @as(PromoteInt(i32x4), a));
+    return @reduce(.Add, @as(PromoteVector(i32x4), a));
 }
 
 test vaddlvq_s32 {
@@ -1263,7 +1254,7 @@ test vaddlvq_s32 {
 
 /// Unsigned Add Long across Vector
 pub inline fn vaddlvq_u8(a: u8x16) u16 {
-    return @reduce(.Add, @as(PromoteInt(u8x16), a));
+    return @reduce(.Add, @as(PromoteVector(u8x16), a));
 }
 
 test vaddlvq_u8 {
@@ -1274,7 +1265,7 @@ test vaddlvq_u8 {
 
 /// Unsigned Add Long across Vector
 pub inline fn vaddlvq_u16(a: u16x8) u32 {
-    return @reduce(.Add, @as(PromoteInt(u16x8), a));
+    return @reduce(.Add, @as(PromoteVector(u16x8), a));
 }
 
 test vaddlvq_u16 {
@@ -1285,7 +1276,7 @@ test vaddlvq_u16 {
 
 /// Unsigned Add Long across Vector
 pub inline fn vaddlvq_u32(a: u32x4) u64 {
-    return @reduce(.Add, @as(PromoteInt(u32x4), a));
+    return @reduce(.Add, @as(PromoteVector(u32x4), a));
 }
 
 test vaddlvq_u32 {
@@ -1294,9 +1285,255 @@ test vaddlvq_u32 {
     try expectEqual(expected, vaddlvq_u32(a));
 }
 
+/// Signed Add Long across Vector
+pub inline fn vaddv_s8(a: i8x8) i8 {
+    return @reduce(.Add, a);
+}
+
+test vaddv_s8 {
+    const a: i8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: i8 = 8;
+    try expectEqual(expected, vaddv_s8(a));
+}
+
+/// Signed Add Long across Vector
+pub inline fn vaddv_s16(a: i16x4) i16 {
+    return @reduce(.Add, a);
+}
+
+test vaddv_s16 {
+    const a: i16x4 = .{ 1, 1, 1, 1 };
+    const expected: i16 = 4;
+    try expectEqual(expected, vaddv_s16(a));
+}
+
+/// Signed Add Long across Vector
+pub inline fn vaddv_s32(a: i32x2) i32 {
+    return @reduce(.Add, a);
+}
+
+test vaddv_s32 {
+    const a: i32x2 = .{ 1, 1 };
+    const expected: i32 = 2;
+    try expectEqual(expected, vaddv_s32(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddv_u8(a: u8x8) u8 {
+    return @reduce(.Add, a);
+}
+
+test vaddv_u8 {
+    const a: u8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: u8 = 8;
+    try expectEqual(expected, vaddv_u8(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddv_u16(a: u16x4) u16 {
+    return @reduce(.Add, a);
+}
+
+test vaddv_u16 {
+    const a: u16x4 = .{ 1, 1, 1, 1 };
+    const expected: u16 = 4;
+    try expectEqual(expected, vaddv_u16(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddv_u32(a: u32x2) u32 {
+    return @reduce(.Add, a);
+}
+
+test vaddv_u32 {
+    const a: u32x2 = .{ 1, 1 };
+    const expected: u32 = 2;
+    try expectEqual(expected, vaddv_u32(a));
+}
+
+/// Signed Add Long across Vector
+pub inline fn vaddvq_s8(a: i8x16) i8 {
+    return @reduce(.Add, a);
+}
+
+test vaddvq_s8 {
+    const a: i8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: i8 = 16;
+    try expectEqual(expected, vaddvq_s8(a));
+}
+
+/// Signed Add Long across Vector
+pub inline fn vaddvq_s16(a: i16x8) i16 {
+    return @reduce(.Add, a);
+}
+
+test vaddvq_s16 {
+    const a: i16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: i16 = 8;
+    try expectEqual(expected, vaddvq_s16(a));
+}
+
+/// Signed Add Long across Vector
+pub inline fn vaddvq_s32(a: i32x4) i32 {
+    return @reduce(.Add, a);
+}
+
+test vaddvq_s32 {
+    const a: i32x4 = .{ 1, 1, 1, 1 };
+    const expected: i32 = 4;
+    try expectEqual(expected, vaddvq_s32(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddvq_u8(a: u8x16) u8 {
+    return @reduce(.Add, a);
+}
+
+test vaddvq_u8 {
+    const a: u8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: u8 = 16;
+    try expectEqual(expected, vaddvq_u8(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddvq_u16(a: u16x8) u16 {
+    return @reduce(.Add, a);
+}
+
+test vaddvq_u16 {
+    const a: u16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: u16 = 8;
+    try expectEqual(expected, vaddvq_u16(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddvq_u32(a: u32x4) u32 {
+    return @reduce(.Add, a);
+}
+
+test vaddvq_u32 {
+    const a: u32x4 = .{ 1, 1, 1, 1 };
+    const expected: u32 = 4;
+    try expectEqual(expected, vaddvq_u32(a));
+}
+
+/// Floating-point maximum number across vector
+pub inline fn vmaxnmv_f32(a: f32x2) f32 {
+    return @reduce(.Max, a);
+}
+
+test vmaxnmv_f32 {
+    const a: f32x2 = .{ 0.59, 0.5 };
+    const expected: f32 = 0.59;
+    try expectEqual(expected, vmaxnmv_f32(a));
+}
+
+/// Floating-point maximum number across vector
+pub inline fn vmaxnmvq_f32(a: f32x4) f32 {
+    return @reduce(.Max, a);
+}
+
+test vmaxnmvq_f32 {
+    const a: f32x4 = .{ 0.59, 0.5, 2.5, 50.2 };
+    const expected: f32 = 50.2;
+    try expectEqual(expected, vmaxnmvq_f32(a));
+}
+
+/// Horizontal vector max
+pub inline fn vmaxv_s8(a: i8x8) i8 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxv_s16(a: i16x4) i16 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxv_s32(a: i32x2) i32 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxv_u8(a: u8x8) u8 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxv_u16(a: u16x4) u16 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxv_u32(a: u32x2) u32 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxvq_s8(a: i8x16) i8 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxvq_s16(a: i16x8) i16 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxvq_s32(a: i32x4) i32 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxvq_u8(a: u8x16) u8 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxvq_u16(a: u16x8) u16 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxvq_u32(a: u32x4) u32 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxvq_f32(a: f32x4) f32 {
+    return @reduce(.Max, a);
+}
+
+/// Horizontal vector max
+pub inline fn vmaxvq_f64(a: f64x2) f64 {
+    return @reduce(.Max, a);
+}
+
 /// Unsigned Absolute difference Long
 pub inline fn vabdl_s8(a: i8x8, b: i8x8) i16x8 {
     return abd(a, b);
+}
+
+/// Floating-point maximum number across vector
+pub inline fn vminnmv_f32(a: f32x2) f32 {
+    return @reduce(.Min, a);
+}
+
+test vminnmv_f32 {
+    const a: f32x2 = .{ 0.59, 0.5 };
+    const expected: f32 = 0.5;
+    try expectEqual(expected, vminnmv_f32(a));
+}
+
+/// Floating-point maximum number across vector
+pub inline fn vminnmvq_f32(a: f32x4) f32 {
+    return @reduce(.Min, a);
+}
+
+test vminnmvq_f32 {
+    const a: f32x4 = .{ 0.59, 0.5, 2.5, 50.2 };
+    const expected: f32 = 0.5;
+    try expectEqual(expected, vminnmvq_f32(a));
 }
 
 test vabdl_s8 {
