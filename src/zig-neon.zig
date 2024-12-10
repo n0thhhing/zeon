@@ -1390,7 +1390,7 @@ pub inline fn vaddvq_u8(a: u8x16) u8 {
 }
 
 test vaddvq_u8 {
-    const a: u8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    const a: u8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, };
     const expected: u8 = 16;
     try expectEqual(expected, vaddvq_u8(a));
 }
