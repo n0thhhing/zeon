@@ -572,7 +572,7 @@ test vmovl_high_u32 {
     try expectEqual(@as(u32x2, .{ 0, 1 }), vmovl_high_u32(v));
 }
 
-/// Signed multiply long
+/// Unsigned multiply long
 pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
     return @as(i16x8, a) * @as(i16x8, b);
 }
@@ -584,7 +584,7 @@ test vmull_s8 {
     try expectEqual(i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_s8(a, b));
 }
 
-/// Signed multiply long
+/// Unsigned multiply long
 pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
     return @as(i32x4, a) * @as(i32x4, b);
 }
@@ -596,7 +596,7 @@ test vmull_s16 {
     try expectEqual(i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, vmull_s16(a, b));
 }
 
-/// Signed multiply long
+/// Unsigned multiply long
 pub inline fn vmull_s32(a: i32x2, b: i32x2) i64x2 {
     return @as(i64x2, a) * @as(i64x2, b);
 }
@@ -644,7 +644,7 @@ test vmull_u32 {
     try expectEqual(u64x2{ 0, 1 * 5 }, vmull_u32(a, b));
 }
 
-/// Signed multiply long
+/// Unsigned multiply long
 pub inline fn vmull_high_s8(a: i8x16, b: i8x16) i16x8 {
     return vmull_s8(vget_high_s8(a), vget_high_s8(b));
 }
@@ -656,7 +656,7 @@ test vmull_high_s8 {
     try expectEqual(i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_high_s8(a, b));
 }
 
-/// Signed multiply long
+/// Unsigned multiply long
 pub inline fn vmull_high_s16(a: i16x8, b: i16x8) i32x4 {
     return vmull_s16(vget_high_s16(a), vget_high_s16(b));
 }
@@ -668,7 +668,7 @@ test vmull_high_s16 {
     try expectEqual(i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, vmull_high_s16(a, b));
 }
 
-/// Signed multiply long
+/// Unsigned multiply long
 pub inline fn vmull_high_s32(a: i32x4, b: i32x4) i64x2 {
     return vmull_s32(vget_high_s32(a), vget_high_s32(b));
 }
@@ -890,32 +890,7 @@ test vabdq_s32 {
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u8(a: u8x16, b: u8x16) u8x16 {
-    const a_lo = vget_low_u8(a);
-    const a_hi = vget_high_u8(a);
-    const b_lo = vget_low_u8(b);
-    const b_hi = vget_high_u8(b);
-
-    const result_lo: u8x8 = @truncate(@abs(@as(i16x8, a_lo) - @as(i16x8, b_lo)));
-    const result_hi: u8x8 = @truncate(@abs(@as(i16x8, a_hi) - @as(i16x8, b_hi)));
-
-    return .{
-        result_lo[0],
-        result_lo[1],
-        result_lo[2],
-        result_lo[3],
-        result_lo[4],
-        result_lo[5],
-        result_lo[6],
-        result_lo[7],
-        result_hi[0],
-        result_hi[1],
-        result_hi[2],
-        result_hi[3],
-        result_hi[4],
-        result_hi[5],
-        result_hi[6],
-        result_hi[7],
-    };
+    return abd(a, b);
 }
 
 test vabdq_u8 {
@@ -947,24 +922,7 @@ test vabdq_u8 {
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u16(a: u16x8, b: u16x8) u16x8 {
-    const a_lo = vget_low_u16(a);
-    const a_hi = vget_high_u16(a);
-    const b_lo = vget_low_u16(b);
-    const b_hi = vget_high_u16(b);
-
-    const result_lo: u16x4 = @truncate(@abs(@as(i32x4, a_lo) - @as(i32x4, b_lo)));
-    const result_hi: u16x4 = @truncate(@abs(@as(i32x4, a_hi) - @as(i32x4, b_hi)));
-
-    return .{
-        result_lo[0],
-        result_lo[1],
-        result_lo[2],
-        result_lo[3],
-        result_hi[0],
-        result_hi[1],
-        result_hi[2],
-        result_hi[3],
-    };
+    return abd(a, b);
 }
 
 test vabdq_u16 {
@@ -978,20 +936,7 @@ test vabdq_u16 {
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u32(a: u32x4, b: u32x4) u32x4 {
-    const a_lo = vget_low_u32(a);
-    const a_hi = vget_high_u32(a);
-    const b_lo = vget_low_u32(b);
-    const b_hi = vget_high_u32(b);
-
-    const result_lo: u32x2 = @truncate(@abs(@as(i64x2, a_lo) - @as(i64x2, b_lo)));
-    const result_hi: u32x2 = @truncate(@abs(@as(i64x2, a_hi) - @as(i64x2, b_hi)));
-
-    return .{
-        result_lo[0],
-        result_lo[1],
-        result_hi[0],
-        result_hi[1],
-    };
+    return abd(a, b);
 }
 
 test vabdq_u32 {
@@ -1005,7 +950,7 @@ test vabdq_u32 {
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_f32(a: f32x4, b: f32x4) f32x4 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabdq_f32 {
@@ -1019,7 +964,7 @@ test vabdq_f32 {
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_f64(a: f64x2, b: f64x2) f64x2 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabdq_f64 {
@@ -1031,9 +976,327 @@ test vabdq_f64 {
     try expectEqual(expected, vabdq_f64(a, b));
 }
 
-/// Signed Absolute difference Long
+/// Unsigned saturating doubling multiply long
+pub inline fn vqdmull_s16(a: i16x4, b: i16x4) i32x4 {
+    const product = vmull_s16(a, b);
+    return product *| @as(i32x4, @splat(2));
+}
+
+test vqdmull_s16 {
+    const a: i16x4 = .{ 16384, -16384, 12345, -12345 };
+    const b: i16x4 = .{ 2, 2, -2, -2 };
+
+    const expected: i32x4 = .{
+        65536, // 16384 * 2 * 2
+        -65536, // -16384 * 2 * 2
+        -49380, // 12345 * -2 * 2
+        49380, // -12345 * -2 * 2
+    };
+
+    try expectEqual(expected, vqdmull_s16(a, b));
+
+    const a_sat: i16x4 = .{ std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.minInt(i16) };
+    const b_sat: i16x4 = .{ std.math.maxInt(i16), std.math.minInt(i16), std.math.maxInt(i16), std.math.maxInt(i16) };
+
+    const expected_sat: i32x4 = .{
+        2147352578,
+        -2147418112,
+        2147352578,
+        -2147418112,
+    };
+
+    try expectEqual(expected_sat, vqdmull_s16(a_sat, b_sat));
+}
+
+/// Unsigned saturating doubling multiply long
+pub inline fn vqdmull_s32(a: i32x2, b: i32x2) i64x2 {
+    const product = vmull_s32(a, b);
+    return product *| @as(i64x2, @splat(2));
+}
+
+test vqdmull_s32 {
+    const a: i32x2 = .{ 6477777, -782282872 };
+    const b: i32x2 = .{ 5, 5 };
+
+    const expected: i64x2 = .{
+        64777770, // 6477777 * 5 * 2
+        -7822828720, // -782282872 * 5 * 2
+    };
+
+    try expectEqual(expected, vqdmull_s32(a, b));
+
+    const a_sat: i32x2 = .{ std.math.maxInt(i32), std.math.maxInt(i32) };
+    const b_sat: i32x2 = .{ std.math.maxInt(i32), std.math.minInt(i32) };
+
+    const expected_sat: i64x2 = .{
+        9223372028264841218,
+        -9223372032559808512,
+    };
+
+    try expectEqual(expected_sat, vqdmull_s32(a_sat, b_sat));
+}
+
+/// Unsigned saturating doubling multiply long
+pub inline fn vqdmullh_s16(a: i16, b: i16) i32 {
+    return (@as(i32, a) *| @as(i32, b)) *| 2;
+}
+
+test vqdmullh_s16 {
+    const a: i16 = std.math.maxInt(i16);
+    const b: i16 = 20;
+
+    const expected: i32 = 1310680;
+    try expectEqual(expected, vqdmullh_s16(a, b));
+}
+
+/// Unsigned saturating doubling multiply long
+pub inline fn vqdmulls_s32(a: i32, b: i32) i64 {
+    return (@as(i64, a) *| @as(i64, b)) *| 2;
+}
+
+test vqdmulls_s32 {
+    const a: i32 = std.math.maxInt(i32);
+    const b: i32 = 20;
+
+    const expected: i64 = 85899345880;
+    try expectEqual(expected, vqdmulls_s32(a, b));
+}
+
+/// Saturating subtract
+pub inline fn vqsub_s8(a: i8x8, b: i8x8) i8x8 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsub_s16(a: i16x4, b: i16x4) i16x4 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsub_s32(a: i32x2, b: i32x2) i32x2 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsub_s64(a: i64x1, b: i64x1) i64x1 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsub_u8(a: u8x8, b: u8x8) u8x8 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsub_u16(a: u16x4, b: u16x4) u16x4 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsub_u32(a: u32x2, b: u32x2) u32x2 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsub_u64(a: u64x1, b: u64x1) u64x1 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubq_s8(a: i8x16, b: i8x16) i8x16 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubq_s16(a: i16x8, b: i16x8) i16x8 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubq_s32(a: i32x4, b: i32x4) i32x4 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubq_s64(a: i64x2, b: i64x2) i64x2 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubq_u8(a: u8x16, b: u8x16) u8x16 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubq_u16(a: u16x8, b: u16x8) u16x8 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubq_u32(a: u32x4, b: u32x4) u32x4 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubq_u64(a: u64x2, b: u64x2) u64x2 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubs_s32(a: i32, b: i32) i32 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubs_u32(a: u32, b: u32) u32 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubd_s64(a: i64, b: i64) i64 {
+    return a -| b;
+}
+
+/// Saturating subtract
+pub inline fn vqsubd_u64(a: u64, b: u64) u64 {
+    return a -| b;
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlv_s8(a: i8x8) i16 {
+    return @reduce(.Add, @as(i16x8, a));
+}
+
+test vaddlv_s8 {
+    const a: i8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: i16 = 8;
+    try expectEqual(expected, vaddlv_s8(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlv_s16(a: i16x4) i32 {
+    return @reduce(.Add, @as(i32x4, a));
+}
+
+test vaddlv_s16 {
+    const a: i16x4 = .{ 1, 1, 1, 1 };
+    const expected: i32 = 4;
+    try expectEqual(expected, vaddlv_s16(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlv_s32(a: i32x2) i64 {
+    return @reduce(.Add, @as(i64x2, a));
+}
+
+test vaddlv_s32 {
+    const a: i32x2 = .{ 1, 1 };
+    const expected: i64 = 2;
+    try expectEqual(expected, vaddlv_s32(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlv_u8(a: u8x8) u16 {
+    return @reduce(.Add, @as(u16x8, a));
+}
+
+test vaddlv_u8 {
+    const a: u8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: u16 = 8;
+    try expectEqual(expected, vaddlv_u8(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlv_u16(a: u16x4) u32 {
+    return @reduce(.Add, @as(u32x4, a));
+}
+
+test vaddlv_u16 {
+    const a: u16x4 = .{ 1, 1, 1, 1 };
+    const expected: u32 = 4;
+    try expectEqual(expected, vaddlv_u16(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlv_u32(a: u32x2) u64 {
+    return @reduce(.Add, @as(u64x2, a));
+}
+
+test vaddlv_u32 {
+    const a: u32x2 = .{ 1, 1 };
+    const expected: u64 = 2;
+    try expectEqual(expected, vaddlv_u32(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlvq_s8(a: i8x16) i16 {
+    return @reduce(.Add, @as(PromoteInt(i8x16), a));
+}
+
+test vaddlvq_s8 {
+    const a: i8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: i16 = 16;
+    try expectEqual(expected, vaddlvq_s8(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlvq_s16(a: i16x8) i32 {
+    return @reduce(.Add, @as(PromoteInt(i16x8), a));
+}
+
+test vaddlvq_s16 {
+    const a: i16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: i32 = 8;
+    try expectEqual(expected, vaddlvq_s16(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlvq_s32(a: i32x4) i64 {
+    return @reduce(.Add, @as(PromoteInt(i32x4), a));
+}
+
+test vaddlvq_s32 {
+    const a: i32x4 = .{ 1, 1, 1, 1 };
+    const expected: i64 = 4;
+    try expectEqual(expected, vaddlvq_s32(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlvq_u8(a: u8x16) u16 {
+    return @reduce(.Add, @as(PromoteInt(u8x16), a));
+}
+
+test vaddlvq_u8 {
+    const a: u8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: u16 = 16;
+    try expectEqual(expected, vaddlvq_u8(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlvq_u16(a: u16x8) u32 {
+    return @reduce(.Add, @as(PromoteInt(u16x8), a));
+}
+
+test vaddlvq_u16 {
+    const a: u16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: u32 = 8;
+    try expectEqual(expected, vaddlvq_u16(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddlvq_u32(a: u32x4) u64 {
+    return @reduce(.Add, @as(PromoteInt(u32x4), a));
+}
+
+test vaddlvq_u32 {
+    const a: u32x4 = .{ 1, 1, 1, 1 };
+    const expected: u64 = 4;
+    try expectEqual(expected, vaddlvq_u32(a));
+}
+
+/// Unsigned Absolute difference Long
 pub inline fn vabdl_s8(a: i8x8, b: i8x8) i16x8 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabdl_s8 {
@@ -1045,9 +1308,9 @@ test vabdl_s8 {
     try expectEqual(expected, vabdl_s8(a, b));
 }
 
-/// Signed Absolute difference Long
+/// Unsigned Absolute difference Long
 pub inline fn vabdl_s16(a: i16x4, b: i16x4) i32x4 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabdl_s16 {
@@ -1059,9 +1322,9 @@ test vabdl_s16 {
     try expectEqual(expected, vabdl_s16(a, b));
 }
 
-/// Signed Absolute difference Long
+/// Unsigned Absolute difference Long
 pub inline fn vabdl_s32(a: i32x2, b: i32x2) i64x2 {
-    return @abs(a - b);
+    return abd(a, b);
 }
 
 test vabdl_s32 {
@@ -1073,9 +1336,9 @@ test vabdl_s32 {
     try expectEqual(expected, vabdl_s32(a, b));
 }
 
-/// Signed Absolute difference Long
+/// Unsigned Absolute difference Long
 pub inline fn vabdl_u8(a: u8x8, b: u8x8) u16x8 {
-    return @bitCast(@abs(@as(i16x8, @intCast(a)) - @as(i16x8, @intCast(b))));
+    return abd(a, b);
 }
 
 test vabdl_u8 {
@@ -1105,9 +1368,9 @@ test vabdl_u8 {
     try expectEqual(expected5, vabdl_u8(a5, b5));
 }
 
-/// Signed Absolute difference Long
+/// Unsigned Absolute difference Long
 pub inline fn vabdl_u16(a: u16x4, b: u16x4) u32x4 {
-    return @bitCast(@abs(@as(i32x4, @intCast(a)) - @as(i32x4, @intCast(b))));
+    return abd(a, b);
 }
 
 test vabdl_u16 {
@@ -1119,9 +1382,9 @@ test vabdl_u16 {
     try expectEqual(expected, vabdl_u16(a, b));
 }
 
-/// Signed Absolute difference Long
+/// Unsigned Absolute difference Long
 pub inline fn vabdl_u32(a: u32x2, b: u32x2) u64x2 {
-    return @bitCast(@abs(@as(i64x2, @intCast(a)) - @as(i64x2, @intCast(b))));
+    return abd(a, b);
 }
 
 test vabdl_u32 {
@@ -1133,7 +1396,7 @@ test vabdl_u32 {
     try expectEqual(expected, vabdl_u32(a, b));
 }
 
-/// Signed Absolute difference and Accumulate
+/// Unsigned Absolute difference and Accumulate
 pub inline fn vaba_s8(acc: i8x8, a: i8x8, b: i8x8) i8x8 {
     return vabd_s8(a, b) +% acc;
 }
