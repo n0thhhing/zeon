@@ -1581,7 +1581,7 @@ pub inline fn vabdl_u8(a: u8x8, b: u8x8) u16x8 {
 test vabdl_u8 {
     const a: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
     const b: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
-    const expected: u16x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+    const expected: u16x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1, };
     try expectEqual(expected, vabdl_u8(a, b));
 
     const a2: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
