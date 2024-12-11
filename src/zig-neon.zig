@@ -2044,6 +2044,61 @@ pub inline fn vaddd_u64(a: u64, b: u64) u64 {
 
 /// Add returning High Narrow
 pub inline fn vaddhn_s16(a: i16x8, b: i16x8) i8x8 {
-    _ = b;
-    _ = a;
+    const sum: i16x8 = a +% b;
+    return @truncate(vshrq_n_s16(sum, 8));
+}
+
+test vaddhn_s16 {
+    const a: i16x8 = .{ 256, 512, 1024, 2048, 4096, 8192, 16384, 32767 };
+    const b: i16x8 = .{ 128, 256, 512, 1024, 2048, 4096, 8192, 32767 };
+
+    const expected: i8x8 = .{ 1, 3, 6, 12, 24, 48, 96, -1 }; // -1 due to wrapping
+    try expectEqual(expected, vaddhn_s16(a, b));
+
+    const a2: i16x8 = .{ -256, -512, -1024, -2048, -4096, -8192, -16384, -32768 };
+    const b2: i16x8 = .{ -128, -256, -512, -1024, -2048, -4096, -8192, -32768 };
+
+    const expected2: i8x8 = .{ -2, -3, -6, -12, -24, -48, -96, 0 };
+    try expectEqual(expected2, vaddhn_s16(a2, b2));
+
+    const a3: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+    const b3: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    const expected3: i8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+    try expectEqual(expected3, vaddhn_s16(a3, b3));
+}
+
+/// Add returning High Narrow
+pub inline fn vaddhn_s32(a: i32x4, b: i32x4) i16x4 {
+    const sum = vaddq_s32(a, b);
+    return @intCast(sum >> @as(i32x4, @splat(8)));
+}
+
+/// Add returning High Narrow
+pub inline fn vaddhn_s64(a: i64x2, b: i64x2) i32x2 {
+    const sum = vaddq_s64(a, b);
+    return @intCast(sum >> @as(i32x4, @splat(8)));
+}
+
+/// Add returning High Narrow
+pub inline fn vaddhn_u16(a: u16x8, b: u16x8) u8x8 {
+    const sum = vaddq_u16(a, b);
+    return @intCast(sum >> @as(u16x8, @splat(8)));
+}
+
+/// Add returning High Narrow
+pub inline fn vaddhn_u32(a: u32x4, b: u32x4) u16x4 {
+    const sum = vaddq_u32(a, b);
+    return @intCast(sum >> @as(u32x4, @splat(8)));
+}
+
+/// Add returning High Narrow
+pub inline fn vaddhn_u64(a: u64x2, b: u64x2) u32x2 {
+    const sum = vaddq_u64(a, b);
+    return @intCast(sum >> @as(u64x2, @splat(8)));
+}
+
+/// Shift right
+pub inline fn vshrq_n_s16(a: i16x8, n: u16) i16x8 {
+    return @as(u16x8, @bitCast(a)) >> @as(u16x8, @splat(n));
 }
