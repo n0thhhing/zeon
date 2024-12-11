@@ -214,7 +214,7 @@ test abd {
     try expectEqual(i8x2{ -126, -106 }, abd(a6, b6));
 }
 
-//// Get high elements of a i8x16 vector
+/// Get high elements of a i8x16 vector
 pub inline fn vget_high_s8(vec: i8x16) i8x8 {
     return @shuffle(
         i8,
@@ -224,7 +224,7 @@ pub inline fn vget_high_s8(vec: i8x16) i8x8 {
     );
 }
 
-//// Get high elements of a i16x8 vector
+/// Get high elements of a i16x8 vector
 pub inline fn vget_high_s16(vec: i16x8) i16x4 {
     return @shuffle(
         i16,
@@ -234,7 +234,7 @@ pub inline fn vget_high_s16(vec: i16x8) i16x4 {
     );
 }
 
-//// Get high elements of a i32x4 vector
+/// Get high elements of a i32x4 vector
 pub inline fn vget_high_s32(vec: i32x4) i32x2 {
     return @shuffle(
         i32,
@@ -244,7 +244,7 @@ pub inline fn vget_high_s32(vec: i32x4) i32x2 {
     );
 }
 
-//// Get high elements of a i64x2 vector
+/// Get high elements of a i64x2 vector
 pub inline fn vget_high_s64(vec: i64x2) i64x1 {
     return @shuffle(
         i64,
@@ -254,7 +254,7 @@ pub inline fn vget_high_s64(vec: i64x2) i64x1 {
     );
 }
 
-//// Get high elements of a f16x8 vector
+/// Get high elements of a f16x8 vector
 pub inline fn vget_high_f16(vec: f16x8) f16x4 {
     return @shuffle(
         f16,
@@ -264,7 +264,7 @@ pub inline fn vget_high_f16(vec: f16x8) f16x4 {
     );
 }
 
-//// Get high elements of a f32x4 vector
+/// Get high elements of a f32x4 vector
 pub inline fn vget_high_f32(vec: f32x4) f32x2 {
     return @shuffle(
         f32,
@@ -274,7 +274,7 @@ pub inline fn vget_high_f32(vec: f32x4) f32x2 {
     );
 }
 
-//// Get high elements of a f64x2 vector
+/// Get high elements of a f64x2 vector
 pub inline fn vget_high_f64(vec: f64x2) f64x1 {
     return @shuffle(
         f64,
@@ -284,7 +284,7 @@ pub inline fn vget_high_f64(vec: f64x2) f64x1 {
     );
 }
 
-//// Get high elements of a u8x16 vector
+/// Get high elements of a u8x16 vector
 pub inline fn vget_high_u8(vec: u8x16) u8x8 {
     return @shuffle(
         u8,
@@ -294,7 +294,7 @@ pub inline fn vget_high_u8(vec: u8x16) u8x8 {
     );
 }
 
-//// Get high elements of a u16x8 vector
+/// Get high elements of a u16x8 vector
 pub inline fn vget_high_u16(vec: u16x8) u16x4 {
     return @shuffle(
         u16,
@@ -304,7 +304,7 @@ pub inline fn vget_high_u16(vec: u16x8) u16x4 {
     );
 }
 
-//// Get high elements of a u32x4 vector
+/// Get high elements of a u32x4 vector
 pub inline fn vget_high_u32(vec: u32x4) u32x2 {
     return @shuffle(
         u32,
@@ -314,7 +314,7 @@ pub inline fn vget_high_u32(vec: u32x4) u32x2 {
     );
 }
 
-//// Get high elements of a u64x2 vector
+/// Get high elements of a u64x2 vector
 pub inline fn vget_high_u64(vec: u64x2) u64x1 {
     return @shuffle(
         u64,
@@ -324,7 +324,7 @@ pub inline fn vget_high_u64(vec: u64x2) u64x1 {
     );
 }
 
-//// Get high elements of a p8x16 vector
+/// Get high elements of a p8x16 vector
 pub inline fn vget_high_p8(vec: p8x16) p8x8 {
     return @shuffle(
         u8,
@@ -334,7 +334,7 @@ pub inline fn vget_high_p8(vec: p8x16) p8x8 {
     );
 }
 
-//// Get high elements of a u16x8 vector
+/// Get high elements of a u16x8 vector
 pub inline fn vget_high_p16(vec: p16x8) p16x4 {
     return @shuffle(
         u16,
