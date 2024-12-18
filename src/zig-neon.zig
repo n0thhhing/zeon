@@ -746,29 +746,30 @@ test vmovl_high_u32 {
 
 /// Signed multiply long
 pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
-    if (use_asm and AArch64.has_neon) {
-        return asm volatile ("smull v0.8h, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> i16x8),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
-        );
-    } else if (use_asm and Arm.has_neon) {
-        return asm volatile ("vmull.s8 q0, d0, d1"
-            : [ret] "={q0}" (-> i16x8),
-            : [a] "{d0}" (a),
-              [b] "{d1}" (b),
-        );
-    } else if (use_builtins and AArch64.has_neon) {
-        return struct {
-            extern fn @"llvm.aarch64.neon.smull.v8i16"(i8x8, i8x8) i16x8;
-        }.@"llvm.aarch64.neon.smull.v8i16"(a, b);
-    } else if (use_builtins and Arm.has_neon) {
-        return struct {
-            extern fn @"llvm.arm.neon.vmulls.v8i16"(i8x8, i8x8) i16x8;
-        }.@"llvm.arm.neon.vmulls.v8i16"(a, b);
-    } else {
-        return @as(i16x8, a) * @as(i16x8, b);
-    }
+    // if (use_asm and AArch64.has_neon) {
+    //     return asm volatile ("smull v0.8h, v1.8b, v2.8b"
+    //         : [ret] "={v0}" (-> i16x8),
+    //         : [a] "{v1}" (a),
+    //           [b] "{v2}" (b),
+    //     );
+    // } else if (use_asm and Arm.has_neon) {
+    //     return asm volatile ("vmull.s8 q0, d0, d1"
+    //         : [ret] "={q0}" (-> i16x8),
+    //         : [a] "{d0}" (a),
+    //           [b] "{d1}" (b),
+    //     );
+    // } else if (use_builtins and AArch64.has_neon) {
+    //     return struct {
+    //         extern fn @"llvm.aarch64.neon.smull.v8i16"(i8x8, i8x8) i16x8;
+    //     }.@"llvm.aarch64.neon.smull.v8i16"(a, b);
+    // } else if (use_builtins and Arm.has_neon) {
+    //     return struct {
+    //         extern fn @"llvm.arm.neon.vmulls.v8i16"(i8x8, i8x8) i16x8;
+    //     }.@"llvm.arm.neon.vmulls.v8i16"(a, b);
+    // } else {
+    //     return @as(i16x8, a) * @as(i16x8, b);
+    // }
+    return @as(i16x8, a) * @as(i16x8, b);
 }
 
 test vmull_s8 {
