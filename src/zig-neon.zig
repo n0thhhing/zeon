@@ -31,8 +31,8 @@ const GF_MUL_TABLE: [256][256]u8 = blk: {
     for (0..256) |a| {
         for (0..256) |b| {
             var result: u8 = 0;
-            const x: u8 = a;
-            const y: u8 = b;
+            const x: u8 = @truncate(a);
+            const y: u8 = @truncate(b);
             var tmp_x = x;
             var tmp_y = y;
             while (tmp_y != 0) {
@@ -752,16 +752,16 @@ pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
               [b] "{v2}" (b),
         );
     } else if (use_asm and Arm.has_neon) {
-        return asm volatile ("vmull.s8 q0, d1, d2"
+        return asm volatile ("vmull.s8 q0, d0, d1"
             : [ret] "={q0}" (-> i16x8),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+            : [a] "{d0}" (a),
+              [b] "{d1}" (b),
         );
     } else if (use_builtins and AArch64.has_neon) {
         return struct {
             extern fn @"llvm.aarch64.neon.smull.v8i16"(i8x8, i8x8) i16x8;
         }.@"llvm.aarch64.neon.smull.v8i16"(a, b);
-    }  else if (use_builtins and Arm.has_neon) {
+    } else if (use_builtins and Arm.has_neon) {
         return struct {
             extern fn @"llvm.arm.neon.vmulls.v8i16"(i8x8, i8x8) i16x8;
         }.@"llvm.arm.neon.vmulls.v8i16"(a, b);
