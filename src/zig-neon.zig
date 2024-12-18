@@ -5,6 +5,7 @@ const simd = std.simd;
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
 
+
 /// Max bitsize for vectors on Arm/AArch64
 ///
 /// TODO:
