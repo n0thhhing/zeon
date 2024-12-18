@@ -21,7 +21,7 @@ const test_targets = [_]std.Target.Query{
         .os_tag = .linux,
     },
     std.Target.Query{
-        .cpu_arch = .x86,
+        .cpu_arch = .x86_64,
         .os_tag = .linux,
     },
 };
