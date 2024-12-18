@@ -634,484 +634,484 @@ test vmovl_s8 {
     try expectEqual(i16x8{ 0, -1, -2, -3, -4, -5, -6, -7 }, vmovl_s8(v));
 }
 
-// /// Vector long move
-// pub inline fn vmovl_s16(a: i16x4) i32x4 {
-//     return @intCast(a);
-// }
-
-// test vmovl_s16 {
-//     const v: i16x4 = .{ 0, -1, -2, -3 };
-//     try expectEqual(@as(i32x4, .{ 0, -1, -2, -3 }), vmovl_s16(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_s32(a: i32x2) i64x2 {
-//     return @intCast(a);
-// }
-
-// test vmovl_s32 {
-//     const v: i32x2 = .{ 0, -1 };
-//     try expectEqual(@as(i32x2, .{ 0, -1 }), vmovl_s32(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_u8(a: u8x8) u16x8 {
-//     return @intCast(a);
-// }
-
-// test vmovl_u8 {
-//     const v: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
-//     try expectEqual(@as(u16x8, .{ 0, 1, 2, 3, 4, 5, 6, 7 }), vmovl_u8(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_u16(a: u16x4) u32x4 {
-//     return @intCast(a);
-// }
-
-// test vmovl_u16 {
-//     const v: u16x4 = .{ 0, 1, 2, 3 };
-//     try expectEqual(@as(u32x4, .{ 0, 1, 2, 3 }), vmovl_u16(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_u32(a: u32x2) u64x2 {
-//     return @intCast(a);
-// }
-
-// test vmovl_u32 {
-//     const v: u32x2 = .{ 0, 1 };
-//     try expectEqual(@as(u32x2, .{ 0, 1 }), vmovl_u32(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_high_s8(a: i8x16) i16x8 {
-//     return vmovl_s8(vget_high_s8(a));
-// }
-
-// test vmovl_high_s8 {
-//     const v: i8x16 = .{ 0, -1, -2, -3, -4, -5, -6, -7, 0, -1, -2, -3, -4, -5, -6, -7 };
-//     try expectEqual(i16x8{ 0, -1, -2, -3, -4, -5, -6, -7 }, vmovl_high_s8(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_high_s16(a: i16x8) i32x4 {
-//     return vmovl_s16(vget_high_s16(a));
-// }
-
-// test vmovl_high_s16 {
-//     const v: i16x8 = .{ 0, -1, -2, -3, 0, -1, -2, -3 };
-//     try expectEqual(@as(i32x4, .{ 0, -1, -2, -3 }), vmovl_high_s16(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_high_s32(a: i32x4) i64x2 {
-//     return vmovl_s32(vget_high_s32(a));
-// }
-
-// test vmovl_high_s32 {
-//     const v: i32x4 = .{ 0, -1, 0, -1 };
-//     try expectEqual(@as(i32x2, .{ 0, -1 }), vmovl_high_s32(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_high_u8(a: u8x16) u16x8 {
-//     return vmovl_u8(vget_high_u8(a));
-// }
-
-// test vmovl_high_u8 {
-//     const v: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
-//     try expectEqual(@as(u16x8, .{ 0, 1, 2, 3, 4, 5, 6, 7 }), vmovl_high_u8(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_high_u16(a: u16x8) u32x4 {
-//     return vmovl_u16(vget_high_u16(a));
-// }
-
-// test vmovl_high_u16 {
-//     const v: u16x8 = .{ 0, 1, 2, 3, 0, 1, 2, 3 };
-//     try expectEqual(@as(u32x4, .{ 0, 1, 2, 3 }), vmovl_high_u16(v));
-// }
-
-// /// Vector long move
-// pub inline fn vmovl_high_u32(a: u32x4) u64x2 {
-//     return vmovl_u32(vget_high_u32(a));
-// }
-
-// test vmovl_high_u32 {
-//     const v: u32x4 = .{ 0, 1, 0, 1 };
-//     try expectEqual(@as(u32x2, .{ 0, 1 }), vmovl_high_u32(v));
-// }
-
-// /// Signed multiply long
-// pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
-//     if (use_asm and AArch64.has_neon) {
-//         return asm volatile ("smull v0.8h, v1.8b, v2.8b"
-//             : [ret] "={v0}" (-> i16x8),
-//             : [a] "{v1}" (a),
-//               [b] "{v2}" (b),
-//         );
-//     } else if (use_asm and Arm.has_neon) {
-//         return asm volatile ("vmull.s8 q0, d0, d1"
-//             : [ret] "={q0}" (-> i16x8),
-//             : [a] "{d0}" (a),
-//               [b] "{d1}" (b),
-//         );
-//     } else if (use_builtins and AArch64.has_neon) {
-//         return struct {
-//             extern fn @"llvm.aarch64.neon.smull.v8i16"(i8x8, i8x8) i16x8;
-//         }.@"llvm.aarch64.neon.smull.v8i16"(a, b);
-//     } else if (use_builtins and Arm.has_neon) {
-//         return struct {
-//             extern fn @"llvm.arm.neon.vmulls.v8i16"(i8x8, i8x8) i16x8;
-//         }.@"llvm.arm.neon.vmulls.v8i16"(a, b);
-//     } else {
-//         return @as(i16x8, a) * @as(i16x8, b);
-//     }
-// }
-
-// test vmull_s8 {
-//     const a: i8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 127 };
-//     const b: i8x8 = @splat(2);
-//     try testIntrinsic(vmull_s8, i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b });
-// }
-
-// /// Signed multiply long
-// pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
-//     if (use_asm and AArch64.has_neon) {
-//         return asm volatile ("smull v0.4s, v1.4h, v2.4h"
-//             : [ret] "={v0}" (-> i32x4),
-//             : [a] "{v1}" (a),
-//               [b] "{v2}" (b),
-//         );
-//     } else if (use_asm and Arm.has_neon) {
-//         return asm volatile ("vmull.s16 q0, d0, d1"
-//             : [ret] "={q0}" (-> i32x4),
-//             : [a] "{d0}" (a),
-//               [b] "{d1}" (b),
-//         );
-//     } else if (use_builtins and AArch64.has_neon) {
-//         return struct {
-//             extern fn @"llvm.aarch64.neon.smull.v4i32"(i16x4, i16x4) i32x4;
-//         }.@"llvm.aarch64.neon.smull.v4i32"(a, b);
-//     } else if (use_builtins and Arm.has_neon) {
-//         return struct {
-//             extern fn @"llvm.arm.neon.vmulls.v4i32"(i16x4, i16x4) i32x4;
-//         }.@"llvm.arm.neon.vmulls.v4i32"(a, b);
-//     } else {
-//         return @as(i32x4, a) * @as(i32x4, b);
-//     }
-// }
-
-// test vmull_s16 {
-//     const a: i16x4 = .{ 0, -1, -2, -3 };
-//     const b: i16x4 = @splat(5);
-
-//     try testIntrinsic(vmull_s16, i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, .{ a, b });
-// }
-
-// /// Signed multiply long
-// pub inline fn vmull_s32(a: i32x2, b: i32x2) i64x2 {
-//     if (use_asm and AArch64.has_neon) {
-//         return asm volatile ("smull v0.2d, v1.2s, v2.2s"
-//             : [ret] "={v0}" (-> i64x2),
-//             : [a] "{v1}" (a),
-//               [b] "{v2}" (b),
-//         );
-//     } else if (use_asm and Arm.has_neon) {
-//         return asm volatile ("vmull.s32 q0, d0, d1"
-//             : [ret] "={q0}" (-> i64x2),
-//             : [a] "{d0}" (a),
-//               [b] "{d1}" (b),
-//         );
-//     } else if (use_builtins and AArch64.has_neon) {
-//         return struct {
-//             extern fn @"llvm.aarch64.neon.smull.v2i64"(i32x2, i32x2) i64x2;
-//         }.@"llvm.aarch64.neon.smull.v2i64"(a, b);
-//     } else if (use_builtins and Arm.has_neon) {
-//         return struct {
-//             extern fn @"llvm.arm.neon.vmulls.v2i64"(i32x2, i32x2) i64x2;
-//         }.@"llvm.arm.neon.vmulls.v2i64"(a, b);
-//     } else {
-//         return @as(i64x2, a) * @as(i64x2, b);
-//     }
-// }
-
-// test vmull_s32 {
-//     const a: i32x2 = .{ 0, -1 };
-//     const b: i32x2 = @splat(5);
-
-//     try testIntrinsic(vmull_s32, i32x2{ 0, -1 * 5 }, .{ a, b });
-// }
-
-// /// Unsigned multiply long
-// pub inline fn vmull_u8(a: u8x8, b: u8x8) u16x8 {
-//     return @as(u16x8, a) * @as(u16x8, b);
-// }
-
-// test vmull_u8 {
-//     const a: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
-//     const b: u8x8 = @splat(5);
-
-//     try expectEqual(u16x8{ 0, 1 * 5, 2 * 5, 3 * 5, 4 * 5, 5 * 5, 6 * 5, 7 * 5 }, vmull_u8(a, b));
-// }
-
-// /// Unsigned multiply long
-// pub inline fn vmull_u16(a: u16x4, b: u16x4) u32x4 {
-//     return @as(u32x4, a) * @as(u32x4, b);
-// }
-
-// test vmull_u16 {
-//     const a: u16x4 = .{ 0, 1, 2, 3 };
-//     const b: u16x4 = @splat(5);
-
-//     try expectEqual(u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, vmull_u16(a, b));
-// }
-
-// /// Unsigned multiply long
-// pub inline fn vmull_u32(a: u32x2, b: u32x2) u64x2 {
-//     return @as(u64x2, a) * @as(u64x2, b);
-// }
-
-// test vmull_u32 {
-//     const a: u32x2 = .{ 0, 1 };
-//     const b: u32x2 = @splat(5);
-
-//     try expectEqual(u64x2{ 0, 1 * 5 }, vmull_u32(a, b));
-// }
-
-// /// Signed multiply long
-// pub inline fn vmull_high_s8(a: i8x16, b: i8x16) i16x8 {
-//     return vmull_s8(vget_high_s8(a), vget_high_s8(b));
-// }
-
-// test vmull_high_s8 {
-//     const a: i8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 127 };
-//     const b: i8x16 = @splat(2);
-
-//     try expectEqual(i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_high_s8(a, b));
-// }
-
-// /// Signed multiply long
-// pub inline fn vmull_high_s16(a: i16x8, b: i16x8) i32x4 {
-//     return vmull_s16(vget_high_s16(a), vget_high_s16(b));
-// }
-
-// test vmull_high_s16 {
-//     const a: i16x8 = .{ 0, -1, -2, -3, 0, -1, -2, -3 };
-//     const b: i16x8 = @splat(5);
-
-//     try expectEqual(i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, vmull_high_s16(a, b));
-// }
-
-// /// Signed multiply long
-// pub inline fn vmull_high_s32(a: i32x4, b: i32x4) i64x2 {
-//     return vmull_s32(vget_high_s32(a), vget_high_s32(b));
-// }
-
-// test vmull_high_s32 {
-//     const a: i32x4 = .{ 0, -1, -2, -3 };
-//     const b: i32x4 = @splat(5);
-
-//     try expectEqual(i64x2{ -2 * 5, -3 * 5 }, vmull_high_s32(a, b));
-// }
-
-// /// Unsigned multiply long
-// pub inline fn vmull_high_u8(a: u8x16, b: u8x16) u16x8 {
-//     return vmull_u8(vget_high_u8(a), vget_high_u8(b));
-// }
-
-// test vmull_high_u8 {
-//     const a: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 127 };
-//     const b: u8x16 = @splat(2);
-
-//     try expectEqual(u16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_high_u8(a, b));
-// }
-
-// /// Unsigned multiply long
-// pub inline fn vmull_high_u16(a: u16x8, b: u16x8) u32x4 {
-//     return vmull_u16(vget_high_u16(a), vget_high_u16(b));
-// }
-
-// test vmull_high_u16 {
-//     const a: u16x8 = .{ 0, 1, 2, 3, 0, 1, 2, 3 };
-//     const b: u16x8 = @splat(5);
-
-//     try expectEqual(u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, vmull_high_u16(a, b));
-// }
-
-// /// Unsigned multiply long
-// pub inline fn vmull_high_u32(a: u32x4, b: u32x4) u64x2 {
-//     return vmull_u32(vget_high_u32(a), vget_high_u32(b));
-// }
-
-// test vmull_high_u32 {
-//     const a: u32x4 = .{ 0, 1, 2, 3 };
-//     const b: u32x4 = @splat(5);
-
-//     try expectEqual(u32x2{ 2 * 5, 3 * 5 }, vmull_high_u32(a, b));
-// }
-
-// /// Absolute difference between two i8x8 vectors
-// pub inline fn vabd_s8(a: i8x8, b: i8x8) i8x8 {
-//     if (use_asm and AArch64.has_neon) {
-//         return asm volatile ("sabd v0.8b,v1.8b,v2.8b"
-//             : [ret] "={v0}" (-> i8x8),
-//             : [a] "{v1}" (a),
-//               [b] "{v2}" (b),
-//         );
-//     } else {
-//         return abd(a, b);
-//     }
-// }
-
-// test vabd_s8 {
-//     const a: i8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
-//     const b: i8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
-
-//     const expected: i8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
-
-//     try testIntrinsic(vabd_s8, expected, .{ a, b });
-// }
-
-// /// Absolute difference between two i16x4 vectors
-// pub inline fn vabd_s16(a: i16x4, b: i16x4) i16x4 {
-//     return abd(a, b);
-// }
-
-// test vabd_s16 {
-//     const a: i16x4 = .{ 1, 2, 3, 4 };
-//     const b: i16x4 = .{ 16, 15, 14, 13 };
-
-//     const expected: i16x4 = .{ 15, 13, 11, 9 };
-
-//     try expectEqual(expected, vabd_s16(a, b));
-// }
-
-// /// Absolute difference between two i32x2 vectors
-// pub inline fn vabd_s32(a: i32x2, b: i32x2) i32x2 {
-//     return abd(a, b);
-// }
-
-// test vabd_s32 {
-//     const a: i32x2 = .{ 1, 2 };
-//     const b: i32x2 = .{ 16, 15 };
-
-//     const expected: i32x2 = .{ 15, 13 };
-
-//     try expectEqual(expected, vabd_s32(a, b));
-// }
-
-// /// Absolute difference between two u8x8 vectors
-// pub inline fn vabd_u8(a: u8x8, b: u8x8) u8x8 {
-//     if (use_asm and AArch64.has_neon) {
-//         return asm volatile ("uabd v0.8b,v1.8b,v2.8b"
-//             : [ret] "={v0}" (-> u8x8),
-//             : [a] "{v1}" (a),
-//               [b] "{v2}" (b),
-//         );
-//     } else {
-//         return abd(a, b);
-//     }
-// }
-
-// test vabd_u8 {
-//     const a: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
-//     const b: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
-//     const expected: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
-//     try expectEqual(expected, vabd_u8(a, b));
-
-//     const a2: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
-//     const b2: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
-//     const expected2: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-//     try expectEqual(expected2, vabd_u8(a2, b2));
-
-//     const a3: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
-//     const b3: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
-//     const expected3: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
-//     try expectEqual(expected3, vabd_u8(a3, b3));
-
-//     const a4: u8x8 = .{ 0, 255, 128, 64, 32, 16, 8, 4 };
-//     const b4: u8x8 = .{ 255, 0, 64, 128, 16, 32, 4, 8 };
-//     const expected4: u8x8 = .{ 255, 255, 64, 64, 16, 16, 4, 4 };
-//     try expectEqual(expected4, vabd_u8(a4, b4));
-
-//     const a5: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-//     const b5: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-//     const expected5: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-//     try expectEqual(expected5, vabd_u8(a5, b5));
-// }
-
-// /// Absolute difference between two u16x4 vectors
-// pub inline fn vabd_u16(a: u16x4, b: u16x4) u16x4 {
-//     return abd(a, b);
-// }
-
-// test vabd_u16 {
-//     const a: u16x4 = .{ 1, 2, 3, 4 };
-//     const b: u16x4 = .{ 16, 15, 14, 13 };
-
-//     const expected: u16x4 = .{ 15, 13, 11, 9 };
-
-//     try expectEqual(expected, vabd_u16(a, b));
-// }
-
-// /// Absolute difference between two u32x2 vectors
-// pub inline fn vabd_u32(a: u32x2, b: u32x2) u32x2 {
-//     return abd(a, b);
-// }
-
-// test vabd_u32 {
-//     const a: u32x2 = .{ 1, 2 };
-//     const b: u32x2 = .{ 16, 15 };
-
-//     const expected: u32x2 = .{ 15, 13 };
-
-//     try expectEqual(expected, vabd_u32(a, b));
-// }
-
-// /// Absolute difference between two f32x2 vectors
-// pub inline fn vabd_f32(a: f32x2, b: f32x2) f32x2 {
-//     return abd(a, b);
-// }
-
-// test vabd_f32 {
-//     const a: f32x2 = .{ 0.00, 0.00 };
-//     const b: f32x2 = .{ 0.19, 0.15 };
-
-//     const expected: f32x2 = .{ @abs(0.00 - 0.19), @abs(0.00 - 0.15) };
-
-//     try expectEqual(expected, vabd_f32(a, b));
-// }
-
-// /// Absolute difference between two f64x1 vectors
-// pub inline fn vabd_f64(a: f64x1, b: f64x1) f64x1 {
-//     return abd(a, b);
-// }
-
-// test vabd_f64 {
-//     const a: f64x1 = .{0.01};
-//     const b: f64x1 = .{0.16};
-
-//     const expected: f64x1 = .{0.15};
-
-//     try expectEqual(expected, vabd_f64(a, b));
-// }
-
-// /// signed absolute difference and accumulate (128-bit)
-// pub inline fn vabdq_s8(a: i8x16, b: i8x16) i8x16 {
-//     return abd(a, b);
-// }
-
-// test vabdq_s8 {
-//     const a: i8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
-//     const b: i8x16 = .{ 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
-
-//     const expected: i8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 1, 3, 5, 7, 9, 11, 13, 15 };
-
-//     try expectEqual(expected, vabdq_s8(a, b));
-// }
+/// Vector long move
+pub inline fn vmovl_s16(a: i16x4) i32x4 {
+    return @intCast(a);
+}
+
+test vmovl_s16 {
+    const v: i16x4 = .{ 0, -1, -2, -3 };
+    try expectEqual(@as(i32x4, .{ 0, -1, -2, -3 }), vmovl_s16(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_s32(a: i32x2) i64x2 {
+    return @intCast(a);
+}
+
+test vmovl_s32 {
+    const v: i32x2 = .{ 0, -1 };
+    try expectEqual(@as(i32x2, .{ 0, -1 }), vmovl_s32(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_u8(a: u8x8) u16x8 {
+    return @intCast(a);
+}
+
+test vmovl_u8 {
+    const v: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    try expectEqual(@as(u16x8, .{ 0, 1, 2, 3, 4, 5, 6, 7 }), vmovl_u8(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_u16(a: u16x4) u32x4 {
+    return @intCast(a);
+}
+
+test vmovl_u16 {
+    const v: u16x4 = .{ 0, 1, 2, 3 };
+    try expectEqual(@as(u32x4, .{ 0, 1, 2, 3 }), vmovl_u16(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_u32(a: u32x2) u64x2 {
+    return @intCast(a);
+}
+
+test vmovl_u32 {
+    const v: u32x2 = .{ 0, 1 };
+    try expectEqual(@as(u32x2, .{ 0, 1 }), vmovl_u32(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_s8(a: i8x16) i16x8 {
+    return vmovl_s8(vget_high_s8(a));
+}
+
+test vmovl_high_s8 {
+    const v: i8x16 = .{ 0, -1, -2, -3, -4, -5, -6, -7, 0, -1, -2, -3, -4, -5, -6, -7 };
+    try expectEqual(i16x8{ 0, -1, -2, -3, -4, -5, -6, -7 }, vmovl_high_s8(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_s16(a: i16x8) i32x4 {
+    return vmovl_s16(vget_high_s16(a));
+}
+
+test vmovl_high_s16 {
+    const v: i16x8 = .{ 0, -1, -2, -3, 0, -1, -2, -3 };
+    try expectEqual(@as(i32x4, .{ 0, -1, -2, -3 }), vmovl_high_s16(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_s32(a: i32x4) i64x2 {
+    return vmovl_s32(vget_high_s32(a));
+}
+
+test vmovl_high_s32 {
+    const v: i32x4 = .{ 0, -1, 0, -1 };
+    try expectEqual(@as(i32x2, .{ 0, -1 }), vmovl_high_s32(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_u8(a: u8x16) u16x8 {
+    return vmovl_u8(vget_high_u8(a));
+}
+
+test vmovl_high_u8 {
+    const v: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 };
+    try expectEqual(@as(u16x8, .{ 0, 1, 2, 3, 4, 5, 6, 7 }), vmovl_high_u8(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_u16(a: u16x8) u32x4 {
+    return vmovl_u16(vget_high_u16(a));
+}
+
+test vmovl_high_u16 {
+    const v: u16x8 = .{ 0, 1, 2, 3, 0, 1, 2, 3 };
+    try expectEqual(@as(u32x4, .{ 0, 1, 2, 3 }), vmovl_high_u16(v));
+}
+
+/// Vector long move
+pub inline fn vmovl_high_u32(a: u32x4) u64x2 {
+    return vmovl_u32(vget_high_u32(a));
+}
+
+test vmovl_high_u32 {
+    const v: u32x4 = .{ 0, 1, 0, 1 };
+    try expectEqual(@as(u32x2, .{ 0, 1 }), vmovl_high_u32(v));
+}
+
+/// Signed multiply long
+pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("smull v0.8h, v1.8b, v2.8b"
+            : [ret] "={v0}" (-> i16x8),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vmull.s8 q0, d0, d1"
+            : [ret] "={q0}" (-> i16x8),
+            : [a] "{d0}" (a),
+              [b] "{d1}" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.smull.v8i16"(i8x8, i8x8) i16x8;
+        }.@"llvm.aarch64.neon.smull.v8i16"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vmulls.v8i16"(i8x8, i8x8) i16x8;
+        }.@"llvm.arm.neon.vmulls.v8i16"(a, b);
+    } else {
+        return @as(i16x8, a) * @as(i16x8, b);
+    }
+}
+
+test vmull_s8 {
+    const a: i8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 127 };
+    const b: i8x8 = @splat(2);
+    try testIntrinsic(vmull_s8, i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b });
+}
+
+/// Signed multiply long
+pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("smull v0.4s, v1.4h, v2.4h"
+            : [ret] "={v0}" (-> i32x4),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vmull.s16 q0, d0, d1"
+            : [ret] "={q0}" (-> i32x4),
+            : [a] "{d0}" (a),
+              [b] "{d1}" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.smull.v4i32"(i16x4, i16x4) i32x4;
+        }.@"llvm.aarch64.neon.smull.v4i32"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vmulls.v4i32"(i16x4, i16x4) i32x4;
+        }.@"llvm.arm.neon.vmulls.v4i32"(a, b);
+    } else {
+        return @as(i32x4, a) * @as(i32x4, b);
+    }
+}
+
+test vmull_s16 {
+    const a: i16x4 = .{ 0, -1, -2, -3 };
+    const b: i16x4 = @splat(5);
+
+    try testIntrinsic(vmull_s16, i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, .{ a, b });
+}
+
+/// Signed multiply long
+pub inline fn vmull_s32(a: i32x2, b: i32x2) i64x2 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("smull v0.2d, v1.2s, v2.2s"
+            : [ret] "={v0}" (-> i64x2),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vmull.s32 q0, d0, d1"
+            : [ret] "={q0}" (-> i64x2),
+            : [a] "{d0}" (a),
+              [b] "{d1}" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.smull.v2i64"(i32x2, i32x2) i64x2;
+        }.@"llvm.aarch64.neon.smull.v2i64"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vmulls.v2i64"(i32x2, i32x2) i64x2;
+        }.@"llvm.arm.neon.vmulls.v2i64"(a, b);
+    } else {
+        return @as(i64x2, a) * @as(i64x2, b);
+    }
+}
+
+test vmull_s32 {
+    const a: i32x2 = .{ 0, -1 };
+    const b: i32x2 = @splat(5);
+
+    try testIntrinsic(vmull_s32, i32x2{ 0, -1 * 5 }, .{ a, b });
+}
+
+/// Unsigned multiply long
+pub inline fn vmull_u8(a: u8x8, b: u8x8) u16x8 {
+    return @as(u16x8, a) * @as(u16x8, b);
+}
+
+test vmull_u8 {
+    const a: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const b: u8x8 = @splat(5);
+
+    try expectEqual(u16x8{ 0, 1 * 5, 2 * 5, 3 * 5, 4 * 5, 5 * 5, 6 * 5, 7 * 5 }, vmull_u8(a, b));
+}
+
+/// Unsigned multiply long
+pub inline fn vmull_u16(a: u16x4, b: u16x4) u32x4 {
+    return @as(u32x4, a) * @as(u32x4, b);
+}
+
+test vmull_u16 {
+    const a: u16x4 = .{ 0, 1, 2, 3 };
+    const b: u16x4 = @splat(5);
+
+    try expectEqual(u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, vmull_u16(a, b));
+}
+
+/// Unsigned multiply long
+pub inline fn vmull_u32(a: u32x2, b: u32x2) u64x2 {
+    return @as(u64x2, a) * @as(u64x2, b);
+}
+
+test vmull_u32 {
+    const a: u32x2 = .{ 0, 1 };
+    const b: u32x2 = @splat(5);
+
+    try expectEqual(u64x2{ 0, 1 * 5 }, vmull_u32(a, b));
+}
+
+/// Signed multiply long
+pub inline fn vmull_high_s8(a: i8x16, b: i8x16) i16x8 {
+    return vmull_s8(vget_high_s8(a), vget_high_s8(b));
+}
+
+test vmull_high_s8 {
+    const a: i8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 127 };
+    const b: i8x16 = @splat(2);
+
+    try expectEqual(i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_high_s8(a, b));
+}
+
+/// Signed multiply long
+pub inline fn vmull_high_s16(a: i16x8, b: i16x8) i32x4 {
+    return vmull_s16(vget_high_s16(a), vget_high_s16(b));
+}
+
+test vmull_high_s16 {
+    const a: i16x8 = .{ 0, -1, -2, -3, 0, -1, -2, -3 };
+    const b: i16x8 = @splat(5);
+
+    try expectEqual(i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, vmull_high_s16(a, b));
+}
+
+/// Signed multiply long
+pub inline fn vmull_high_s32(a: i32x4, b: i32x4) i64x2 {
+    return vmull_s32(vget_high_s32(a), vget_high_s32(b));
+}
+
+test vmull_high_s32 {
+    const a: i32x4 = .{ 0, -1, -2, -3 };
+    const b: i32x4 = @splat(5);
+
+    try expectEqual(i64x2{ -2 * 5, -3 * 5 }, vmull_high_s32(a, b));
+}
+
+/// Unsigned multiply long
+pub inline fn vmull_high_u8(a: u8x16, b: u8x16) u16x8 {
+    return vmull_u8(vget_high_u8(a), vget_high_u8(b));
+}
+
+test vmull_high_u8 {
+    const a: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 127 };
+    const b: u8x16 = @splat(2);
+
+    try expectEqual(u16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_high_u8(a, b));
+}
+
+/// Unsigned multiply long
+pub inline fn vmull_high_u16(a: u16x8, b: u16x8) u32x4 {
+    return vmull_u16(vget_high_u16(a), vget_high_u16(b));
+}
+
+test vmull_high_u16 {
+    const a: u16x8 = .{ 0, 1, 2, 3, 0, 1, 2, 3 };
+    const b: u16x8 = @splat(5);
+
+    try expectEqual(u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, vmull_high_u16(a, b));
+}
+
+/// Unsigned multiply long
+pub inline fn vmull_high_u32(a: u32x4, b: u32x4) u64x2 {
+    return vmull_u32(vget_high_u32(a), vget_high_u32(b));
+}
+
+test vmull_high_u32 {
+    const a: u32x4 = .{ 0, 1, 2, 3 };
+    const b: u32x4 = @splat(5);
+
+    try expectEqual(u32x2{ 2 * 5, 3 * 5 }, vmull_high_u32(a, b));
+}
+
+/// Absolute difference between two i8x8 vectors
+pub inline fn vabd_s8(a: i8x8, b: i8x8) i8x8 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("sabd v0.8b,v1.8b,v2.8b"
+            : [ret] "={v0}" (-> i8x8),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else {
+        return abd(a, b);
+    }
+}
+
+test vabd_s8 {
+    const a: i8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    const b: i8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
+
+    const expected: i8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+
+    try testIntrinsic(vabd_s8, expected, .{ a, b });
+}
+
+/// Absolute difference between two i16x4 vectors
+pub inline fn vabd_s16(a: i16x4, b: i16x4) i16x4 {
+    return abd(a, b);
+}
+
+test vabd_s16 {
+    const a: i16x4 = .{ 1, 2, 3, 4 };
+    const b: i16x4 = .{ 16, 15, 14, 13 };
+
+    const expected: i16x4 = .{ 15, 13, 11, 9 };
+
+    try expectEqual(expected, vabd_s16(a, b));
+}
+
+/// Absolute difference between two i32x2 vectors
+pub inline fn vabd_s32(a: i32x2, b: i32x2) i32x2 {
+    return abd(a, b);
+}
+
+test vabd_s32 {
+    const a: i32x2 = .{ 1, 2 };
+    const b: i32x2 = .{ 16, 15 };
+
+    const expected: i32x2 = .{ 15, 13 };
+
+    try expectEqual(expected, vabd_s32(a, b));
+}
+
+/// Absolute difference between two u8x8 vectors
+pub inline fn vabd_u8(a: u8x8, b: u8x8) u8x8 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("uabd v0.8b,v1.8b,v2.8b"
+            : [ret] "={v0}" (-> u8x8),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else {
+        return abd(a, b);
+    }
+}
+
+test vabd_u8 {
+    const a: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    const b: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
+    const expected: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+    try expectEqual(expected, vabd_u8(a, b));
+
+    const a2: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
+    const b2: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
+    const expected2: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+    try expectEqual(expected2, vabd_u8(a2, b2));
+
+    const a3: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
+    const b3: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    const expected3: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+    try expectEqual(expected3, vabd_u8(a3, b3));
+
+    const a4: u8x8 = .{ 0, 255, 128, 64, 32, 16, 8, 4 };
+    const b4: u8x8 = .{ 255, 0, 64, 128, 16, 32, 4, 8 };
+    const expected4: u8x8 = .{ 255, 255, 64, 64, 16, 16, 4, 4 };
+    try expectEqual(expected4, vabd_u8(a4, b4));
+
+    const a5: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+    const b5: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+    const expected5: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+    try expectEqual(expected5, vabd_u8(a5, b5));
+}
+
+/// Absolute difference between two u16x4 vectors
+pub inline fn vabd_u16(a: u16x4, b: u16x4) u16x4 {
+    return abd(a, b);
+}
+
+test vabd_u16 {
+    const a: u16x4 = .{ 1, 2, 3, 4 };
+    const b: u16x4 = .{ 16, 15, 14, 13 };
+
+    const expected: u16x4 = .{ 15, 13, 11, 9 };
+
+    try expectEqual(expected, vabd_u16(a, b));
+}
+
+/// Absolute difference between two u32x2 vectors
+pub inline fn vabd_u32(a: u32x2, b: u32x2) u32x2 {
+    return abd(a, b);
+}
+
+test vabd_u32 {
+    const a: u32x2 = .{ 1, 2 };
+    const b: u32x2 = .{ 16, 15 };
+
+    const expected: u32x2 = .{ 15, 13 };
+
+    try expectEqual(expected, vabd_u32(a, b));
+}
+
+/// Absolute difference between two f32x2 vectors
+pub inline fn vabd_f32(a: f32x2, b: f32x2) f32x2 {
+    return abd(a, b);
+}
+
+test vabd_f32 {
+    const a: f32x2 = .{ 0.00, 0.00 };
+    const b: f32x2 = .{ 0.19, 0.15 };
+
+    const expected: f32x2 = .{ @abs(0.00 - 0.19), @abs(0.00 - 0.15) };
+
+    try expectEqual(expected, vabd_f32(a, b));
+}
+
+/// Absolute difference between two f64x1 vectors
+pub inline fn vabd_f64(a: f64x1, b: f64x1) f64x1 {
+    return abd(a, b);
+}
+
+test vabd_f64 {
+    const a: f64x1 = .{0.01};
+    const b: f64x1 = .{0.16};
+
+    const expected: f64x1 = .{0.15};
+
+    try expectEqual(expected, vabd_f64(a, b));
+}
+
+/// signed absolute difference and accumulate (128-bit)
+pub inline fn vabdq_s8(a: i8x16, b: i8x16) i8x16 {
+    return abd(a, b);
+}
+
+test vabdq_s8 {
+    const a: i8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+    const b: i8x16 = .{ 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+
+    const expected: i8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 1, 3, 5, 7, 9, 11, 13, 15 };
+
+    try expectEqual(expected, vabdq_s8(a, b));
+}
 
 // /// signed absolute difference and accumulate (128-bit)
 // pub inline fn vabdq_s16(a: i16x8, b: i16x8) i16x8 {
