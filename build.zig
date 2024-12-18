@@ -37,7 +37,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const test_step = b.step("test", "Run unit tests");
-    for (test_targets) |t| {
+    for (test_targets) |_|{//t| {
         const unit_tests = b.addTest(.{
             .root_source_file = mod.root_source_file.?,
             .target = target,// b.resolveTargetQuery(t),
