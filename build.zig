@@ -40,7 +40,7 @@ pub fn build(b: *std.Build) void {
     for (test_targets) |t| {
         const unit_tests = b.addTest(.{
             .root_source_file = mod.root_source_file.?,
-            .target = b.resolveTargetQuery(t),
+            .target = target,// b.resolveTargetQuery(t),
             .optimize = optimize,
         });
 
