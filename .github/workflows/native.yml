@@ -34,6 +34,4 @@ jobs:
           zig build test \
             -fqemu \
             -freference-trace \
-            --summary all \
-            --verbose-llvm-ir=out
-          cat out
+            --summary all
