@@ -24,8 +24,5 @@ jobs:
           version: ${{ matrix.zig-version }}
       - run: |
           zig build testBasic \
-            -fqemu \
             -freference-trace \
-            --summary all \
-            --verbose-llvm-ir=out
-          cat out
+            --summary all
