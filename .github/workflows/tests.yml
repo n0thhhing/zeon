@@ -32,5 +32,5 @@ jobs:
           version: ${{ matrix.zig-version }}
       - run: |
           zig build test --summary all -fqemu --build-file arm-build.zig
-          zig build test --summary all -fqemu --build-file native-build.zig --verbose-llvm-cpu-features --verbose-llvm-ir out --verbose-llvm-cpu-features
+          zig build test --summary all -fqemu --build-file native-build.zig --verbose-llvm-cpu-features --verbose-llvm-ir=out --verbose-llvm-cpu-features
           cat out
