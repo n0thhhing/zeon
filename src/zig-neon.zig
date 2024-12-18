@@ -25,28 +25,28 @@ const AES_SBOX: [256]u8 = .{ 0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x3
 const AES_INV_SBOX: [256]u8 = .{ 0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb, 0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb, 0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e, 0x08, 0x2e, 0xa1, 0x66, 0x28, 0xd9, 0x24, 0xb2, 0x76, 0x5b, 0xa2, 0x49, 0x6d, 0x8b, 0xd1, 0x25, 0x72, 0xf8, 0xf6, 0x64, 0x86, 0x68, 0x98, 0x16, 0xd4, 0xa4, 0x5c, 0xcc, 0x5d, 0x65, 0xb6, 0x92, 0x6c, 0x70, 0x48, 0x50, 0xfd, 0xed, 0xb9, 0xda, 0x5e, 0x15, 0x46, 0x57, 0xa7, 0x8d, 0x9d, 0x84, 0x90, 0xd8, 0xab, 0x00, 0x8c, 0xbc, 0xd3, 0x0a, 0xf7, 0xe4, 0x58, 0x05, 0xb8, 0xb3, 0x45, 0x06, 0xd0, 0x2c, 0x1e, 0x8f, 0xca, 0x3f, 0x0f, 0x02, 0xc1, 0xaf, 0xbd, 0x03, 0x01, 0x13, 0x8a, 0x6b, 0x3a, 0x91, 0x11, 0x41, 0x4f, 0x67, 0xdc, 0xea, 0x97, 0xf2, 0xcf, 0xce, 0xf0, 0xb4, 0xe6, 0x73, 0x96, 0xac, 0x74, 0x22, 0xe7, 0xad, 0x35, 0x85, 0xe2, 0xf9, 0x37, 0xe8, 0x1c, 0x75, 0xdf, 0x6e, 0x47, 0xf1, 0x1a, 0x71, 0x1d, 0x29, 0xc5, 0x89, 0x6f, 0xb7, 0x62, 0x0e, 0xaa, 0x18, 0xbe, 0x1b, 0xfc, 0x56, 0x3e, 0x4b, 0xc6, 0xd2, 0x79, 0x20, 0x9a, 0xdb, 0xc0, 0xfe, 0x78, 0xcd, 0x5a, 0xf4, 0x1f, 0xdd, 0xa8, 0x33, 0x88, 0x07, 0xc7, 0x31, 0xb1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xec, 0x5f, 0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef, 0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61, 0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d };
 
 /// Table for Galois Field multiplication (GF(2^8))
-const GF_MUL_TABLE: [256][256]u8 = blk: {
-    var table: [256][256]u8 = undefined;
-    @setEvalBranchQuota(1_000_000);
+// const GF_MUL_TABLE: [256][256]u8 = blk: {
+//     var table: [256][256]u8 = undefined;
+//     @setEvalBranchQuota(1_000_000);
 
-    for (0..256) |a| {
-        for (0..256) |b| {
-            var result: u8 = 0;
-            const x: u8 = a;
-            const y: u8 = b;
-            var tmp_x = x;
-            var tmp_y = y;
-            while (tmp_y != 0) {
-                result ^= (tmp_y & 1) * tmp_x;
-                tmp_x = (tmp_x << 1) ^ ((tmp_x >> 7) * 0x1b);
-                tmp_y >>= 1;
-            }
-            table[a][b] = result;
-        }
-    }
+//     for (0..256) |a| {
+//         for (0..256) |b| {
+//             var result: u8 = 0;
+//             const x: u8 = a;
+//             const y: u8 = b;
+//             var tmp_x = x;
+//             var tmp_y = y;
+//             while (tmp_y != 0) {
+//                 result ^= (tmp_y & 1) * tmp_x;
+//                 tmp_x = (tmp_x << 1) ^ ((tmp_x >> 7) * 0x1b);
+//                 tmp_y >>= 1;
+//             }
+//             table[a][b] = result;
+//         }
+//     }
 
-    break :blk table;
-};
+//     break :blk table;
+// };
 
 /// Specifies if we should use inline assembly. Note that this will take
 /// priority over use_builtins when it can. Also, if your current target
@@ -2198,578 +2198,578 @@ pub inline fn vabsq_f64(a: f64x2) f64x2 {
     return @bitCast(@abs(a));
 }
 
-/// Vector add (wrapping)
-pub inline fn vadd_s8(a: i8x8, b: i8x8) i8x8 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vadd_s16(a: i16x4, b: i16x4) i16x4 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vadd_s32(a: i32x2, b: i32x2) i32x2 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vadd_s64(a: i64x1, b: i64x1) i64x1 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vadd_f32(a: f32x2, b: f32x2) f32x2 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vadd_u8(a: u8x8, b: u8x8) u8x8 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vadd_u16(a: u16x4, b: u16x4) u16x4 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vadd_u32(a: u32x2, b: u32x2) u32x2 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vadd_u64(a: u64x1, b: u64x1) u64x1 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_s8(a: i8x16, b: i8x16) i8x16 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_s16(a: i16x8, b: i16x8) i16x8 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_s32(a: i32x4, b: i32x4) i32x4 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_s64(a: i64x2, b: i64x2) i64x2 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_f32(a: f32x2, b: f32x2) f32x2 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_f64(a: f64x2, b: f64x2) f64x2 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_u8(a: u8x16, b: u8x16) u8x16 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_u16(a: u16x8, b: u16x8) u16x8 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_u32(a: u32x4, b: u32x4) u32x4 {
-    return a +% b;
-}
-
-/// Vector add (wrapping)
-pub inline fn vaddq_u64(a: u64x2, b: u64x2) u64x2 {
-    return a +% b;
-}
-
-/// Add (wrapping)
-pub inline fn vaddd_s64(a: i64, b: i64) i64 {
-    return a +% b;
-}
-
-/// Add (wrapping)
-pub inline fn vaddd_u64(a: u64, b: u64) u64 {
-    return a +% b;
-}
-
-/// Add returning High Narrow
-pub inline fn vaddhn_s16(a: i16x8, b: i16x8) i8x8 {
-    const sum: i16x8 = a +% b;
-    return @truncate(vshrq_n_s16(sum, 8));
-}
-
-test vaddhn_s16 {
-    const a: i16x8 = .{ 256, 512, 1024, 2048, 4096, 8192, 16384, 32767 };
-    const b: i16x8 = .{ 128, 256, 512, 1024, 2048, 4096, 8192, 32767 };
-
-    const expected: i8x8 = .{ 1, 3, 6, 12, 24, 48, 96, -1 }; // -1 due to wrapping
-    try expectEqual(expected, vaddhn_s16(a, b));
-
-    const a2: i16x8 = .{ -256, -512, -1024, -2048, -4096, -8192, -16384, -32768 };
-    const b2: i16x8 = .{ -128, -256, -512, -1024, -2048, -4096, -8192, -32768 };
-
-    const expected2: i8x8 = .{ -2, -3, -6, -12, -24, -48, -96, 0 };
-    try expectEqual(expected2, vaddhn_s16(a2, b2));
-
-    const a3: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-    const b3: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-
-    const expected3: i8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-    try expectEqual(expected3, vaddhn_s16(a3, b3));
-}
-
-/// Add returning High Narrow
-pub inline fn vaddhn_s32(a: i32x4, b: i32x4) i16x4 {
-    const sum: i32x4 = a +% b;
-    return @truncate(vshrq_n_s32(sum, 16));
-}
-
-/// Add returning High Narrow
-pub inline fn vaddhn_s64(a: i64x2, b: i64x2) i32x2 {
-    const sum: i64x2 = a +% b;
-    return @truncate(vshrq_n_s64(sum, 32));
-}
-
-/// Add returning High Narrow
-pub inline fn vaddhn_u16(a: u16x8, b: u16x8) u8x8 {
-    const sum: u16x8 = a +% b;
-    return @truncate(vshrq_n_u16(sum, 8));
-}
-
-/// Add returning High Narrow
-pub inline fn vaddhn_u32(a: u32x4, b: u32x4) u16x4 {
-    const sum: u32x4 = a +% b;
-    return @truncate(vshrq_n_u32(sum, 16));
-}
-
-/// Add returning High Narrow
-pub inline fn vaddhn_u64(a: u64x2, b: u64x2) u32x2 {
-    const sum: u64x2 = a +% b;
-    return @truncate(vshrq_n_u64(sum, 32));
-}
-
-/// Add returning High Narrow (high half)
-pub inline fn vaddhn_high_s16(a: i8x8, b: i16x8, c: i16x8) i8x16 {
-    return join(
-        a,
-        vaddhn_s16(b, c),
-    );
-}
-
-test vaddhn_high_s16 {
-    const a: i8x8 = @splat(42);
-    const b: i16x8 = .{ (0 << 8) + 1, (1 << 8) + 1, (2 << 8) + 1, (3 << 8) + 1, (4 << 8) + 1, (5 << 8) + 1, (6 << 8) + 1, (7 << 8) + 1 };
-    const expected: i8x16 = .{ 42, 42, 42, 42, 42, 42, 42, 42, 0, 2, 4, 6, 8, 10, 12, 14 };
-
-    try expectEqual(expected, vaddhn_high_s16(a, b, b));
-}
-
-/// Add returning High Narrow (high half)
-pub inline fn vaddhn_high_s32(a: i16x4, b: i32x4, c: i32x4) i16x8 {
-    return join(
-        a,
-        vaddhn_s32(b, c),
-    );
-}
-
-/// Add returning High Narrow (high half)
-pub inline fn vaddhn_high_s64(a: i32x2, b: i64x2, c: i64x2) i32x4 {
-    return join(
-        a,
-        vaddhn_s64(b, c),
-    );
-}
-
-/// Add returning High Narrow (high half)
-pub inline fn vaddhn_high_u16(a: u8x8, b: u16x8, c: u16x8) u8x16 {
-    return join(
-        a,
-        vaddhn_u16(b, c),
-    );
-}
-
-test vaddhn_high_u16 {
-    const a: u8x8 = @splat(42);
-    const b: u16x8 = .{ (0 << 8) + 1, (1 << 8) + 1, (2 << 8) + 1, (3 << 8) + 1, (4 << 8) + 1, (5 << 8) + 1, (6 << 8) + 1, (7 << 8) + 1 };
-    const expected: u8x16 = .{ 42, 42, 42, 42, 42, 42, 42, 42, 0, 2, 4, 6, 8, 10, 12, 14 };
-
-    try expectEqual(expected, vaddhn_high_u16(a, b, b));
-}
-
-/// Add returning High Narrow (high half)
-pub inline fn vaddhn_high_u32(a: u16x4, b: u32x4, c: u32x4) u16x8 {
-    return join(
-        a,
-        vaddhn_u32(b, c),
-    );
-}
-
-/// Add returning High Narrow (high half)
-pub inline fn vaddhn_high_u64(a: u32x2, b: u64x2, c: u64x2) u32x4 {
-    return join(
-        a,
-        vaddhn_u64(b, c),
-    );
-}
-
-/// Signed Add Long
-pub inline fn vaddl_s8(a: i8x8, b: i8x8) i16x8 {
-    return vmovl_s8(a) + vmovl_s8(b);
-}
-
-/// Signed Add Long
-pub inline fn vaddl_s16(a: i16x4, b: i16x4) i32x4 {
-    return vmovl_s16(a) + vmovl_s16(b);
-}
-
-/// Signed Add Long
-pub inline fn vaddl_s32(a: i32x2, b: i32x2) i64x2 {
-    return vmovl_s32(a) + vmovl_s32(b);
-}
-
-/// Unsigned Add Long
-pub inline fn vaddl_u8(a: u8x8, b: u8x8) u16x8 {
-    return vmovl_u8(a) + vmovl_u8(b);
-}
-
-/// Unsigned Add Long
-pub inline fn vaddl_u16(a: u16x4, b: u16x4) u32x4 {
-    return vmovl_u16(a) + vmovl_u16(b);
-}
-
-/// Unsigned Add Long
-pub inline fn vaddl_u32(a: u32x2, b: u32x2) u64x2 {
-    return vmovl_u32(a) + vmovl_u32(b);
-}
-
-///	Signed Add Long (high half)
-pub inline fn vaddl_high_s8(a: i8x16, b: i8x16) i16x8 {
-    return vmovl_high_s8(a) + vmovl_high_s8(b);
-}
-
-///	Signed Add Long (high half)
-pub inline fn vaddl_high_s16(a: i16x8, b: i16x8) i32x4 {
-    return vmovl_high_s16(a) + vmovl_high_s16(b);
-}
-
-///	Signed Add Long (high half)
-pub inline fn vaddl_high_s32(a: i32x4, b: i32x4) i64x2 {
-    return vmovl_high_s32(a) + vmovl_high_s32(b);
-}
-
-///	Unsigned Add Long (high half)
-pub inline fn vaddl_high_u8(a: u8x16, b: u8x16) u16x8 {
-    return vmovl_high_u8(a) + vmovl_high_u8(b);
-}
-
-///	Unsigned Add Long (high half)
-pub inline fn vaddl_high_u16(a: u16x8, b: u16x8) u32x4 {
-    return vmovl_high_u16(a) + vmovl_high_u16(b);
-}
-
-///	Unsigned Add Long (high half)
-pub inline fn vaddl_high_u32(a: u32x4, b: u32x4) u64x2 {
-    return vmovl_high_u32(a) + vmovl_high_u32(b);
-}
-
-/// Signed Add Wide
-pub inline fn vaddw_s8(a: i16x8, b: i8x8) i16x8 {
-    return a +% vmovl_s8(b);
-}
-
-test vaddw_s8 {
-    const a1: i16x8 = .{ 1000, 2000, 3000, 4000, -5000, -6000, -7000, -8000 };
-    const b1: i8x8 = .{ 10, 20, -30, -40, 50, 60, -70, 80 };
-    const expected1: i16x8 = .{ 1010, 2020, 2970, 3960, -4950, -5940, -7070, -7920 };
-
-    try expectEqual(expected1, vaddw_s8(a1, b1));
-
-    const a2 = @Vector(8, i16){ 32760, -32760, 1000, -1000, 2000, -2000, 0, -32768 };
-    const b2 = @Vector(8, i8){ 10, -10, 120, -120, 127, -128, 0, 1 };
-    const expected2: i16x8 = .{
-        -32766, // Overflow wraps around to negative
-        32766, // Underflow wraps around to positive
-        1120, // Normal addition
-        -1120, // Normal subtraction
-        2127, // Normal addition
-        -2128, // Normal subtraction
-        0, // No change
-        -32767, // Wraps around to next higher value
-    };
-
-    try expectEqual(expected2, vaddw_s8(a2, b2));
-}
-
-/// Signed Add Wide (high half)
-pub inline fn vaddw_high_s8(a: i16x8, b: i8x16) i16x8 {
-    return a +% vmovl_high_s8(b);
-}
-
-test vaddw_high_s8 {
-    const a: i16x8 = .{ 32760, -32760, 1000, -1000, 2000, -2000, 0, -32768 };
-    const b: i8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 10, -10, 120, -120, 127, -128, 0, 1 };
-    const expected: i16x8 = .{ -32766, 32766, 1120, -1120, 2127, -2128, 0, -32767 };
-
-    try expectEqual(expected, vaddw_high_s8(a, b));
-}
-
-/// Signed Add Wide (high half)
-pub inline fn vaddw_high_s16(a: i32x4, b: i16x8) i32x4 {
-    return a +% vmovl_high_s16(b);
-}
-
-/// Signed Add Wide (high half)
-pub inline fn vaddw_high_s32(a: i64x2, b: i32x4) i64x2 {
-    return a +% vmovl_high_s32(b);
-}
-
-/// Unsigned Add Wide (high half)
-pub inline fn vaddw_high_u8(a: u16x8, b: u8x16) u16x8 {
-    return a +% vmovl_high_s8(b);
-}
-
-/// Unsigned Add Wide (high half)
-pub inline fn vaddw_high_u16(a: u32x4, b: u16x8) u32x4 {
-    return a +% vmovl_high_u16(b);
-}
-
-/// Unsigned Add Wide (high half)
-pub inline fn vaddw_high_u32(a: u64x2, b: u32x4) u64x2 {
-    return a +% vmovl_high_u32(b);
-}
-
-/// Signed Add Wide
-pub inline fn vaddw_s16(a: i32x4, b: i16x4) i32x4 {
-    return a +% vmovl_s16(b);
-}
-
-/// Signed Add Wide
-pub inline fn vaddw_s32(a: i64x2, b: i32x2) i64x2 {
-    return a +% vmovl_s32(b);
-}
-
-/// Unsigned Add Wide
-pub inline fn vaddw_u8(a: u16x8, b: u8x8) u16x8 {
-    return a +% vmovl_u8(b);
-}
-
-/// Unsigned Add Wide
-pub inline fn vaddw_u16(a: u32x4, b: u16x4) u32x4 {
-    return a +% vmovl_u16(b);
-}
-
-/// Unsigned Add Wide
-pub inline fn vaddw_u32(a: u64x2, b: u32x2) u64x2 {
-    return a +% vmovl_u32(b);
-}
-
-/// AES single round decryption
-pub fn vaesdq_u8(data: u8x16, key: u8x16) u8x16 {
-    if (use_asm and AArch64.has_aes) {
-        return asm volatile ("aesd v0.16b, v1.16b"
-            : [ret] "={v0}" (-> u8x16),
-            : [a] "{v0}" (data),
-              [b] "{v1}" (key),
-        );
-    } else if (use_builtins and AArch64.has_crypto) {
-        return struct {
-            extern fn @"llvm.aarch64.crypto.aesd"(u8x16, u8x16) u8x16;
-        }.@"llvm.aarch64.crypto.aesd"(data, key);
-    } else {
-        return AESShiftRows(AESSubBytes(data ^ key, AES_INV_SBOX), true);
-    }
-}
-
-test vaesdq_u8 {
-    const state: u8x16 = .{ 0x69, 0xc4, 0xe0, 0xd8, 0x6a, 0x7b, 0x04, 0x30, 0xd8, 0xcd, 0xb7, 0x80, 0x70, 0xb4, 0xc5, 0x5a };
-    const key: u8x16 = .{ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x97, 0x75, 0x46, 0x10, 0x3b, 0x2f };
-    const expected: u8x16 = .{ 246, 29, 84, 53, 246, 192, 12, 119, 143, 181, 119, 63, 36, 162, 74, 236 };
-
-    try testIntrinsic(vaesdq_u8, expected, .{ state, key });
-}
-
-/// AES single round encryption
-pub inline fn vaeseq_u8(data: u8x16, key: u8x16) u8x16 {
-    if (use_asm and AArch64.has_aes) {
-        return asm volatile ("aese v0.16b, v1.16b"
-            : [ret] "={v0}" (-> u8x16),
-            : [a] "{v0}" (data),
-              [b] "{v1}" (key),
-        );
-    } else if (use_builtins and AArch64.has_crypto) {
-        return struct {
-            extern fn @"llvm.aarch64.crypto.aese"(u8x16, u8x16) u8x16;
-        }.@"llvm.aarch64.crypto.aese"(data, key);
-    } else {
-        return AESShiftRows(AESSubBytes(data ^ key, AES_SBOX), false);
-    }
-}
-
-fn AESSubBytes(op: u8x16, comptime box: [256]u8) u8x16 {
-    var out: u8x16 = @splat(0);
-    inline for (0..16) |i| {
-        out[i] = box[op[i]];
-    }
-    return out;
-}
-
-/// Perform AES ShiftRows transformation. If `inverse`
-/// is `true`, perform inverse ShiftRows.
-fn AESShiftRows(data: u8x16, comptime inverse: bool) u8x16 {
-    const shift_pattern = if (inverse)
-        // Inverse ShiftRows pattern
-        u8x16{ 0, 13, 10, 7, 4, 1, 14, 11, 8, 5, 2, 15, 12, 9, 6, 3 }
-    else
-        // Regular ShiftRows pattern
-        u8x16{ 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11 };
-
-    // Use the shift pattern to create the transformed state
-    return u8x16{
-        data[shift_pattern[0]],  data[shift_pattern[1]],  data[shift_pattern[2]],  data[shift_pattern[3]],
-        data[shift_pattern[4]],  data[shift_pattern[5]],  data[shift_pattern[6]],  data[shift_pattern[7]],
-        data[shift_pattern[8]],  data[shift_pattern[9]],  data[shift_pattern[10]], data[shift_pattern[11]],
-        data[shift_pattern[12]], data[shift_pattern[13]], data[shift_pattern[14]], data[shift_pattern[15]],
-    };
-}
-
-test vaeseq_u8 {
-    const state = u8x16{ 0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34 };
-    const key = u8x16{ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0xcf, 0xfb, 0x73, 0x73, 0x73, 0x73 };
-
-    const expected = u8x16{ 212, 191, 91, 160, 224, 180, 146, 174, 184, 27, 17, 241, 220, 39, 152, 203 };
-    try testIntrinsic(vaeseq_u8, expected, .{ state, key });
-}
-
-/// AES inverse mix columns
-pub inline fn vaesimcq_u8(data: u8x16) u8x16 {
-    if (use_asm and AArch64.has_aes) {
-        return asm volatile ("aesimc v0.16b, v1.16b"
-            : [ret] "={v0}" (-> u8x16),
-            : [a] "{v1}" (data),
-        );
-    } else if (use_builtins and AArch64.has_crypto) {
-        return struct {
-            extern fn @"llvm.aarch64.crypto.aesimc"(u8x16) u8x16;
-        }.@"llvm.aarch64.crypto.aesimc"(data);
-    } else {
-        return AESMixColumns(data, true);
-    }
-}
-
-test vaesimcq_u8 {
-    const input = u8x16{ 0xdb, 0x13, 0x53, 0x45, 0xf2, 0x0a, 0x22, 0x5c, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef };
-    const expected = u8x16{ 50, 164, 29, 85, 174, 195, 105, 130, 78, 228, 10, 160, 198, 108, 130, 40 };
-
-    try testIntrinsic(vaesimcq_u8, expected, .{input});
-}
-
-/// AES mix columns
-pub inline fn vaesmcq_u8(data: u8x16) u8x16 {
-    if (use_asm and AArch64.has_aes) {
-        return asm volatile ("aesmc v0.16b, v1.16b"
-            : [ret] "={v0}" (-> u8x16),
-            : [a] "{v1}" (data),
-        );
-    } else if (use_builtins and AArch64.has_crypto) {
-        return struct {
-            extern fn @"llvm.aarch64.crypto.aesmc"(u8x16) u8x16;
-        }.@"llvm.aarch64.crypto.aesmc"(data);
-    } else {
-        return AESMixColumns(data, false);
-    }
-}
-
-/// Perform AES MixColumns transformation. If `inverse`
-/// is `true`, perform the inverse MixColumns.
-fn AESMixColumns(state: u8x16, comptime inverse: bool) u8x16 {
-    var result: u8x16 = undefined;
-    const mix = if (inverse)
-        // Inverse MixColumns matrix
-        @Vector(4, u8){ 0x0e, 0x0b, 0x0d, 0x09 }
-    else
-        // Regular MixColumns matrix
-        @Vector(4, u8){ 0x02, 0x03, 0x01, 0x01 };
-
-    mixColumn(state, mix, 0, &result);
-    mixColumn(state, mix, 4, &result);
-    mixColumn(state, mix, 8, &result);
-    mixColumn(state, mix, 12, &result);
-
-    return result;
-}
-
-/// Mix a single AES column using the given MixColumns matrix.
-fn mixColumn(
-    state: u8x16,
-    mix: @Vector(4, u8),
-    offset: usize,
-    result: *u8x16,
-) void {
-    result.*[offset + 0] = gfMult(state[offset + 0], mix[0]) ^ gfMult(state[offset + 1], mix[1]) ^ gfMult(state[offset + 2], mix[2]) ^ gfMult(state[offset + 3], mix[3]);
-    result.*[offset + 1] = gfMult(state[offset + 0], mix[3]) ^ gfMult(state[offset + 1], mix[0]) ^ gfMult(state[offset + 2], mix[1]) ^ gfMult(state[offset + 3], mix[2]);
-    result.*[offset + 2] = gfMult(state[offset + 0], mix[2]) ^ gfMult(state[offset + 1], mix[3]) ^ gfMult(state[offset + 2], mix[0]) ^ gfMult(state[offset + 3], mix[1]);
-    result.*[offset + 3] = gfMult(state[offset + 0], mix[1]) ^ gfMult(state[offset + 1], mix[2]) ^ gfMult(state[offset + 2], mix[3]) ^ gfMult(state[offset + 3], mix[0]);
-}
-
-/// Multiply two bytes in the AES finite field GF(2^8).
-inline fn gfMult(a: u8, b: u8) u8 {
-    return GF_MUL_TABLE[a][b];
-}
-
-test vaesmcq_u8 {
-    const input = u8x16{ 0xdb, 0x13, 0x53, 0x45, 0xf2, 0x0a, 0x22, 0x5c, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef };
-    const expected = u8x16{ 142, 77, 161, 188, 159, 220, 88, 157, 69, 239, 1, 171, 205, 103, 137, 35 };
-
-    try testIntrinsic(vaesmcq_u8, expected, .{input});
-}
-
-/// Shift right
-pub inline fn vshrq_n_s8(a: i8x16, n: u8) i8x16 {
-    return @as(u8x16, @bitCast(a)) >> @as(u8x16, @splat(n));
-}
-
-/// Shift right
-pub inline fn vshrq_n_s16(a: i16x8, n: u16) i16x8 {
-    return @as(u16x8, @bitCast(a)) >> @as(u16x8, @splat(n));
-}
-
-/// Shift right
-pub inline fn vshrq_n_s32(a: i32x4, n: u32) i32x4 {
-    return @as(u32x4, @bitCast(a)) >> @as(u32x4, @splat(n));
-}
-
-/// Shift right
-pub inline fn vshrq_n_s64(a: u64x2, n: u64) i64x2 {
-    return a >> @as(u64x2, @splat(n));
-}
-
-/// Shift right
-pub inline fn vshrq_n_u8(a: u8x16, n: u8) u8x16 {
-    return a >> @as(u8x16, @splat(n));
-}
-
-/// Shift right
-pub inline fn vshrq_n_u16(a: u16x8, n: u16) u16x8 {
-    return a >> @as(u16x8, @splat(n));
-}
-
-/// Shift right
-pub inline fn vshrq_n_u32(a: u32x4, n: u32) u32x4 {
-    return a >> @as(u32x4, @splat(n));
-}
-
-/// Shift right
-pub inline fn vshrq_n_u64(a: u64x2, n: u64) u64x2 {
-    return a >> @as(u64x2, @splat(n));
-}
+// /// Vector add (wrapping)
+// pub inline fn vadd_s8(a: i8x8, b: i8x8) i8x8 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vadd_s16(a: i16x4, b: i16x4) i16x4 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vadd_s32(a: i32x2, b: i32x2) i32x2 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vadd_s64(a: i64x1, b: i64x1) i64x1 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vadd_f32(a: f32x2, b: f32x2) f32x2 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vadd_u8(a: u8x8, b: u8x8) u8x8 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vadd_u16(a: u16x4, b: u16x4) u16x4 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vadd_u32(a: u32x2, b: u32x2) u32x2 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vadd_u64(a: u64x1, b: u64x1) u64x1 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_s8(a: i8x16, b: i8x16) i8x16 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_s16(a: i16x8, b: i16x8) i16x8 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_s32(a: i32x4, b: i32x4) i32x4 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_s64(a: i64x2, b: i64x2) i64x2 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_f32(a: f32x2, b: f32x2) f32x2 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_f64(a: f64x2, b: f64x2) f64x2 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_u8(a: u8x16, b: u8x16) u8x16 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_u16(a: u16x8, b: u16x8) u16x8 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_u32(a: u32x4, b: u32x4) u32x4 {
+//     return a +% b;
+// }
+
+// /// Vector add (wrapping)
+// pub inline fn vaddq_u64(a: u64x2, b: u64x2) u64x2 {
+//     return a +% b;
+// }
+
+// /// Add (wrapping)
+// pub inline fn vaddd_s64(a: i64, b: i64) i64 {
+//     return a +% b;
+// }
+
+// /// Add (wrapping)
+// pub inline fn vaddd_u64(a: u64, b: u64) u64 {
+//     return a +% b;
+// }
+
+// /// Add returning High Narrow
+// pub inline fn vaddhn_s16(a: i16x8, b: i16x8) i8x8 {
+//     const sum: i16x8 = a +% b;
+//     return @truncate(vshrq_n_s16(sum, 8));
+// }
+
+// test vaddhn_s16 {
+//     const a: i16x8 = .{ 256, 512, 1024, 2048, 4096, 8192, 16384, 32767 };
+//     const b: i16x8 = .{ 128, 256, 512, 1024, 2048, 4096, 8192, 32767 };
+
+//     const expected: i8x8 = .{ 1, 3, 6, 12, 24, 48, 96, -1 }; // -1 due to wrapping
+//     try expectEqual(expected, vaddhn_s16(a, b));
+
+//     const a2: i16x8 = .{ -256, -512, -1024, -2048, -4096, -8192, -16384, -32768 };
+//     const b2: i16x8 = .{ -128, -256, -512, -1024, -2048, -4096, -8192, -32768 };
+
+//     const expected2: i8x8 = .{ -2, -3, -6, -12, -24, -48, -96, 0 };
+//     try expectEqual(expected2, vaddhn_s16(a2, b2));
+
+//     const a3: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+//     const b3: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
+//     const expected3: i8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+//     try expectEqual(expected3, vaddhn_s16(a3, b3));
+// }
+
+// /// Add returning High Narrow
+// pub inline fn vaddhn_s32(a: i32x4, b: i32x4) i16x4 {
+//     const sum: i32x4 = a +% b;
+//     return @truncate(vshrq_n_s32(sum, 16));
+// }
+
+// /// Add returning High Narrow
+// pub inline fn vaddhn_s64(a: i64x2, b: i64x2) i32x2 {
+//     const sum: i64x2 = a +% b;
+//     return @truncate(vshrq_n_s64(sum, 32));
+// }
+
+// /// Add returning High Narrow
+// pub inline fn vaddhn_u16(a: u16x8, b: u16x8) u8x8 {
+//     const sum: u16x8 = a +% b;
+//     return @truncate(vshrq_n_u16(sum, 8));
+// }
+
+// /// Add returning High Narrow
+// pub inline fn vaddhn_u32(a: u32x4, b: u32x4) u16x4 {
+//     const sum: u32x4 = a +% b;
+//     return @truncate(vshrq_n_u32(sum, 16));
+// }
+
+// /// Add returning High Narrow
+// pub inline fn vaddhn_u64(a: u64x2, b: u64x2) u32x2 {
+//     const sum: u64x2 = a +% b;
+//     return @truncate(vshrq_n_u64(sum, 32));
+// }
+
+// /// Add returning High Narrow (high half)
+// pub inline fn vaddhn_high_s16(a: i8x8, b: i16x8, c: i16x8) i8x16 {
+//     return join(
+//         a,
+//         vaddhn_s16(b, c),
+//     );
+// }
+
+// test vaddhn_high_s16 {
+//     const a: i8x8 = @splat(42);
+//     const b: i16x8 = .{ (0 << 8) + 1, (1 << 8) + 1, (2 << 8) + 1, (3 << 8) + 1, (4 << 8) + 1, (5 << 8) + 1, (6 << 8) + 1, (7 << 8) + 1 };
+//     const expected: i8x16 = .{ 42, 42, 42, 42, 42, 42, 42, 42, 0, 2, 4, 6, 8, 10, 12, 14 };
+
+//     try expectEqual(expected, vaddhn_high_s16(a, b, b));
+// }
+
+// /// Add returning High Narrow (high half)
+// pub inline fn vaddhn_high_s32(a: i16x4, b: i32x4, c: i32x4) i16x8 {
+//     return join(
+//         a,
+//         vaddhn_s32(b, c),
+//     );
+// }
+
+// /// Add returning High Narrow (high half)
+// pub inline fn vaddhn_high_s64(a: i32x2, b: i64x2, c: i64x2) i32x4 {
+//     return join(
+//         a,
+//         vaddhn_s64(b, c),
+//     );
+// }
+
+// /// Add returning High Narrow (high half)
+// pub inline fn vaddhn_high_u16(a: u8x8, b: u16x8, c: u16x8) u8x16 {
+//     return join(
+//         a,
+//         vaddhn_u16(b, c),
+//     );
+// }
+
+// test vaddhn_high_u16 {
+//     const a: u8x8 = @splat(42);
+//     const b: u16x8 = .{ (0 << 8) + 1, (1 << 8) + 1, (2 << 8) + 1, (3 << 8) + 1, (4 << 8) + 1, (5 << 8) + 1, (6 << 8) + 1, (7 << 8) + 1 };
+//     const expected: u8x16 = .{ 42, 42, 42, 42, 42, 42, 42, 42, 0, 2, 4, 6, 8, 10, 12, 14 };
+
+//     try expectEqual(expected, vaddhn_high_u16(a, b, b));
+// }
+
+// /// Add returning High Narrow (high half)
+// pub inline fn vaddhn_high_u32(a: u16x4, b: u32x4, c: u32x4) u16x8 {
+//     return join(
+//         a,
+//         vaddhn_u32(b, c),
+//     );
+// }
+
+// /// Add returning High Narrow (high half)
+// pub inline fn vaddhn_high_u64(a: u32x2, b: u64x2, c: u64x2) u32x4 {
+//     return join(
+//         a,
+//         vaddhn_u64(b, c),
+//     );
+// }
+
+// /// Signed Add Long
+// pub inline fn vaddl_s8(a: i8x8, b: i8x8) i16x8 {
+//     return vmovl_s8(a) + vmovl_s8(b);
+// }
+
+// /// Signed Add Long
+// pub inline fn vaddl_s16(a: i16x4, b: i16x4) i32x4 {
+//     return vmovl_s16(a) + vmovl_s16(b);
+// }
+
+// /// Signed Add Long
+// pub inline fn vaddl_s32(a: i32x2, b: i32x2) i64x2 {
+//     return vmovl_s32(a) + vmovl_s32(b);
+// }
+
+// /// Unsigned Add Long
+// pub inline fn vaddl_u8(a: u8x8, b: u8x8) u16x8 {
+//     return vmovl_u8(a) + vmovl_u8(b);
+// }
+
+// /// Unsigned Add Long
+// pub inline fn vaddl_u16(a: u16x4, b: u16x4) u32x4 {
+//     return vmovl_u16(a) + vmovl_u16(b);
+// }
+
+// /// Unsigned Add Long
+// pub inline fn vaddl_u32(a: u32x2, b: u32x2) u64x2 {
+//     return vmovl_u32(a) + vmovl_u32(b);
+// }
+
+// ///	Signed Add Long (high half)
+// pub inline fn vaddl_high_s8(a: i8x16, b: i8x16) i16x8 {
+//     return vmovl_high_s8(a) + vmovl_high_s8(b);
+// }
+
+// ///	Signed Add Long (high half)
+// pub inline fn vaddl_high_s16(a: i16x8, b: i16x8) i32x4 {
+//     return vmovl_high_s16(a) + vmovl_high_s16(b);
+// }
+
+// ///	Signed Add Long (high half)
+// pub inline fn vaddl_high_s32(a: i32x4, b: i32x4) i64x2 {
+//     return vmovl_high_s32(a) + vmovl_high_s32(b);
+// }
+
+// ///	Unsigned Add Long (high half)
+// pub inline fn vaddl_high_u8(a: u8x16, b: u8x16) u16x8 {
+//     return vmovl_high_u8(a) + vmovl_high_u8(b);
+// }
+
+// ///	Unsigned Add Long (high half)
+// pub inline fn vaddl_high_u16(a: u16x8, b: u16x8) u32x4 {
+//     return vmovl_high_u16(a) + vmovl_high_u16(b);
+// }
+
+// ///	Unsigned Add Long (high half)
+// pub inline fn vaddl_high_u32(a: u32x4, b: u32x4) u64x2 {
+//     return vmovl_high_u32(a) + vmovl_high_u32(b);
+// }
+
+// /// Signed Add Wide
+// pub inline fn vaddw_s8(a: i16x8, b: i8x8) i16x8 {
+//     return a +% vmovl_s8(b);
+// }
+
+// test vaddw_s8 {
+//     const a1: i16x8 = .{ 1000, 2000, 3000, 4000, -5000, -6000, -7000, -8000 };
+//     const b1: i8x8 = .{ 10, 20, -30, -40, 50, 60, -70, 80 };
+//     const expected1: i16x8 = .{ 1010, 2020, 2970, 3960, -4950, -5940, -7070, -7920 };
+
+//     try expectEqual(expected1, vaddw_s8(a1, b1));
+
+//     const a2 = @Vector(8, i16){ 32760, -32760, 1000, -1000, 2000, -2000, 0, -32768 };
+//     const b2 = @Vector(8, i8){ 10, -10, 120, -120, 127, -128, 0, 1 };
+//     const expected2: i16x8 = .{
+//         -32766, // Overflow wraps around to negative
+//         32766, // Underflow wraps around to positive
+//         1120, // Normal addition
+//         -1120, // Normal subtraction
+//         2127, // Normal addition
+//         -2128, // Normal subtraction
+//         0, // No change
+//         -32767, // Wraps around to next higher value
+//     };
+
+//     try expectEqual(expected2, vaddw_s8(a2, b2));
+// }
+
+// /// Signed Add Wide (high half)
+// pub inline fn vaddw_high_s8(a: i16x8, b: i8x16) i16x8 {
+//     return a +% vmovl_high_s8(b);
+// }
+
+// test vaddw_high_s8 {
+//     const a: i16x8 = .{ 32760, -32760, 1000, -1000, 2000, -2000, 0, -32768 };
+//     const b: i8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 10, -10, 120, -120, 127, -128, 0, 1 };
+//     const expected: i16x8 = .{ -32766, 32766, 1120, -1120, 2127, -2128, 0, -32767 };
+
+//     try expectEqual(expected, vaddw_high_s8(a, b));
+// }
+
+// /// Signed Add Wide (high half)
+// pub inline fn vaddw_high_s16(a: i32x4, b: i16x8) i32x4 {
+//     return a +% vmovl_high_s16(b);
+// }
+
+// /// Signed Add Wide (high half)
+// pub inline fn vaddw_high_s32(a: i64x2, b: i32x4) i64x2 {
+//     return a +% vmovl_high_s32(b);
+// }
+
+// /// Unsigned Add Wide (high half)
+// pub inline fn vaddw_high_u8(a: u16x8, b: u8x16) u16x8 {
+//     return a +% vmovl_high_s8(b);
+// }
+
+// /// Unsigned Add Wide (high half)
+// pub inline fn vaddw_high_u16(a: u32x4, b: u16x8) u32x4 {
+//     return a +% vmovl_high_u16(b);
+// }
+
+// /// Unsigned Add Wide (high half)
+// pub inline fn vaddw_high_u32(a: u64x2, b: u32x4) u64x2 {
+//     return a +% vmovl_high_u32(b);
+// }
+
+// /// Signed Add Wide
+// pub inline fn vaddw_s16(a: i32x4, b: i16x4) i32x4 {
+//     return a +% vmovl_s16(b);
+// }
+
+// /// Signed Add Wide
+// pub inline fn vaddw_s32(a: i64x2, b: i32x2) i64x2 {
+//     return a +% vmovl_s32(b);
+// }
+
+// /// Unsigned Add Wide
+// pub inline fn vaddw_u8(a: u16x8, b: u8x8) u16x8 {
+//     return a +% vmovl_u8(b);
+// }
+
+// /// Unsigned Add Wide
+// pub inline fn vaddw_u16(a: u32x4, b: u16x4) u32x4 {
+//     return a +% vmovl_u16(b);
+// }
+
+// /// Unsigned Add Wide
+// pub inline fn vaddw_u32(a: u64x2, b: u32x2) u64x2 {
+//     return a +% vmovl_u32(b);
+// }
+
+// /// AES single round decryption
+// pub fn vaesdq_u8(data: u8x16, key: u8x16) u8x16 {
+//     if (use_asm and AArch64.has_aes) {
+//         return asm volatile ("aesd v0.16b, v1.16b"
+//             : [ret] "={v0}" (-> u8x16),
+//             : [a] "{v0}" (data),
+//               [b] "{v1}" (key),
+//         );
+//     } else if (use_builtins and AArch64.has_crypto) {
+//         return struct {
+//             extern fn @"llvm.aarch64.crypto.aesd"(u8x16, u8x16) u8x16;
+//         }.@"llvm.aarch64.crypto.aesd"(data, key);
+//     } else {
+//         return AESShiftRows(AESSubBytes(data ^ key, AES_INV_SBOX), true);
+//     }
+// }
+
+// test vaesdq_u8 {
+//     const state: u8x16 = .{ 0x69, 0xc4, 0xe0, 0xd8, 0x6a, 0x7b, 0x04, 0x30, 0xd8, 0xcd, 0xb7, 0x80, 0x70, 0xb4, 0xc5, 0x5a };
+//     const key: u8x16 = .{ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x97, 0x75, 0x46, 0x10, 0x3b, 0x2f };
+//     const expected: u8x16 = .{ 246, 29, 84, 53, 246, 192, 12, 119, 143, 181, 119, 63, 36, 162, 74, 236 };
+
+//     try testIntrinsic(vaesdq_u8, expected, .{ state, key });
+// }
+
+// /// AES single round encryption
+// pub inline fn vaeseq_u8(data: u8x16, key: u8x16) u8x16 {
+//     if (use_asm and AArch64.has_aes) {
+//         return asm volatile ("aese v0.16b, v1.16b"
+//             : [ret] "={v0}" (-> u8x16),
+//             : [a] "{v0}" (data),
+//               [b] "{v1}" (key),
+//         );
+//     } else if (use_builtins and AArch64.has_crypto) {
+//         return struct {
+//             extern fn @"llvm.aarch64.crypto.aese"(u8x16, u8x16) u8x16;
+//         }.@"llvm.aarch64.crypto.aese"(data, key);
+//     } else {
+//         return AESShiftRows(AESSubBytes(data ^ key, AES_SBOX), false);
+//     }
+// }
+
+// fn AESSubBytes(op: u8x16, comptime box: [256]u8) u8x16 {
+//     var out: u8x16 = @splat(0);
+//     inline for (0..16) |i| {
+//         out[i] = box[op[i]];
+//     }
+//     return out;
+// }
+
+// /// Perform AES ShiftRows transformation. If `inverse`
+// /// is `true`, perform inverse ShiftRows.
+// fn AESShiftRows(data: u8x16, comptime inverse: bool) u8x16 {
+//     const shift_pattern = if (inverse)
+//         // Inverse ShiftRows pattern
+//         u8x16{ 0, 13, 10, 7, 4, 1, 14, 11, 8, 5, 2, 15, 12, 9, 6, 3 }
+//     else
+//         // Regular ShiftRows pattern
+//         u8x16{ 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11 };
+
+//     // Use the shift pattern to create the transformed state
+//     return u8x16{
+//         data[shift_pattern[0]],  data[shift_pattern[1]],  data[shift_pattern[2]],  data[shift_pattern[3]],
+//         data[shift_pattern[4]],  data[shift_pattern[5]],  data[shift_pattern[6]],  data[shift_pattern[7]],
+//         data[shift_pattern[8]],  data[shift_pattern[9]],  data[shift_pattern[10]], data[shift_pattern[11]],
+//         data[shift_pattern[12]], data[shift_pattern[13]], data[shift_pattern[14]], data[shift_pattern[15]],
+//     };
+// }
+
+// test vaeseq_u8 {
+//     const state = u8x16{ 0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34 };
+//     const key = u8x16{ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0xcf, 0xfb, 0x73, 0x73, 0x73, 0x73 };
+
+//     const expected = u8x16{ 212, 191, 91, 160, 224, 180, 146, 174, 184, 27, 17, 241, 220, 39, 152, 203 };
+//     try testIntrinsic(vaeseq_u8, expected, .{ state, key });
+// }
+
+// /// AES inverse mix columns
+// pub inline fn vaesimcq_u8(data: u8x16) u8x16 {
+//     if (use_asm and AArch64.has_aes) {
+//         return asm volatile ("aesimc v0.16b, v1.16b"
+//             : [ret] "={v0}" (-> u8x16),
+//             : [a] "{v1}" (data),
+//         );
+//     } else if (use_builtins and AArch64.has_crypto) {
+//         return struct {
+//             extern fn @"llvm.aarch64.crypto.aesimc"(u8x16) u8x16;
+//         }.@"llvm.aarch64.crypto.aesimc"(data);
+//     } else {
+//         return AESMixColumns(data, true);
+//     }
+// }
+
+// test vaesimcq_u8 {
+//     const input = u8x16{ 0xdb, 0x13, 0x53, 0x45, 0xf2, 0x0a, 0x22, 0x5c, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef };
+//     const expected = u8x16{ 50, 164, 29, 85, 174, 195, 105, 130, 78, 228, 10, 160, 198, 108, 130, 40 };
+
+//     try testIntrinsic(vaesimcq_u8, expected, .{input});
+// }
+
+// /// AES mix columns
+// pub inline fn vaesmcq_u8(data: u8x16) u8x16 {
+//     if (use_asm and AArch64.has_aes) {
+//         return asm volatile ("aesmc v0.16b, v1.16b"
+//             : [ret] "={v0}" (-> u8x16),
+//             : [a] "{v1}" (data),
+//         );
+//     } else if (use_builtins and AArch64.has_crypto) {
+//         return struct {
+//             extern fn @"llvm.aarch64.crypto.aesmc"(u8x16) u8x16;
+//         }.@"llvm.aarch64.crypto.aesmc"(data);
+//     } else {
+//         return AESMixColumns(data, false);
+//     }
+// }
+
+// /// Perform AES MixColumns transformation. If `inverse`
+// /// is `true`, perform the inverse MixColumns.
+// fn AESMixColumns(state: u8x16, comptime inverse: bool) u8x16 {
+//     var result: u8x16 = undefined;
+//     const mix = if (inverse)
+//         // Inverse MixColumns matrix
+//         @Vector(4, u8){ 0x0e, 0x0b, 0x0d, 0x09 }
+//     else
+//         // Regular MixColumns matrix
+//         @Vector(4, u8){ 0x02, 0x03, 0x01, 0x01 };
+
+//     mixColumn(state, mix, 0, &result);
+//     mixColumn(state, mix, 4, &result);
+//     mixColumn(state, mix, 8, &result);
+//     mixColumn(state, mix, 12, &result);
+
+//     return result;
+// }
+
+// /// Mix a single AES column using the given MixColumns matrix.
+// fn mixColumn(
+//     state: u8x16,
+//     mix: @Vector(4, u8),
+//     offset: usize,
+//     result: *u8x16,
+// ) void {
+//     result.*[offset + 0] = gfMult(state[offset + 0], mix[0]) ^ gfMult(state[offset + 1], mix[1]) ^ gfMult(state[offset + 2], mix[2]) ^ gfMult(state[offset + 3], mix[3]);
+//     result.*[offset + 1] = gfMult(state[offset + 0], mix[3]) ^ gfMult(state[offset + 1], mix[0]) ^ gfMult(state[offset + 2], mix[1]) ^ gfMult(state[offset + 3], mix[2]);
+//     result.*[offset + 2] = gfMult(state[offset + 0], mix[2]) ^ gfMult(state[offset + 1], mix[3]) ^ gfMult(state[offset + 2], mix[0]) ^ gfMult(state[offset + 3], mix[1]);
+//     result.*[offset + 3] = gfMult(state[offset + 0], mix[1]) ^ gfMult(state[offset + 1], mix[2]) ^ gfMult(state[offset + 2], mix[3]) ^ gfMult(state[offset + 3], mix[0]);
+// }
+
+// /// Multiply two bytes in the AES finite field GF(2^8).
+// inline fn gfMult(a: u8, b: u8) u8 {
+//     return GF_MUL_TABLE[a][b];
+// }
+
+// test vaesmcq_u8 {
+//     const input = u8x16{ 0xdb, 0x13, 0x53, 0x45, 0xf2, 0x0a, 0x22, 0x5c, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef };
+//     const expected = u8x16{ 142, 77, 161, 188, 159, 220, 88, 157, 69, 239, 1, 171, 205, 103, 137, 35 };
+
+//     try testIntrinsic(vaesmcq_u8, expected, .{input});
+// }
+
+// /// Shift right
+// pub inline fn vshrq_n_s8(a: i8x16, n: u8) i8x16 {
+//     return @as(u8x16, @bitCast(a)) >> @as(u8x16, @splat(n));
+// }
+
+// /// Shift right
+// pub inline fn vshrq_n_s16(a: i16x8, n: u16) i16x8 {
+//     return @as(u16x8, @bitCast(a)) >> @as(u16x8, @splat(n));
+// }
+
+// /// Shift right
+// pub inline fn vshrq_n_s32(a: i32x4, n: u32) i32x4 {
+//     return @as(u32x4, @bitCast(a)) >> @as(u32x4, @splat(n));
+// }
+
+// /// Shift right
+// pub inline fn vshrq_n_s64(a: u64x2, n: u64) i64x2 {
+//     return a >> @as(u64x2, @splat(n));
+// }
+
+// /// Shift right
+// pub inline fn vshrq_n_u8(a: u8x16, n: u8) u8x16 {
+//     return a >> @as(u8x16, @splat(n));
+// }
+
+// /// Shift right
+// pub inline fn vshrq_n_u16(a: u16x8, n: u16) u16x8 {
+//     return a >> @as(u16x8, @splat(n));
+// }
+
+// /// Shift right
+// pub inline fn vshrq_n_u32(a: u32x4, n: u32) u32x4 {
+//     return a >> @as(u32x4, @splat(n));
+// }
+
+// /// Shift right
+// pub inline fn vshrq_n_u64(a: u64x2, n: u64) u64x2 {
+//     return a >> @as(u64x2, @splat(n));
+// }
