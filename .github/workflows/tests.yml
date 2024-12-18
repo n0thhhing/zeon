@@ -1,4 +1,4 @@
-name: Tests
+name: tests
 
 on:
   push:
@@ -32,4 +32,3 @@ jobs:
           version: ${{ matrix.zig-version }}
       - run: |
           zig build test --summary all -fqemu
-          echo ${{ steps.qemu.outputs.platforms }}
