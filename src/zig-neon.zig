@@ -1,6 +1,5 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const root = @import("root");
 const simd = std.simd;
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
@@ -2731,6 +2730,438 @@ test vaesmcq_u8 {
     const expected = u8x16{ 142, 77, 161, 188, 159, 220, 88, 157, 69, 239, 1, 171, 205, 103, 137, 35 };
 
     try testIntrinsic(vaesmcq_u8, expected, .{input});
+}
+
+// Vector bitwise and
+pub inline fn vand_s8(a: i8x8, b: i8x8) i8x8 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+            : [ret] "={v0}" (-> i8x8),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand d0, d1, d2"
+            : [ret] "={d0}" (-> i8x8),
+            : [a] "{d1}" (a),
+              [b] "{d2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vand_s8 {
+    const a: i8x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+    const b: i8x8 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: i8x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+
+    try testIntrinsic(vand_s8, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vand_s16(a: i16x4, b: i16x4) i16x4 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+            : [ret] "={v0}" (-> i16x4),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand d0, d1, d2"
+            : [ret] "={d0}" (-> i16x4),
+            : [a] "{d1}" (a),
+              [b] "{d2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vand_s16 {
+    const a: i16x4 = .{ 0x00, 0x01, 0x02, 0x03 };
+    const b: i16x4 = .{ 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: i16x4 = .{ 0x00, 0x01, 0x02, 0x03 };
+
+    try testIntrinsic(vand_s16, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vand_s32(a: i32x2, b: i32x2) i32x2 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+            : [ret] "={v0}" (-> i32x2),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand d0, d1, d2"
+            : [ret] "={d0}" (-> i32x2),
+            : [a] "{d1}" (a),
+              [b] "{d2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vand_s32 {
+    const a: i32x2 = .{ 0x00, 0x01 };
+    const b: i32x2 = .{ 0x0F, 0x0F };
+    const expected: i32x2 = .{ 0x00, 0x01 };
+
+    try testIntrinsic(vand_s32, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vand_s64(a: i64x1, b: i64x1) i64x1 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+            : [ret] "={v0}" (-> i64x1),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand d0, d1, d2"
+            : [ret] "={d0}" (-> i64x1),
+            : [a] "{d1}" (a),
+              [b] "{d2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vand_s64 {
+    const a: i64x1 = .{0x00};
+    const b: i64x1 = .{0x0F};
+    const expected: i64x1 = .{0x00};
+
+    try testIntrinsic(vand_s64, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vand_u8(a: u8x8, b: u8x8) u8x8 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+            : [ret] "={v0}" (-> u8x8),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand d0, d1, d2"
+            : [ret] "={d0}" (-> u8x8),
+            : [a] "{d1}" (a),
+              [b] "{d2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vand_u8 {
+    const a: u8x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+    const b: u8x8 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: u8x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+
+    try testIntrinsic(vand_u8, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vand_u16(a: i16x4, b: i16x4) u16x4 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+            : [ret] "={v0}" (-> u16x4),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand d0, d1, d2"
+            : [ret] "={d0}" (-> u16x4),
+            : [a] "{d1}" (a),
+              [b] "{d2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vand_u16 {
+    const a: u16x4 = .{ 0x00, 0x01, 0x02, 0x03 };
+    const b: u16x4 = .{ 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: u16x4 = .{ 0x00, 0x01, 0x02, 0x03 };
+
+    try testIntrinsic(vand_u16, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vand_u32(a: u32x2, b: u32x2) u32x2 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+            : [ret] "={v0}" (-> u32x2),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand d0, d1, d2"
+            : [ret] "={d0}" (-> u32x2),
+            : [a] "{d1}" (a),
+              [b] "{d2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vand_u32 {
+    const a: u32x2 = .{ 0x00, 0x01 };
+    const b: u32x2 = .{ 0x0F, 0x0F };
+    const expected: u32x2 = .{ 0x00, 0x01 };
+
+    try testIntrinsic(vand_u32, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vand_u64(a: u64x1, b: u64x1) u64x1 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+            : [ret] "={v0}" (-> u64x1),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand d0, d1, d2"
+            : [ret] "={d0}" (-> u64x1),
+            : [a] "{d1}" (a),
+              [b] "{d2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vand_u64 {
+    const a: u64x1 = .{0x00};
+    const b: u64x1 = .{0x0F};
+    const expected: u64x1 = .{0x00};
+
+    try testIntrinsic(vand_u64, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vandq_s8(a: i8x16, b: i8x16) i8x16 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+            : [ret] "={v0}" (-> i8x16),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand q0, q1, q2"
+            : [ret] "={q0}" (-> i8x16),
+            : [a] "{q1}" (a),
+              [b] "{q2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vandq_s8 {
+    const a: i8x16 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x00, 0x01, 0x02, 0x03 };
+    const b: i8x16 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: i8x16 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x00, 0x01, 0x02, 0x03 };
+
+    try testIntrinsic(vandq_s8, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vandq_s16(a: i16x8, b: i16x8) i16x8 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+            : [ret] "={v0}" (-> i16x8),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand q0, q1, q2"
+            : [ret] "={q0}" (-> i16x8),
+            : [a] "{q1}" (a),
+              [b] "{q2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vandq_s16 {
+    const a: i16x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03 };
+    const b: i16x8 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: i16x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03 };
+
+    try testIntrinsic(vandq_s16, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vandq_s32(a: i32x4, b: i32x4) i32x4 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+            : [ret] "={v0}" (-> i32x4),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand q0, q1, q2"
+            : [ret] "={q0}" (-> i32x4),
+            : [a] "{q1}" (a),
+              [b] "{q2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vandq_s32 {
+    const a: i32x4 = .{ 0x00, 0x01, 0x00, 0x01 };
+    const b: i32x4 = .{ 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: i32x4 = .{ 0x00, 0x01, 0x00, 0x01 };
+
+    try testIntrinsic(vandq_s32, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vandq_s64(a: i64x2, b: i64x2) i64x2 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+            : [ret] "={v0}" (-> i64x2),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand q0, q1, q2"
+            : [ret] "={q0}" (-> i64x2),
+            : [a] "{q1}" (a),
+              [b] "{q2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vandq_s64 {
+    const a: i64x2 = .{ 0x00, 0x00 };
+    const b: i64x2 = .{ 0x0F, 0x0F };
+    const expected: i64x2 = .{ 0x00, 0x00 };
+
+    try testIntrinsic(vandq_s64, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vandq_u8(a: u8x16, b: u8x16) u8x16 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+            : [ret] "={v0}" (-> u8x16),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand q0, q1, q2"
+            : [ret] "={q0}" (-> u8x16),
+            : [a] "{q1}" (a),
+              [b] "{q2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vandq_u8 {
+    const a: u8x16 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x00, 0x01, 0x02, 0x03 };
+    const b: u8x16 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: u8x16 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x00, 0x01, 0x02, 0x03 };
+
+    try testIntrinsic(vandq_u8, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vandq_u16(a: i16x8, b: i16x8) u16x8 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+            : [ret] "={v0}" (-> u16x8),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand q0, q1, q2"
+            : [ret] "={q0}" (-> u16x8),
+            : [a] "{q1}" (a),
+              [b] "{q2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vandq_u16 {
+    const a: u16x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03 };
+    const b: u16x8 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: u16x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03 };
+
+    try testIntrinsic(vandq_u16, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vandq_u32(a: u32x4, b: u32x4) u32x4 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+            : [ret] "={v0}" (-> u32x4),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand q0, q1, q2"
+            : [ret] "={q0}" (-> u32x4),
+            : [a] "{q1}" (a),
+              [b] "{q2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vandq_u32 {
+    const a: u32x4 = .{ 0x00, 0x01, 0x00, 0x01 };
+    const b: u32x4 = .{ 0x0F, 0x0F, 0x0F, 0x0F };
+    const expected: u32x4 = .{ 0x00, 0x01, 0x00, 0x01 };
+
+    try testIntrinsic(vandq_u32, expected, .{ a, b });
+}
+
+// Vector bitwise and
+pub inline fn vandq_u64(a: u64x2, b: u64x2) u64x2 {
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+            : [ret] "={v0}" (-> u64x2),
+            : [a] "{v1}" (a),
+              [b] "{v2}" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vand q0, q1, q2"
+            : [ret] "={q0}" (-> u64x2),
+            : [a] "{q1}" (a),
+              [b] "{q2}" (b),
+        );
+    } else {
+        return a & b;
+    }
+}
+
+test vandq_u64 {
+    const a: u64x2 = .{ 0x00, 0x00 };
+    const b: u64x2 = .{ 0x0F, 0x0F };
+    const expected: u64x2 = .{ 0x00, 0x00 };
+
+    try testIntrinsic(vandq_u64, expected, .{ a, b });
 }
 
 /// Shift right
