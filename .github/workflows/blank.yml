@@ -13,13 +13,23 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest, ARM]
+        os: [ubuntu-latest]
         zig-version: [0.13.0]
+        image:
+          - tonistiigi/binfmt:latest
+        platforms:
+          - arm64,arm
 
     name: Build and Test
     steps:
+      - uses: docker/setup-qemu-action@v3
+        with:
+          image: ${{ matrix.image }}
+          platforms: ${{ matrix.platforms }}
       - uses: actions/checkout@v3
       - uses: mlugg/setup-zig@v1
         with:
           version: ${{ matrix.zig-version }}
-      - run: zig build test
+      - run: |
+          zig build test --summary all -fqemu
+          echo ${{ steps.qemu.outputs.platforms }}
