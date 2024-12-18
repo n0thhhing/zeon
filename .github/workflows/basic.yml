@@ -1,0 +1,31 @@
+name: basic
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  workflow_dispatch:
+
+jobs:
+  basic:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        zig-version: [0.13.0]
+
+    name: Build and Test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ matrix.zig-version }}
+      - run: |
+          zig build testBasic \
+            -fqemu \
+            -freference-trace \
+            --summary all \
+            --verbose-llvm-ir=out
+          cat out
