@@ -1,4 +1,4 @@
-name: native
+name: tests
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  navive:
+  tests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
