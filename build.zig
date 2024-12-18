@@ -2,7 +2,7 @@
 const std = @import("std");
 
 const test_targets = [_]std.Target.Query{
-    .{}
+    .{},
     std.Target.Query{
         .cpu_arch = .arm,
         .os_tag = .linux,
