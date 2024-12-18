@@ -1,3 +1,4 @@
+
 const std = @import("std");
 
 const test_targets = [_]std.Target.Query{
@@ -7,7 +8,20 @@ const test_targets = [_]std.Target.Query{
         .os_tag = .linux,
     },
     std.Target.Query{
+        .cpu_arch = .arm,
+        .os_tag = .linux,
+        .cpu_features_sub = blk: {
+            var disabled_features = std.Target.Cpu.Feature.Set.empty;
+            disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.neon));
+            break :blk disabled_features;
+        }
+    },
+    std.Target.Query{
         .cpu_arch = .aarch64,
+        .os_tag = .linux,
+    },
+    std.Target.Query{
+        .cpu_arch = .x86,
         .os_tag = .linux,
     },
 };
