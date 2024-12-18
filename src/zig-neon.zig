@@ -5,7 +5,6 @@ const simd = std.simd;
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
 
-
 /// Max bitsize for vectors on Arm/AArch64
 ///
 /// TODO:
@@ -66,27 +65,27 @@ const is_arm = builtin.target.cpu.arch == .arm;
 const is_aarch64 = builtin.target.cpu.arch == .aarch64;
 
 const Arm = struct {
-    pub const has_neon = std.Target.arm.featureSetHas(builtin.cpu.features, .neon);
-    pub const has_aes = std.Target.arm.featureSetHas(builtin.cpu.features, .aes);
-    pub const has_sha2 = std.Target.arm.featureSetHas(builtin.cpu.features, .sha2);
-    pub const has_crc = std.Target.arm.featureSetHas(builtin.cpu.features, .crc);
-    pub const has_dotprod = std.Target.arm.featureSetHas(builtin.cpu.features, .dotprod);
-    pub const has_v7 = std.Target.arm.featureSetHas(builtin.cpu.features, .has_v7);
-    pub const has_v8 = std.Target.arm.featureSetHas(builtin.cpu.features, .has_v8);
-    pub const has_i8mm = std.Target.arm.featureSetHas(builtin.cpu.features, .i8mm);
+    pub const has_neon = is_arm and std.Target.arm.featureSetHas(builtin.cpu.features, .neon);
+    pub const has_aes = is_arm and std.Target.arm.featureSetHas(builtin.cpu.features, .aes);
+    pub const has_sha2 = is_arm and std.Target.arm.featureSetHas(builtin.cpu.features, .sha2);
+    pub const has_crc = is_arm and std.Target.arm.featureSetHas(builtin.cpu.features, .crc);
+    pub const has_dotprod = is_arm and std.Target.arm.featureSetHas(builtin.cpu.features, .dotprod);
+    pub const has_v7 = is_arm and std.Target.arm.featureSetHas(builtin.cpu.features, .has_v7);
+    pub const has_v8 = is_arm and std.Target.arm.featureSetHas(builtin.cpu.features, .has_v8);
+    pub const has_i8mm = is_arm and std.Target.arm.featureSetHas(builtin.cpu.features, .i8mm);
 };
 
 const AArch64 = struct {
-    pub const has_neon = std.Target.aarch64.featureSetHas(builtin.cpu.features, .neon);
-    pub const has_aes = std.Target.aarch64.featureSetHas(builtin.cpu.features, .aes);
-    pub const has_rdm = std.Target.aarch64.featureSetHas(builtin.cpu.features, .rdm);
-    pub const has_sha2 = std.Target.aarch64.featureSetHas(builtin.cpu.features, .sha2);
-    pub const has_sha3 = std.Target.aarch64.featureSetHas(builtin.cpu.features, .sha3);
-    pub const has_dotprod = std.Target.aarch64.featureSetHas(builtin.cpu.features, .dotprod);
-    pub const has_i8mm = std.Target.aarch64.featureSetHas(builtin.cpu.features, .i8mm);
-    pub const has_sm4 = std.Target.aarch64.featureSetHas(builtin.cpu.features, .sm4);
-    pub const has_crypto = std.Target.aarch64.featureSetHas(builtin.cpu.features, .crypto);
-    pub const has_sve = std.Target.aarch64.featureSetHas(builtin.cpu.features, .sve);
+    pub const has_neon = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .neon);
+    pub const has_aes = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .aes);
+    pub const has_rdm = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .rdm);
+    pub const has_sha2 = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .sha2);
+    pub const has_sha3 = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .sha3);
+    pub const has_dotprod = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .dotprod);
+    pub const has_i8mm = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .i8mm);
+    pub const has_sm4 = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .sm4);
+    pub const has_crypto = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .crypto);
+    pub const has_sve = is_aarch64 and std.Target.aarch64.featureSetHas(builtin.cpu.features, .sve);
 };
 
 pub const p8 = u8;
@@ -763,7 +762,7 @@ pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
         return struct {
             extern fn @"llvm.aarch64.neon.smull.v8i16"(i8x8, i8x8) i16x8;
         }.@"llvm.aarch64.neon.smull.v8i16"(a, b);
-    }// else if (use_builtins and Arm.has_neon) {
+    } // else if (use_builtins and Arm.has_neon) {
     //     return struct {
     //         extern fn @"llvm.arm.neon.vmulls.v8i16"(i8x8, i8x8) i16x8;
     //     }.@"llvm.arm.neon.vmulls.v8i16"(a, b);
