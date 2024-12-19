@@ -22,8 +22,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user qemu-user-static
+          echo aarch64:
           qemu-aarch64 -version
+          echo arm:
           qemu-arm -version
+          echo aarch64_be:
           qemu-aarch64_be -version
 
       - name: Install Zig
