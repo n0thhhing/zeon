@@ -22,10 +22,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user qemu-user-static
+
+          echo
+
           echo aarch64:
           qemu-aarch64 -version
+          echo
+
           echo arm:
           qemu-arm -version
+          echo
+
           echo aarch64_be:
           qemu-aarch64_be -version
 
