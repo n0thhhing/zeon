@@ -17,18 +17,20 @@ jobs:
         zig-version: [0.13.0]
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
       - name: Install QEMU User-Mode
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user qemu-user-static
+          qemu-aarch64 -version
           qemu-arm -version
+          qemu-aarch64_be -version
       - name: Build and Test
-        uses: actions/checkout@v3
         uses: mlugg/setup-zig@v1
         with:
           version: ${{ matrix.zig-version }}
         run: |
-          echo ${{ steps.qemu.outputs.platforms }}
           zig build test \
             -fqemu \
             -freference-trace \
