@@ -36,9 +36,6 @@ jobs:
           echo aarch64_be:
           qemu-aarch64_be -version
 
-          echo x86:
-          qemu-x86 -version
-
       - name: Install Zig
         uses: mlugg/setup-zig@v1
         with:
