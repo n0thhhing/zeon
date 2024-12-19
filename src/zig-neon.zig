@@ -2632,7 +2632,6 @@ fn AESShiftRows(data: u8x16, comptime inverse: bool) u8x16 {
         // Regular ShiftRows pattern
         u8x16{ 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11 };
 
-    // Use the shift pattern to create the transformed state
     return u8x16{
         data[shift_pattern[0]],  data[shift_pattern[1]],  data[shift_pattern[2]],  data[shift_pattern[3]],
         data[shift_pattern[4]],  data[shift_pattern[5]],  data[shift_pattern[6]],  data[shift_pattern[7]],
@@ -3162,6 +3161,153 @@ test vandq_u64 {
     const expected: u64x2 = .{ 0x00, 0x00 };
 
     try testIntrinsic(vandq_u64, expected, .{ a, b });
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbic_s8(a: i8x8, b: i8x8) i8x8 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbic_s16(a: i16x4, b: i16x4) i16x4 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbic_s32(a: i32x2, b: i32x2) i32x2 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbic_s64(a: i64x1, b: i64x1) i64x1 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbic_u8(a: u8x8, b: u8x8) u8x8 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbic_u16(a: u16x4, b: u16x4) u16x4 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbic_u32(a: u32x2, b: u32x2) u32x2 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbic_u64(a: u64x1, b: u64x1) u64x1 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbicq_s8(a: i8x16, b: i8x16) i8x16 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbicq_s16(a: i16x8, b: i16x8) i16x8 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbicq_s32(a: i32x4, b: i32x4) i32x4 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbicq_s64(a: i64x2, b: i64x2) i64x2 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbicq_u8(a: u8x16, b: u8x16) u8x16 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbicq_u16(a: u16x8, b: u16x8) u16x8 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbicq_u32(a: u32x4, b: u32x4) u32x4 {
+    return a & ~b;
+}
+
+/// Vector bitwise bit clear
+pub inline fn vbicq_u64(a: u64x2, b: u64x2) u64x2 {
+    return a & ~b;
+}
+
+// Bitwise Select
+pub inline fn vbsl_s8(a: i8x8, b: i8x8, c: i8x8) i8x8 {
+    return (a & b) | (~a & c);
+}
+
+test vbsl_s8 {
+    const a: i8x8 = .{ std.math.maxInt(i8), 1, std.math.maxInt(i8), 2, std.math.maxInt(i8), 0, std.math.maxInt(i8), 0 };
+    const b: i8x8 = .{ std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8) };
+    const c: i8x8 = .{ std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8) };
+    const expected: i8x8 = .{ -1, -127, -1, -126, -1, -128, -1, -128 };
+
+    try expectEqual(expected, vbsl_s8(a, b, c));
+}
+
+// Bitwise Select
+pub inline fn vbsl_s16(a: i16x4, b: i16x4, c: i16x4) i16x4 {
+     return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbsl_s32(a: i32x2, b: i32x2, c: i32x2) i32x2 {
+     return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbsl_s64(a: i64x1, b: i64x1, c: i64x1) i64x1 {
+     return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbsl_u8(a: u8x8, b: u8x8, c: u8x8) u8x8 {
+     return (a & b) | (~a & c);
+}
+
+test vbsl_u8 {
+    const a: u8x8 = .{ std.math.maxInt(u8), 1, std.math.maxInt(u8), 2, std.math.maxInt(u8), 0, std.math.maxInt(u8), 0 };
+    const b: u8x8 = .{ std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8) };
+    const c: u8x8 = .{ std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8) };
+    const expected: u8x8 = .{ std.math.maxInt(u8), 1, std.math.maxInt(u8), 2, std.math.maxInt(u8), std.math.minInt(u8), std.math.maxInt(u8), std.math.minInt(u8) };
+
+    try expectEqual(expected, vbsl_u8(a, b, c));
+}
+
+// Bitwise Select
+pub inline fn vbsl_u16(a: u16x4, b: u16x4, c: u16x4) u16x4 {
+     return (a & b) | (~a & c);
+}
+
+test vbsl_u16 {
+    const a: u16x4 = .{ std.math.maxInt(u16), 1, std.math.maxInt(u16), 2 };
+    const b: u16x4 = .{ std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16) };
+    const c: u16x4 = .{ std.math.minInt(u16), std.math.minInt(u16), std.math.minInt(u16), std.math.minInt(u16) };
+    const expected: u16x4 = .{ std.math.maxInt(u16), 1, std.math.maxInt(u16), 2 };
+
+    try expectEqual(expected, vbsl_u16(a, b, c));
+}
+
+// Bitwise Select
+pub inline fn vbsl_u32(a: u32x2, b: u32x2, c: u32x2) u32x2 {
+     return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbsl_u64(a: i64x1, b: i64x1, c: i64x1) i64x1 {
+     return (a & b) | (~a & c);
 }
 
 /// Shift right
