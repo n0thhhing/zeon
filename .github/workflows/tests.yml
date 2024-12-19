@@ -31,6 +31,7 @@ jobs:
         with:
           version: ${{ matrix.zig-version }}
       - run: |
+          echo ${{ steps.qemu.outputs.platforms }}
           zig build test \
             -fqemu \
             -freference-trace \
