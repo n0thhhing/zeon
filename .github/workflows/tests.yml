@@ -5,20 +5,19 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
   workflow_dispatch:
 
 jobs:
   tests:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest]
         zig-version: [0.13.0]
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
       - name: Install QEMU User-Mode
         run: |
           sudo apt-get update
@@ -26,10 +25,13 @@ jobs:
           qemu-aarch64 -version
           qemu-arm -version
           qemu-aarch64_be -version
-      - name: Build and Test
+
+      - name: Install Zig
         uses: mlugg/setup-zig@v1
         with:
           version: ${{ matrix.zig-version }}
+
+      - name: Build and Test
         run: |
           zig build test \
             -fqemu \
