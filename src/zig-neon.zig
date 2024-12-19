@@ -276,14 +276,11 @@ inline fn PromoteVector(comptime T: type) type {
 /// Checks if the bitsize of `T` exceeds the maximum
 /// bitsize for Vectors(128 on AArch/Arm)
 ///
-/// TODO: Technically were targeting more than just
-///       AArch/Arm, so if we have support for larger
-///       vectors on the current cpu, we use that
-///       instead to avoid unnecessarily splitting
-///       vectors. Also, aarch64 isnt limited to just
-///       128 bits with the sve feature. So if the
-///       user has sve, then this can be determined
-///       with the `cntb` instruction.
+/// TODO: Technically were targeting more than
+///       just AArch/Arm, so if we have support
+///       for larger vectors on the current cpu
+///       we use that instead to avoid unnecessarily
+///       splitting vectors.
 inline fn toLarge(comptime T: type) bool {
     const Child = std.meta.Child(T);
     const bit_size = @typeInfo(Child).Int.bits * @typeInfo(T).Vector.len;
@@ -3259,22 +3256,22 @@ test vbsl_s8 {
 
 // Bitwise Select
 pub inline fn vbsl_s16(a: i16x4, b: i16x4, c: i16x4) i16x4 {
-     return (a & b) | (~a & c);
+    return (a & b) | (~a & c);
 }
 
 // Bitwise Select
 pub inline fn vbsl_s32(a: i32x2, b: i32x2, c: i32x2) i32x2 {
-     return (a & b) | (~a & c);
+    return (a & b) | (~a & c);
 }
 
 // Bitwise Select
 pub inline fn vbsl_s64(a: i64x1, b: i64x1, c: i64x1) i64x1 {
-     return (a & b) | (~a & c);
+    return (a & b) | (~a & c);
 }
 
 // Bitwise Select
 pub inline fn vbsl_u8(a: u8x8, b: u8x8, c: u8x8) u8x8 {
-     return (a & b) | (~a & c);
+    return (a & b) | (~a & c);
 }
 
 test vbsl_u8 {
@@ -3288,7 +3285,7 @@ test vbsl_u8 {
 
 // Bitwise Select
 pub inline fn vbsl_u16(a: u16x4, b: u16x4, c: u16x4) u16x4 {
-     return (a & b) | (~a & c);
+    return (a & b) | (~a & c);
 }
 
 test vbsl_u16 {
@@ -3302,12 +3299,87 @@ test vbsl_u16 {
 
 // Bitwise Select
 pub inline fn vbsl_u32(a: u32x2, b: u32x2, c: u32x2) u32x2 {
-     return (a & b) | (~a & c);
+    return (a & b) | (~a & c);
 }
 
 // Bitwise Select
 pub inline fn vbsl_u64(a: i64x1, b: i64x1, c: i64x1) i64x1 {
-     return (a & b) | (~a & c);
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbsl_f32(a: f32x2, b: f32x2, c: f32x2) f32x2 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbsl_p8(a: p8x8, b: p8x8, c: p8x8) p8x8 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbsl_p16(a: p16x4, b: p16x4, c: p16x4) p16x4 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_s8(a: i8x16, b: i8x16, c: i8x16) i8x16 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_s16(a: i16x8, b: i16x8, c: i16x8) i16x8 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_s32(a: i32x4, b: i32x4, c: i32x4) i32x4 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_s64(a: i64x2, b: i64x2, c: i64x2) i64x2 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_u8(a: u8x16, b: u8x16, c: u8x16) u8x16 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_u16(a: u16x8, b: u16x8, c: u16x8) u16x8 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_u32(a: u32x4, b: u32x4, c: u32x4) u32x4 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_u64(a: i64x2, b: i64x2, c: i64x2) i64x2 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_f32(a: f32x4, b: f32x4, c: f32x4) f32x4 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_f64(a: f64x2, b: f64x2, c: f64x2) f64x2 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_p8(a: p8x16, b: p8x16, c: p8x16) p8x16 {
+    return (a & b) | (~a & c);
+}
+
+// Bitwise Select
+pub inline fn vbslq_p16(a: p16x8, b: p16x8, c: p16x8) p16x8 {
+    return (a & b) | (~a & c);
 }
 
 /// Shift right
