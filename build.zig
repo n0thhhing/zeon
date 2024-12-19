@@ -23,6 +23,10 @@ const test_targets = [_]std.Target.Query{
         .os_tag = .linux,
     },
     std.Target.Query{
+        .cpu_arch = .aarch64_be,
+        .os_tag = .linux,
+    },
+    std.Target.Query{
         .cpu_arch = .aarch64,
         .os_tag = .linux,
         .cpu_features_sub = blk: {
