@@ -41,6 +41,10 @@ const test_targets = [_]std.Target.Query{
         .cpu_arch = .x86,
         .os_tag = .linux,
     },
+    std.Target.Query{
+        .cpu_arch = .aarch64,
+        .os_tag = .macos,
+    },
 };
 
 pub fn build(b: *std.Build) void {
