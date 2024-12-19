@@ -13,6 +13,8 @@ const test_targets = [_]std.Target.Query{
         .cpu_features_sub = blk: {
             var disabled_features = std.Target.Cpu.Feature.Set.empty;
             disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.neon));
+            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.aes));
+            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.crypto));
             break :blk disabled_features;
         }
     },
@@ -26,6 +28,8 @@ const test_targets = [_]std.Target.Query{
         .cpu_features_sub = blk: {
             var disabled_features = std.Target.Cpu.Feature.Set.empty;
             disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.neon));
+            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.crypto));
+            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.aes));
             break :blk disabled_features;
         }
     },
