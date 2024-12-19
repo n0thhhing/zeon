@@ -15,22 +15,19 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         zig-version: [0.13.0]
-        image:
-          - tonistiigi/binfmt:master
-        platforms:
-          - arm64,arm,arm64_be
 
-    name: Build and Test
     steps:
-      - uses: docker/setup-qemu-action@v3
-        with:
-          image: ${{ matrix.image }}
-          platforms: ${{ matrix.platforms }}
-      - uses: actions/checkout@v3
-      - uses: mlugg/setup-zig@v1
+      - name: Install QEMU User-Mode
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user qemu-user-static
+          qemu-arm -version
+      - name: Build and Test
+        uses: actions/checkout@v3
+        uses: mlugg/setup-zig@v1
         with:
           version: ${{ matrix.zig-version }}
-      - run: |
+        run: |
           echo ${{ steps.qemu.outputs.platforms }}
           zig build test \
             -fqemu \
