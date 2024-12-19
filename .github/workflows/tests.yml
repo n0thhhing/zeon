@@ -16,7 +16,7 @@ jobs:
         os: [ubuntu-latest]
         zig-version: [0.13.0]
         image:
-          - tonistiigi/binfmt:latest
+          - tonistiigi/binfmt:master
         platforms:
           - arm64,arm,arm64_be
 
