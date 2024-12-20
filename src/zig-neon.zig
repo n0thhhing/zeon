@@ -3500,6 +3500,12 @@ test vcageq_f64 {
     try testIntrinsic(vcageq_f64, expected, .{ a, b });
 }
 
+/// Floating-point absolute compare greater than
+pub inline fn vcagt_f32(a: f32x2, b: f32x2) u32x2 {
+    _ = a;
+    _ = b;
+}
+
 /// Shift right
 pub inline fn vshrq_n_s8(a: i8x16, n: u8) i8x16 {
     return @as(u8x16, @bitCast(a)) >> @as(u8x16, @splat(n));
