@@ -1,6 +1,6 @@
 # Zig-Neon
 
-ARM64 Neon intrinsics implemented in pure zig as well as in assembly!
+ARM/ARM64 Neon intrinsics implemented in pure zig as well as in assembly!
 
 ## This project is still in production
 
