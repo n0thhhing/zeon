@@ -813,18 +813,15 @@ pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
             },
             inline .big => {
                 return @byteSwap(
-                    @as(
-                        i32x4,
-                        @shuffle(
-                            i32,
-                            asm volatile ("smull %[ret].4s, %[a].4h, %[b].4h"
-                                : [ret] "=w" (-> i32x4),
-                                : [a] "w" (a),
-                                  [b] "w" (b),
-                            ),
-                            undefined,
-                            i32x4{ 3, 2, 1, 0 },
+                    @shuffle(
+                        i32,
+                        asm volatile ("smull %[ret].4s, %[a].4h, %[b].4h"
+                            : [ret] "=w" (-> i32x4),
+                            : [a] "w" (a),
+                              [b] "w" (b),
                         ),
+                        undefined,
+                        i32x4{ 3, 2, 1, 0 },
                     ),
                 );
             },
@@ -868,27 +865,24 @@ pub inline fn vmull_s32(a: i32x2, b: i32x2) i64x2 {
             },
             inline .big => {
                 return @byteSwap(
-                    @as(
-                        i64x2,
-                        @shuffle(
-                            i64,
-                            asm volatile ("smull %[ret].2d, %[a].2s, %[b].2s"
-                                : [ret] "=w" (-> i64x2),
-                                : [a] "w" (a),
-                                  [b] "w" (b),
-                            ),
-                            undefined,
-                            i64x2{ 1, 0 },
+                    @shuffle(
+                        i64,
+                        asm volatile ("smull %[ret].2d, %[a].2s, %[b].2s"
+                            : [ret] "=w" (-> i64x2),
+                            : [a] "w" (a),
+                              [b] "w" (b),
                         ),
+                        undefined,
+                        i64x2{ 1, 0 },
                     ),
                 );
             },
         }
     } else if (use_asm and Arm.has_neon) {
-        return asm volatile ("vmull.s32 q0, d0, d1"
-            : [ret] "={q0}" (-> i64x2),
-            : [a] "{d0}" (a),
-              [b] "{d1}" (b),
+        return asm volatile ("vmull.s32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_builtins and AArch64.has_neon) {
         return struct {
@@ -912,38 +906,158 @@ test vmull_s32 {
 
 /// Unsigned multiply long
 pub inline fn vmull_u8(a: u8x8, b: u8x8) u16x8 {
-    return @as(u16x8, a) * @as(u16x8, b);
+    if (use_asm and AArch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm volatile ("umull %[ret].8h, %[a].8b, %[b].8b"
+                    : [ret] "=w" (-> u16x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return @byteSwap(
+                    @shuffle(
+                        u16,
+                        asm volatile ("umull %[ret].8h, %[a].8b, %[b].8b"
+                            : [ret] "=w" (-> u16x8),
+                            : [a] "w" (a),
+                              [b] "w" (b),
+                        ),
+                        undefined,
+                        u16x8{ 7, 6, 5, 4, 3, 2, 1, 0 },
+                    ),
+                );
+            },
+        }
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vmull.u8 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.umull.v8i16"(u8x8, u8x8) u16x8;
+        }.@"llvm.aarch64.neon.umull.v8i16"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vmullu.v8i16"(u8x8, u8x8) u16x8;
+        }.@"llvm.arm.neon.vmullu.v8i16"(a, b);
+    } else {
+        return @as(u16x8, a) * @as(u16x8, b);
+    }
 }
 
 test vmull_u8 {
     const a: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
     const b: u8x8 = @splat(5);
 
-    try expectEqual(u16x8{ 0, 1 * 5, 2 * 5, 3 * 5, 4 * 5, 5 * 5, 6 * 5, 7 * 5 }, vmull_u8(a, b));
+    try testIntrinsic(vmull_u8, u16x8{ 0, 1 * 5, 2 * 5, 3 * 5, 4 * 5, 5 * 5, 6 * 5, 7 * 5 }, .{ a, b });
 }
 
 /// Unsigned multiply long
 pub inline fn vmull_u16(a: u16x4, b: u16x4) u32x4 {
-    return @as(u32x4, a) * @as(u32x4, b);
+    if (use_asm and AArch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm volatile ("umull %[ret].4s, %[a].4h, v1.4h"
+                    : [ret] "=w" (-> u32x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return @byteSwap(
+                    @shuffle(
+                        u32,
+                        asm volatile ("umull %[ret].4s, %[a].4h, %[b].4h"
+                            : [ret] "=w" (-> u32x4),
+                            : [a] "w" (a),
+                              [b] "w" (b),
+                        ),
+                        undefined,
+                        u32x4{ 3, 2, 1, 0 },
+                    ),
+                );
+            },
+        }
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vmull.u16 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.umull.v4i32"(u16x4, u16x4) u32x4;
+        }.@"llvm.aarch64.neon.umull.v4i32"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vmullu.v4i32"(u16x4, u16x4) u32x4;
+        }.@"llvm.arm.neon.vmullu.v4i32"(a, b);
+    } else {
+        return @as(u32x4, a) * @as(u32x4, b);
+    }
 }
 
 test vmull_u16 {
     const a: u16x4 = .{ 0, 1, 2, 3 };
     const b: u16x4 = @splat(5);
 
-    try expectEqual(u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, vmull_u16(a, b));
+    try testIntrinsic(vmull_u16, u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, .{ a, b });
 }
 
 /// Unsigned multiply long
 pub inline fn vmull_u32(a: u32x2, b: u32x2) u64x2 {
-    return @as(u64x2, a) * @as(u64x2, b);
+    if (use_asm and AArch64.has_neon) {
+        switch (endianness) {
+            .little => {
+                return asm volatile ("umull %[ret].2d, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> u64x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return @byteSwap(
+                    @shuffle(
+                        u64,
+                        asm volatile ("umull %[ret].2d, %[a].2s, %[b].2s"
+                            : [ret] "=w" (-> u64x2),
+                            : [a] "w" (a),
+                              [b] "w" (b),
+                        ),
+                        undefined,
+                        u64x2{ 1, 0 },
+                    ),
+                );
+            },
+        }
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vmull.u32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.umull.v2i64"(u32x2, u32x2) u64x2;
+        }.@"llvm.aarch64.neon.umull.v2i64"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vmullu.v2i64"(u32x2, u32x2) u64x2;
+        }.@"llvm.arm.neon.vmullu.v2i64"(a, b);
+    } else {
+        return @as(u64x2, a) * @as(u64x2, b);
+    }
 }
 
 test vmull_u32 {
     const a: u32x2 = .{ 0, 1 };
     const b: u32x2 = @splat(5);
 
-    try expectEqual(u64x2{ 0, 1 * 5 }, vmull_u32(a, b));
+    try testIntrinsic(vmull_u32, u64x2{ 0, 1 * 5 }, .{ a, b });
 }
 
 /// Signed multiply long
@@ -952,11 +1066,10 @@ pub inline fn vmull_high_s8(a: i8x16, b: i8x16) i16x8 {
 }
 
 test vmull_high_s8 {
-    const a: i8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 127 };
+    const a: i8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127 };
     const b: i8x16 = @splat(2);
-    use_asm = false;
-    use_builtins = true;
-    try expectEqual(i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_high_s8(a, b));
+
+    try testIntrinsic(vmull_high_s8, i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b });
 }
 
 /// Signed multiply long
@@ -965,11 +1078,10 @@ pub inline fn vmull_high_s16(a: i16x8, b: i16x8) i32x4 {
 }
 
 test vmull_high_s16 {
-    const a: i16x8 = .{ 0, -1, -2, -3, 0, -1, -2, -3 };
+    const a: i16x8 = .{ 0, 0, 0, 0, 0, -1, -2, -3 };
     const b: i16x8 = @splat(5);
-    use_asm = false;
-    use_builtins = true;
-    try expectEqual(i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, vmull_high_s16(a, b));
+
+    try testIntrinsic(vmull_high_s16, i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, .{ a, b });
 }
 
 /// Signed multiply long
@@ -980,9 +1092,8 @@ pub inline fn vmull_high_s32(a: i32x4, b: i32x4) i64x2 {
 test vmull_high_s32 {
     const a: i32x4 = .{ 0, -1, -2, -3 };
     const b: i32x4 = @splat(5);
-    use_asm = false;
-    use_builtins = true;
-    try expectEqual(i64x2{ -2 * 5, -3 * 5 }, vmull_high_s32(a, b));
+
+    try testIntrinsic(vmull_high_s32, i64x2{ -2 * 5, -3 * 5 }, .{ a, b });
 }
 
 /// Unsigned multiply long
@@ -994,7 +1105,7 @@ test vmull_high_u8 {
     const a: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 127 };
     const b: u8x16 = @splat(2);
 
-    try expectEqual(u16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, vmull_high_u8(a, b));
+    try testIntrinsic(vmull_high_u8, u16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b });
 }
 
 /// Unsigned multiply long
@@ -1006,7 +1117,7 @@ test vmull_high_u16 {
     const a: u16x8 = .{ 0, 1, 2, 3, 0, 1, 2, 3 };
     const b: u16x8 = @splat(5);
 
-    try expectEqual(u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, vmull_high_u16(a, b));
+    try testIntrinsic(vmull_high_u16, u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, .{ a, b });
 }
 
 /// Unsigned multiply long
