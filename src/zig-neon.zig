@@ -1135,11 +1135,25 @@ test vmull_high_u32 {
 /// Absolute difference between two i8x8 vectors
 pub inline fn vabd_s8(a: i8x8, b: i8x8) i8x8 {
     if (use_asm and AArch64.has_neon) {
-        return asm volatile ("sabd v0.8b,v1.8b,v2.8b"
-            : [ret] "={v0}" (-> i8x8),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm volatile ("sabd %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> i8x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.s8 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i8x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.sabd.v8i8"(i8x8, i8x8) i8x8;
+        }.@"llvm.aarch64.neon.sabd.v8i8"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabds.v8i8"(i8x8, i8x8) i8x8;
+        }.@"llvm.arm.neon.vabds.v8i8"(a, b);
     } else {
         return abd(a, b);
     }
@@ -1156,7 +1170,29 @@ test vabd_s8 {
 
 /// Absolute difference between two i16x4 vectors
 pub inline fn vabd_s16(a: i16x4, b: i16x4) i16x4 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("sabd %[ret].4h, %[a].4h, %[b].4h"
+            : [ret] "=w" (-> i16x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.s16 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i16x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.sabd.v4i16"(i16x4, i16x4) i16x4;
+        }.@"llvm.aarch64.neon.sabd.v4i16"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabds.v4i16"(i16x4, i16x4) i16x4;
+        }.@"llvm.arm.neon.vabds.v4i16"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabd_s16 {
@@ -1165,12 +1201,34 @@ test vabd_s16 {
 
     const expected: i16x4 = .{ 15, 13, 11, 9 };
 
-    try expectEqual(expected, vabd_s16(a, b));
+    try testIntrinsic(vabd_s16, expected, .{ a, b });
 }
 
 /// Absolute difference between two i32x2 vectors
 pub inline fn vabd_s32(a: i32x2, b: i32x2) i32x2 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("sabd %[ret].2s, %[a].2s, %[b].2s"
+            : [ret] "=w" (-> i32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.s32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.sabd.v2i32"(i32x2, i32x2) i32x2;
+        }.@"llvm.aarch64.neon.sabd.v2i32"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabds.v2i32"(i32x2, i32x2) i32x2;
+        }.@"llvm.arm.neon.vabds.v2i32"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabd_s32 {
@@ -1179,17 +1237,31 @@ test vabd_s32 {
 
     const expected: i32x2 = .{ 15, 13 };
 
-    try expectEqual(expected, vabd_s32(a, b));
+    try testIntrinsic(vabd_s32, expected, .{ a, b });
 }
 
 /// Absolute difference between two u8x8 vectors
 pub inline fn vabd_u8(a: u8x8, b: u8x8) u8x8 {
     if (use_asm and AArch64.has_neon) {
-        return asm volatile ("uabd v0.8b,v1.8b,v2.8b"
-            : [ret] "={v0}" (-> u8x8),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm volatile ("uabd %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> u8x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.u8 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u8x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.uabd.v8i8"(u8x8, u8x8) u8x8;
+        }.@"llvm.aarch64.neon.uabd.v8i8"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabdu.v8i8"(u8x8, u8x8) u8x8;
+        }.@"llvm.arm.neon.vabdu.v8i8"(a, b);
     } else {
         return abd(a, b);
     }
@@ -1199,32 +1271,54 @@ test vabd_u8 {
     const a: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
     const b: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
     const expected: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
-    try expectEqual(expected, vabd_u8(a, b));
+    try testIntrinsic(vabd_u8, expected, .{ a, b });
 
     const a2: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
     const b2: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
     const expected2: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-    try expectEqual(expected2, vabd_u8(a2, b2));
+    try testIntrinsic(vabd_u8, expected2, .{ a2, b2 });
 
     const a3: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
     const b3: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
     const expected3: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
-    try expectEqual(expected3, vabd_u8(a3, b3));
+    try testIntrinsic(vabd_u8, expected3, .{ a3, b3 });
 
     const a4: u8x8 = .{ 0, 255, 128, 64, 32, 16, 8, 4 };
     const b4: u8x8 = .{ 255, 0, 64, 128, 16, 32, 4, 8 };
     const expected4: u8x8 = .{ 255, 255, 64, 64, 16, 16, 4, 4 };
-    try expectEqual(expected4, vabd_u8(a4, b4));
+    try testIntrinsic(vabd_u8, expected4, .{ a4, b4 });
 
     const a5: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
     const b5: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
     const expected5: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-    try expectEqual(expected5, vabd_u8(a5, b5));
+    try testIntrinsic(vabd_u8, expected5, .{ a5, b5 });
 }
 
 /// Absolute difference between two u16x4 vectors
 pub inline fn vabd_u16(a: u16x4, b: u16x4) u16x4 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("uabd %[ret].4h, %[a].4h, %[b].4h"
+            : [ret] "=w" (-> u16x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.u16 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u16x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.uabd.v4i16"(u16x4, u16x4) u16x4;
+        }.@"llvm.aarch64.neon.uabd.v4i16"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabdu.v4i16"(u16x4, u16x4) u16x4;
+        }.@"llvm.arm.neon.vabdu.v4i16"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabd_u16 {
@@ -1233,12 +1327,34 @@ test vabd_u16 {
 
     const expected: u16x4 = .{ 15, 13, 11, 9 };
 
-    try expectEqual(expected, vabd_u16(a, b));
+    try testIntrinsic(vabd_u16, expected, .{ a, b });
 }
 
 /// Absolute difference between two u32x2 vectors
 pub inline fn vabd_u32(a: u32x2, b: u32x2) u32x2 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("uabd %[ret].2s, %[a].2s, %[b].2s"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.u32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.uabd.v2i32"(u32x2, u32x2) u32x2;
+        }.@"llvm.aarch64.neon.uabd.v2i32"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabdu.v2i32"(u32x2, u32x2) u32x2;
+        }.@"llvm.arm.neon.vabdu.v2i32"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabd_u32 {
@@ -1247,12 +1363,34 @@ test vabd_u32 {
 
     const expected: u32x2 = .{ 15, 13 };
 
-    try expectEqual(expected, vabd_u32(a, b));
+    try testIntrinsic(vabd_u32, expected, .{ a, b });
 }
 
 /// Absolute difference between two f32x2 vectors
 pub inline fn vabd_f32(a: f32x2, b: f32x2) f32x2 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("fabd %[ret].2s, %[a].2s, %[b].2s"
+            : [ret] "=w" (-> f32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.f32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> f32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.fabd.v2f32"(f32x2, f32x2) f32x2;
+        }.@"llvm.aarch64.neon.fabd.v2f32"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabds.v2f32"(f32x2, f32x2) f32x2;
+        }.@"llvm.arm.neon.vabds.v2f32"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabd_f32 {
@@ -1261,12 +1399,24 @@ test vabd_f32 {
 
     const expected: f32x2 = .{ @abs(0.00 - 0.19), @abs(0.00 - 0.15) };
 
-    try expectEqual(expected, vabd_f32(a, b));
+    try testIntrinsic(vabd_f32, expected, .{ a, b });
 }
 
 /// Absolute difference between two f64x1 vectors
 pub inline fn vabd_f64(a: f64x1, b: f64x1) f64x1 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("fabd d0, d0, d1"
+            : [ret] "={d0}" (-> f64x1),
+            : [a] "{d0}" (a),
+              [b] "{d1}" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.fabd.v1f64"(f64x1, f64x1) f64x1;
+        }.@"llvm.aarch64.neon.fabd.v1f64"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabd_f64 {
