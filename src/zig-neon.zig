@@ -124,12 +124,6 @@ pub const p16x8 = @Vector(8, p16);
 pub const p64x1 = @Vector(1, p64);
 pub const p64x2 = @Vector(2, p64);
 
-inline fn VectorArray(comptime T: type, comptime length: usize) type {
-    return struct {
-        val: [length]T,
-    };
-}
-
 pub const i8x8x2 = struct { i8x8, i8x8 };
 pub const i8x16x2 = struct { i8x16, i8x16 };
 pub const i16x4x2 = struct { i16x4, i16x4 };
@@ -228,14 +222,19 @@ pub const p64x2x4 = struct { p64x2, p64x2, p64x2, p64x2 };
 
 /// Helps test builtins and inline assembly
 fn testIntrinsic(func: anytype, expected: anytype, args: anytype) !void {
-    inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opt| {
-        use_asm = opt[0];
-        use_builtins = opt[1];
+    if (is_aarch64 or is_arm) {
+        inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opt| {
+            use_asm = opt[0];
+            use_builtins = opt[1];
+            const result = @call(.auto, func, args);
+            try expectEqual(expected, result);
+        }
+        use_asm = true;
+        use_builtins = true;
+    } else {
         const result = @call(.auto, func, args);
         try expectEqual(expected, result);
     }
-    use_asm = true;
-    use_builtins = true;
 }
 
 /// Gets the length of a vector
@@ -260,7 +259,12 @@ inline fn join(
     const a_len = vecLen(a);
     const b_len = vecLen(a);
 
-    return @shuffle(Child, a, b, @as([a_len]i32, simd.iota(i32, a_len)) ++ @as([b_len]i32, ~simd.iota(i32, b_len)));
+    return @shuffle(
+        Child,
+        a,
+        b,
+        @as([a_len]i32, simd.iota(i32, a_len)) ++ @as([b_len]i32, ~simd.iota(i32, b_len)),
+    );
 }
 
 /// Promotes the Child type of the vector `T`
@@ -291,6 +295,12 @@ fn toLarge(comptime T: type) bool {
 }
 
 /// Absolute difference between arguments
+///
+/// TODO:
+///       If we are using AArch/Arm, then we can
+///       dynamically build an instruction based
+///       on the current cpu, that way we can
+///       reduce at least some of the repetitiveness.
 inline fn abd(a: anytype, b: anytype) @TypeOf(a, b) {
     const T = @TypeOf(a, b);
     const Child = std.meta.Child(T);
@@ -1430,7 +1440,29 @@ test vabd_f64 {
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_s8(a: i8x16, b: i8x16) i8x16 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("sabd %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.s8 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.sabd.v16i8"(i8x16, i8x16) i8x16;
+        }.@"llvm.aarch64.neon.sabd.v16i8"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabds.v16i8"(i8x16, i8x16) i8x16;
+        }.@"llvm.arm.neon.vabds.v16i8"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabdq_s8 {
@@ -1439,12 +1471,34 @@ test vabdq_s8 {
 
     const expected: i8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 1, 3, 5, 7, 9, 11, 13, 15 };
 
-    try expectEqual(expected, vabdq_s8(a, b));
+    try testIntrinsic(vabdq_s8, expected, .{ a, b });
 }
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_s16(a: i16x8, b: i16x8) i16x8 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("sabd %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.s16 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.sabd.v8i16"(i16x8, i16x8) i16x8;
+        }.@"llvm.aarch64.neon.sabd.v8i16"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabds.v8i16"(i16x8, i16x8) i16x8;
+        }.@"llvm.arm.neon.vabds.v8i16"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabdq_s16 {
@@ -1453,12 +1507,34 @@ test vabdq_s16 {
 
     const expected: i16x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
 
-    try expectEqual(expected, vabdq_s16(a, b));
+    try testIntrinsic(vabdq_s16, expected, .{ a, b });
 }
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_s32(a: i32x4, b: i32x4) i32x4 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("sabd %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.s32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.sabd.v4i32"(i32x4, i32x4) i32x4;
+        }.@"llvm.aarch64.neon.sabd.v4i32"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabds.v4i32"(i32x4, i32x4) i32x4;
+        }.@"llvm.arm.neon.vabds.v4i32"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabdq_s32 {
@@ -1467,39 +1543,61 @@ test vabdq_s32 {
 
     const expected: i32x4 = .{ 15, 13, 11, 9 };
 
-    try expectEqual(expected, vabdq_s32(a, b));
+    try testIntrinsic(vabdq_s32, expected, .{ a, b });
 }
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u8(a: u8x16, b: u8x16) u8x16 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("uabd %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.u8 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.uabd.v16i8"(u8x16, u8x16) u8x16;
+        }.@"llvm.aarch64.neon.uabd.v16i8"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabdu.v16i8"(u8x16, u8x16) u8x16;
+        }.@"llvm.arm.neon.vabdu.v16i8"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabdq_u8 {
     const a: u8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8 };
     const b: u8x16 = .{ 16, 15, 14, 13, 12, 11, 10, 9, 16, 15, 14, 13, 12, 11, 10, 9 };
     const expected: u8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1 };
-    try expectEqual(expected, vabdq_u8(a, b));
+    try testIntrinsic(vabdq_u8, expected, .{ a, b });
 
     const a2: u8x16 = .{ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
     const b2: u8x16 = .{ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
     const expected2: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    try expectEqual(expected2, vabdq_u8(a2, b2));
+    try testIntrinsic(vabdq_u8, expected2, .{ a2, b2 });
 
     const a3: u8x16 = .{ 16, 15, 14, 13, 12, 11, 10, 9, 16, 15, 14, 13, 12, 11, 10, 9 };
     const b3: u8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8 };
     const expected3: u8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1 };
-    try expectEqual(expected3, vabdq_u8(a3, b3));
+    try testIntrinsic(vabdq_u8, expected3, .{ a3, b3 });
 
     const a4: u8x16 = .{ 0, 255, 128, 64, 32, 16, 8, 4, 0, 255, 128, 64, 32, 16, 8, 4 };
     const b4: u8x16 = .{ 255, 0, 64, 128, 16, 32, 4, 8, 255, 0, 64, 128, 16, 32, 4, 8 };
     const expected4: u8x16 = .{ 255, 255, 64, 64, 16, 16, 4, 4, 255, 255, 64, 64, 16, 16, 4, 4 };
-    try expectEqual(expected4, vabdq_u8(a4, b4));
+    try testIntrinsic(vabdq_u8, expected4, .{ a4, b4 });
 
     const a5: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     const b5: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     const expected5: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    try expectEqual(expected5, vabdq_u8(a5, b5));
+    try testIntrinsic(vabdq_u8, expected5, .{ a5, b5 });
 }
 
 /// signed absolute difference and accumulate (128-bit)
@@ -1518,7 +1616,29 @@ test vabdq_u16 {
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u32(a: u32x4, b: u32x4) u32x4 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("uabd %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.u32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.uabd.v4i32"(u32x4, u32x4) u32x4;
+        }.@"llvm.aarch64.neon.uabd.v4i32"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabdu.v4i32"(u32x4, u32x4) u32x4;
+        }.@"llvm.arm.neon.vabdu.v4i32"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabdq_u32 {
@@ -1527,12 +1647,34 @@ test vabdq_u32 {
 
     const expected: u32x4 = .{ 15, 13, 15, 13 };
 
-    try expectEqual(expected, vabdq_u32(a, b));
+    try testIntrinsic(vabdq_u32, expected, .{ a, b });
 }
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_f32(a: f32x4, b: f32x4) f32x4 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("fabd %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vabd.f32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.fabd.v4f32"(f32x4, f32x4) f32x4;
+        }.@"llvm.aarch64.neon.fabd.v4f32"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vabds.v4f32"(f32x4, f32x4) f32x4;
+        }.@"llvm.arm.neon.vabds.v4f32"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabdq_f32 {
@@ -1541,12 +1683,27 @@ test vabdq_f32 {
 
     const expected: f32x4 = .{ @abs(0.00 - 0.19), @abs(0.00 - 0.15), @abs(0.00 - 0.19), @abs(0.00 - 0.15) };
 
+    use_asm = false;
+    use_builtins = false;
+
     try expectEqual(expected, vabdq_f32(a, b));
 }
 
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_f64(a: f64x2, b: f64x2) f64x2 {
-    return abd(a, b);
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("fabd %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> f64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.fabd.v2f64"(f64x2, f64x2) f64x2;
+        }.@"llvm.aarch64.neon.fabd.v2f64"(a, b);
+    } else {
+        return abd(a, b);
+    }
 }
 
 test vabdq_f64 {
@@ -1555,6 +1712,9 @@ test vabdq_f64 {
 
     const expected: f64x2 = .{ 0.15, 0.15 };
 
+    use_asm = false;
+    use_builtins = false;
+    
     try expectEqual(expected, vabdq_f64(a, b));
 }
 

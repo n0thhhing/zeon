@@ -2,4 +2,3 @@
 zig-out/
 tests/
 aarch64_simd.h
-Makefile

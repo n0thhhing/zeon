@@ -21,7 +21,7 @@ jobs:
       - name: Install QEMU User-Mode
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-user qemu-user-static
+          sudo apt-get install -y qemu-user
 
           echo
 
