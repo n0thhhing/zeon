@@ -1,1 +1,1 @@
-Makefile filter=ignoresections
+Makefile filter=ignorelines
