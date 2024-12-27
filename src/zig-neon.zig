@@ -246,8 +246,7 @@ inline fn vecLen(v: anytype) usize {
     return type_info.Vector.len;
 }
 
-/// Joins two vectors. This is a just calling
-/// std.join, but with force inline
+/// Joins two vectors
 inline fn join(
     a: anytype,
     b: anytype,
@@ -1714,14 +1713,36 @@ test vabdq_f64 {
 
     use_asm = false;
     use_builtins = false;
-    
+
     try expectEqual(expected, vabdq_f64(a, b));
 }
 
 /// Signed saturating doubling multiply long
 pub inline fn vqdmull_s16(a: i16x4, b: i16x4) i32x4 {
-    const product = vmull_s16(a, b);
-    return product *| @as(i32x4, @splat(2));
+    if (use_asm and AArch64.has_neon) {
+        return asm volatile ("sqdmull %[ret].4s, %[a].4h, %[b].4h"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_asm and Arm.has_neon) {
+        return asm volatile ("vqdmull.s16 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and AArch64.has_neon) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.sqdmull.v4i32"(i16x4, i16x4) i32x4;
+        }.@"llvm.aarch64.neon.sqdmull.v4i32"(a, b);
+    } else if (use_builtins and Arm.has_neon) {
+        return struct {
+            extern fn @"llvm.arm.neon.vqdmull.v4i32"(i16x4, i16x4) i32x4;
+        }.@"llvm.arm.neon.vqdmull.v4i32"(a, b);
+    } else {
+        const product = vmull_s16(a, b);
+        return product *| @as(i32x4, @splat(2));
+    }
 }
 
 test vqdmull_s16 {
@@ -2102,6 +2123,11 @@ test vaddv_u32 {
     try expectEqual(expected, vaddv_u32(a));
 }
 
+/// Floating-point add across vector
+pub inline fn vaddv_f32(a: f32x2) f32 {
+    return @reduce(.Add, a);
+}
+
 /// Signed Add Long across Vector
 pub inline fn vaddvq_s8(a: i8x16) i8 {
     return @reduce(.Add, a);
@@ -2136,6 +2162,17 @@ test vaddvq_s32 {
 }
 
 /// Unsigned Add Long across Vector
+pub inline fn vaddvq_s64(a: i64x2) i64 {
+    return @reduce(.Add, a);
+}
+
+test vaddvq_s64 {
+    const a: i64x2 = .{ 1, 1 };
+    const expected: i64 = 2;
+    try expectEqual(expected, vaddvq_s64(a));
+}
+
+/// Unsigned Add Long across Vector
 pub inline fn vaddvq_u8(a: u8x16) u8 {
     return @reduce(.Add, a);
 }
@@ -2166,6 +2203,27 @@ test vaddvq_u32 {
     const a: u32x4 = .{ 1, 1, 1, 1 };
     const expected: u32 = 4;
     try expectEqual(expected, vaddvq_u32(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddvq_u64(a: u64x2) u64 {
+    return @reduce(.Add, a);
+}
+
+test vaddvq_u64 {
+    const a: u64x2 = .{ 1, 1 };
+    const expected: u64 = 2;
+    try expectEqual(expected, vaddvq_u64(a));
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddvq_f32(a: f32x4) f32 {
+    return @reduce(.Add, a);
+}
+
+/// Unsigned Add Long across Vector
+pub inline fn vaddvq_f64(a: f64x2) f64 {
+    return @reduce(.Add, a);
 }
 
 /// Floating-point maximum number across vector
@@ -2445,6 +2503,11 @@ pub inline fn vabal_s8(acc: i16x8, a: i8x8, b: i8x8) i8x8 {
     return vabdl_s8(a, b) +% acc;
 }
 
+/// Unsigned Absolute difference and Accumulate Long
+pub inline fn vabal_s16(acc: i32x4, a: i16x4, b: i16x4) i16x4 {
+    return vabdl_s16(a, b) +% acc;
+}
+
 /// Signed Absolute difference and Accumulate Long
 pub inline fn vabal_s32(acc: i64x2, a: i32x2, b: i32x2) i32x2 {
     return vabdl_s32(a, b) +% acc;
@@ -2653,7 +2716,22 @@ pub inline fn vabs_s32(a: i32x2) i32x2 {
 }
 
 /// Absolute value (wrapping)
+pub inline fn vabs_s64(a: i64x1) i64x1 {
+    return @bitCast(@abs(a));
+}
+
+/// Absolute value (wrapping)
 pub inline fn vabs_f32(a: f32x2) f32x2 {
+    return @bitCast(@abs(a));
+}
+
+/// Absolute value (wrapping)
+pub inline fn vabs_f64(a: f64x1) f64x1 {
+    return @bitCast(@abs(a));
+}
+
+/// Absolute value (wrapping)
+pub inline fn vabsd_s64(a: i64) i64 {
     return @bitCast(@abs(a));
 }
 
@@ -2713,6 +2791,11 @@ pub inline fn vadd_f32(a: f32x2, b: f32x2) f32x2 {
 }
 
 /// Vector add (wrapping)
+pub inline fn vadd_f64(a: f64x2, b: f64x2) f64x2 {
+    return a +% b;
+}
+
+/// Vector add (wrapping)
 pub inline fn vadd_u8(a: u8x8, b: u8x8) u8x8 {
     return a +% b;
 }
@@ -2729,6 +2812,21 @@ pub inline fn vadd_u32(a: u32x2, b: u32x2) u32x2 {
 
 /// Vector add (wrapping)
 pub inline fn vadd_u64(a: u64x1, b: u64x1) u64x1 {
+    return a +% b;
+}
+
+/// Vector add (wrapping)
+pub inline fn vadd_p8(a: p8x8, b: p8x8) p8x8 {
+    return a +% b;
+}
+
+/// Vector add (wrapping)
+pub inline fn vadd_p16(a: p16x4, b: p16x4) p16x4 {
+    return a +% b;
+}
+
+/// Vector add (wrapping)
+pub inline fn vadd_p64(a: p64x1, b: p64x1) p64x1 {
     return a +% b;
 }
 
@@ -2780,6 +2878,26 @@ pub inline fn vaddq_u32(a: u32x4, b: u32x4) u32x4 {
 /// Vector add (wrapping)
 pub inline fn vaddq_u64(a: u64x2, b: u64x2) u64x2 {
     return a +% b;
+}
+
+/// Bitwise exclusive OR
+pub inline fn vaddq_p8(a: p8x16, b: p8x16) p8x16 {
+    return a ^ b;
+}
+
+/// Bitwise exclusive OR
+pub inline fn vaddq_p16(a: p16x8, b: p16x8) p16x8 {
+    return a ^ b;
+}
+
+/// Bitwise exclusive OR
+pub inline fn vaddq_p64(a: p64x2, b: p64x2) p64x2 {
+    return a ^ b;
+}
+
+/// Bitwise exclusive OR
+pub inline fn vaddq_p128(a: p128, b: p128) p128 {
+    return a ^ b;
 }
 
 /// Add (wrapping)
@@ -3071,7 +3189,7 @@ pub inline fn vaesdq_u8(data: u8x16, key: u8x16) u8x16 {
             : [a] "{v0}" (data),
               [b] "{v1}" (key),
         );
-    } else if (use_builtins and AArch64.has_crypto) {
+    } else if (use_builtins and AArch64.has_crypto and AArch64.has_aes) {
         return struct {
             extern fn @"llvm.aarch64.crypto.aesd"(u8x16, u8x16) u8x16;
         }.@"llvm.aarch64.crypto.aesd"(data, key);
@@ -3096,7 +3214,7 @@ pub inline fn vaeseq_u8(data: u8x16, key: u8x16) u8x16 {
             : [a] "{v0}" (data),
               [b] "{v1}" (key),
         );
-    } else if (use_builtins and AArch64.has_crypto) {
+    } else if (use_builtins and AArch64.has_crypto and AArch64.has_aes) {
         return struct {
             extern fn @"llvm.aarch64.crypto.aese"(u8x16, u8x16) u8x16;
         }.@"llvm.aarch64.crypto.aese"(data, key);
@@ -3146,7 +3264,7 @@ pub inline fn vaesimcq_u8(data: u8x16) u8x16 {
             : [ret] "={v0}" (-> u8x16),
             : [a] "{v1}" (data),
         );
-    } else if (use_builtins and AArch64.has_crypto) {
+    } else if (use_builtins and AArch64.has_crypto and AArch64.has_aes) {
         return struct {
             extern fn @"llvm.aarch64.crypto.aesimc"(u8x16) u8x16;
         }.@"llvm.aarch64.crypto.aesimc"(data);
@@ -3169,7 +3287,7 @@ pub inline fn vaesmcq_u8(data: u8x16) u8x16 {
             : [ret] "={v0}" (-> u8x16),
             : [a] "{v1}" (data),
         );
-    } else if (use_builtins and AArch64.has_crypto) {
+    } else if (use_builtins and AArch64.has_crypto and AArch64.has_aes) {
         return struct {
             extern fn @"llvm.aarch64.crypto.aesmc"(u8x16) u8x16;
         }.@"llvm.aarch64.crypto.aesmc"(data);
@@ -3874,6 +3992,114 @@ pub inline fn vbslq_p8(a: p8x16, b: p8x16, c: p8x16) p8x16 {
 /// Bitwise Select
 pub inline fn vbslq_p16(a: p16x8, b: p16x8, c: p16x8) p16x8 {
     return (a & b) | (~a & c);
+}
+
+/// Bit clear and exclusive OR
+pub inline fn vbcaxq_s8(a: i8x16, b: i8x16, c: i8x16) i8x16 {
+    if (use_asm and AArch64.has_neon and AArch64.has_sha3) {
+        return asm volatile ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+              [c] "w" (c),
+        );
+    } else if (use_builtins and AArch64.has_neon and AArch64.has_sha3 and AArch64.has_crypto) {
+        return struct {
+            extern fn @"llvm.aarch64.crypto.bcaxs.v16i8"(i8x16, i8x16, i8x16) i8x16;
+        }.@"llvm.aarch64.crypto.bcaxs.v16i8"(a, b, c);
+    } else {
+        return a ^ (b & ~c);
+    }
+}
+
+test vbcaxq_s8 {
+    const a: i8x16 = .{ 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0 };
+    const b: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    const c: i8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: i8x16 = .{ 1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12, 15, 14 };
+
+    try testIntrinsic(vbcaxq_s8, expected, .{ a, b, c });
+}
+
+/// Bit clear and exclusive OR
+pub inline fn vbcaxq_s16(a: i16x8, b: i16x8, c: i16x8) i16x8 {
+    if (use_asm and AArch64.has_neon and AArch64.has_sha3) {
+        return asm volatile ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+              [c] "w" (c),
+        );
+    } else if (use_builtins and AArch64.has_neon and AArch64.has_sha3 and AArch64.has_crypto) {
+        return struct {
+            extern fn @"llvm.aarch64.crypto.bcaxs.v8i16"(i16x8, i16x8, i16x8) i16x8;
+        }.@"llvm.aarch64.crypto.bcaxs.v8i16"(a, b, c);
+    } else {
+        return a ^ (b & ~c);
+    }
+}
+
+test vbcaxq_s16 {
+    const a: i16x8 = .{ 1, 0, 1, 0, 1, 0, 1, 0 };
+    const b: i16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const c: i16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
+    const expected: i16x8 = .{ 1, 0, 3, 2, 5, 4, 7, 6 };
+
+    try testIntrinsic(vbcaxq_s16, expected, .{ a, b, c });
+}
+
+/// Bit clear and exclusive OR
+pub inline fn vbcaxq_s32(a: i32x4, b: i32x4, c: i32x4) i32x4 {
+    if (use_asm and AArch64.has_neon and AArch64.has_sha3) {
+        return asm volatile ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+              [c] "w" (c),
+        );
+    } else if (use_builtins and AArch64.has_neon and AArch64.has_sha3 and AArch64.has_crypto) {
+        return struct {
+            extern fn @"llvm.aarch64.crypto.bcaxs.v4i32"(i32x4, i32x4, i32x4) i32x4;
+        }.@"llvm.aarch64.crypto.bcaxs.v4i32"(a, b, c);
+    } else {
+        return a ^ (b & ~c);
+    }
+}
+
+test vbcaxq_s32 {
+    const a: i32x4 = .{ 1, 0, 1, 0 };
+    const b: i32x4 = .{ 0, 1, 2, 3 };
+    const c: i32x4 = .{ 1, 1, 1, 1 };
+    const expected: i32x4 = .{ 1, 0, 3, 2 };
+
+    try testIntrinsic(vbcaxq_s32, expected, .{ a, b, c });
+}
+
+/// Bit clear and exclusive OR
+pub inline fn vbcaxq_s64(a: i64x2, b: i64x2, c: i64x2) i64x2 {
+    if (use_asm and AArch64.has_neon and AArch64.has_sha3) {
+        return asm volatile ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+              [c] "w" (c),
+        );
+    } else if (use_builtins and AArch64.has_neon and AArch64.has_sha3 and AArch64.has_crypto) {
+        return struct {
+            extern fn @"llvm.aarch64.crypto.bcaxs.v2i64"(i64x2, i64x2, i64x2) i64x2;
+        }.@"llvm.aarch64.crypto.bcaxs.v2i64"(a, b, c);
+    } else {
+        return a ^ (b & ~c);
+    }
+}
+
+test vbcaxq_s64 {
+    const a: i64x2 = .{ 1, 0 };
+    const b: i64x2 = .{ 0, 1 };
+    const c: i64x2 = .{ 1, 1 };
+    const expected: i64x2 = .{ 1, 0 };
+
+    try testIntrinsic(vbcaxq_s64, expected, .{ a, b, c });
 }
 
 /// Floating-point absolute compare greater than or equal
