@@ -3,3 +3,4 @@ TEST_TARGET := test
 
 test:
 	zig build $(TEST_TARGET) $(TEST_FLAGS)
+
