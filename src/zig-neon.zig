@@ -285,8 +285,7 @@ fn testIntrinsic(comptime fn_name: []const u8, func: anytype, expected: anytype,
 }
 
 /// Gets the length of a vector
-inline fn vecLen(v: anytype) usize {
-    const T = @TypeOf(v);
+inline fn vecLen(T: anytype) usize {
     const type_info = @typeInfo(T);
 
     comptime assert(type_info == .Vector);
@@ -294,7 +293,7 @@ inline fn vecLen(v: anytype) usize {
 }
 
 test vecLen {
-    try expectEqual(8, vecLen(u8x8{ 0, 0, 0, 0, 0, 0, 0, 0 }));
+    try expectEqual(8, vecLen(u8x8));
 }
 
 /// Joins two vectors
@@ -302,12 +301,12 @@ inline fn join(
     a: anytype,
     b: anytype,
 ) @Vector(
-    vecLen(a) + vecLen(b),
+    vecLen(@TypeOf(a)) + vecLen(@TypeOf(b)),
     std.meta.Child(@TypeOf(a, b)),
 ) {
     const Child = std.meta.Child(@TypeOf(a));
-    const a_len = vecLen(a);
-    const b_len = vecLen(a);
+    const a_len = vecLen(@TypeOf(a));
+    const b_len = vecLen(@TypeOf(b));
 
     return @shuffle(
         Child,
