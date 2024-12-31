@@ -285,7 +285,7 @@ fn testIntrinsic(comptime fn_name: []const u8, func: anytype, expected: anytype,
 }
 
 /// Gets the length of a vector
-inline fn vecLen(T: anytype) usize {
+inline fn vecLen(comptime T: anytype) usize {
     const type_info = @typeInfo(T);
 
     comptime assert(type_info == .Vector);
