@@ -166,4 +166,55 @@ pub fn build(b: *std.Build) void {
         const run_unit_tests = b.addRunArtifact(unit_tests);
         test_step.dependOn(&run_unit_tests.step);
     }
+
+    //addExample(b, target, optimize, test_step, "matrix/rotate.zig", "rotate_matrix");
+}
+
+fn addExample(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    test_step: *std.Build.Step,
+    comptime path: []const u8,
+    comptime name: []const u8,
+) void {
+    const example = b.addExecutable(.{
+        .name = name,
+        .root_source_file = b.path("./examples/" ++ path),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(example);
+    const mod = b.createModule(
+        .{
+            .root_source_file = b.path("./src/zig-neon.zig"),
+        },
+    );
+
+    example.root_module.addImport("neon", mod);
+    
+    const run_cmd = b.addRunArtifact(example);
+    
+    run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+
+    const run_step = b.step("run-" ++ name, "Run the `" ++ name ++ "` example");
+    run_step.dependOn(&run_cmd.step);
+
+    const example_test_step = b.step("test-" ++ name, "Run unit tests for " ++ name);
+    for (test_targets) |t| {
+        const unit_tests = b.addTest(.{
+            .root_source_file = b.path("./examples/" ++ path),
+            .target = b.resolveTargetQuery(t),
+            .optimize = optimize,
+        });
+
+        const run_unit_tests = b.addRunArtifact(unit_tests);
+        example_test_step.dependOn(&run_unit_tests.step);
+        test_step.dependOn(&run_unit_tests.step);
+    }
 }

@@ -1,4 +1,4 @@
-# Zig-Neon
+make better # Zig-Neon
 
 ARM/ARM64 Neon intrinsics implemented in pure zig as well as in assembly!
 
@@ -17,7 +17,7 @@ Zig-Neon aims to provide high-performance Neon intrinsics for ARM and ARM64 arch
  - [ ] Refactor into multiple files for better organization.
  - [ ] Eliminate repetitive patterns to improve maintainability.
  - [ ] Implement fallbacks for non-ARM architectures.
-
+ - [ ] Instruction Stripping e.g, Functions like vget_lane_f64 should compile down to nothing more than accessing the appropriate register (e.g., s0 for vec in v0). Currently, we are explicitly inserting instructions, which prevents the compiler from optimizing them away when not needed.
 
 ## Getting Started
 
@@ -45,3 +45,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - [rust-lang](https://dev-doc.rust-lang.org/nightly/core/arch/aarch64/index.html): Useful for function tests and reference.
 - [official docs](https://developer.arm.com/architectures/instruction-sets/intrinsics/#q=): Official reference for ARM intrinsics and assembly.
 - [godbolt](https://godbolt.org/z/7Ec6co4WG): Handy tool for examining and debugging assembly code.
+- [LLVM Language Reference Manual](https://releases.llvm.org/10.0.0/docs/LangRef.html) Helpful for using inline assembly.

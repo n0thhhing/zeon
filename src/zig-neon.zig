@@ -226,8 +226,8 @@ fn testIntrinsic(comptime fn_name: []const u8, func: anytype, expected: anytype,
                 const T = @TypeOf(func);
                 const fmt_str =
                     \\({s})({any}):
-                    \\    Expected: {},
-                    \\    Actual: {},
+                    \\    Expected: {d},
+                    \\    Actual: {d},
                     \\    Arch: {},
                     \\    Features: {s},
                     \\    Endianness: {},
@@ -282,6 +282,10 @@ fn testIntrinsic(comptime fn_name: []const u8, func: anytype, expected: anytype,
         const result = @call(.auto, func, args);
         try expectEqual(expected, result);
     }
+}
+
+inline fn numToString(comptime n: usize) []const u8 {
+    return std.fmt.comptimePrint("{d}", .{n});
 }
 
 /// Gets the length of a vector
@@ -918,7 +922,7 @@ pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
-                return asm volatile ("smull %[ret].8h, %[a].8b, %[b].8b"
+                return asm ("smull %[ret].8h, %[a].8b, %[b].8b"
                     : [ret] "=w" (-> i16x8),
                     : [a] "w" (a),
                       [b] "w" (b),
@@ -928,7 +932,7 @@ pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
                 return @byteSwap(
                     @shuffle(
                         i16,
-                        asm volatile ("smull %[ret].8h, %[a].8b, %[b].8b"
+                        asm ("smull %[ret].8h, %[a].8b, %[b].8b"
                             : [ret] "=w" (-> i16x8),
                             : [a] "w" (a),
                               [b] "w" (b),
@@ -940,7 +944,7 @@ pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
             },
         }
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vmull.s8 %[ret], %[a], %[b]"
+        return asm ("vmull.s8 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i16x8),
             : [a] "w" (a),
               [b] "w" (b),
@@ -969,7 +973,7 @@ pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
-                return asm volatile ("smull %[ret].4s, %[a].4h, v1.4h"
+                return asm ("smull %[ret].4s, %[a].4h, v1.4h"
                     : [ret] "=w" (-> i32x4),
                     : [a] "w" (a),
                       [b] "w" (b),
@@ -979,7 +983,7 @@ pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
                 return @byteSwap(
                     @shuffle(
                         i32,
-                        asm volatile ("smull %[ret].4s, %[a].4h, %[b].4h"
+                        asm ("smull %[ret].4s, %[a].4h, %[b].4h"
                             : [ret] "=w" (-> i32x4),
                             : [a] "w" (a),
                               [b] "w" (b),
@@ -991,7 +995,7 @@ pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
             },
         }
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vmull.s16 %[ret], %[a], %[b]"
+        return asm ("vmull.s16 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i32x4),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1021,7 +1025,7 @@ pub inline fn vmull_s32(a: i32x2, b: i32x2) i64x2 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
-                return asm volatile ("smull %[ret].2d, %[a].2s, %[b].2s"
+                return asm ("smull %[ret].2d, %[a].2s, %[b].2s"
                     : [ret] "=w" (-> i64x2),
                     : [a] "w" (a),
                       [b] "w" (b),
@@ -1031,7 +1035,7 @@ pub inline fn vmull_s32(a: i32x2, b: i32x2) i64x2 {
                 return @byteSwap(
                     @shuffle(
                         i64,
-                        asm volatile ("smull %[ret].2d, %[a].2s, %[b].2s"
+                        asm ("smull %[ret].2d, %[a].2s, %[b].2s"
                             : [ret] "=w" (-> i64x2),
                             : [a] "w" (a),
                               [b] "w" (b),
@@ -1043,7 +1047,7 @@ pub inline fn vmull_s32(a: i32x2, b: i32x2) i64x2 {
             },
         }
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vmull.s32 %[ret], %[a], %[b]"
+        return asm ("vmull.s32 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i64x2),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1073,7 +1077,7 @@ pub inline fn vmull_u8(a: u8x8, b: u8x8) u16x8 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
-                return asm volatile ("umull %[ret].8h, %[a].8b, %[b].8b"
+                return asm ("umull %[ret].8h, %[a].8b, %[b].8b"
                     : [ret] "=w" (-> u16x8),
                     : [a] "w" (a),
                       [b] "w" (b),
@@ -1083,7 +1087,7 @@ pub inline fn vmull_u8(a: u8x8, b: u8x8) u16x8 {
                 return @byteSwap(
                     @shuffle(
                         u16,
-                        asm volatile ("umull %[ret].8h, %[a].8b, %[b].8b"
+                        asm ("umull %[ret].8h, %[a].8b, %[b].8b"
                             : [ret] "=w" (-> u16x8),
                             : [a] "w" (a),
                               [b] "w" (b),
@@ -1095,7 +1099,7 @@ pub inline fn vmull_u8(a: u8x8, b: u8x8) u16x8 {
             },
         }
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vmull.u8 %[ret], %[a], %[b]"
+        return asm ("vmull.u8 %[ret], %[a], %[b]"
             : [ret] "=w" (-> u16x8),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1125,7 +1129,7 @@ pub inline fn vmull_u16(a: u16x4, b: u16x4) u32x4 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
-                return asm volatile ("umull %[ret].4s, %[a].4h, v1.4h"
+                return asm ("umull %[ret].4s, %[a].4h, v1.4h"
                     : [ret] "=w" (-> u32x4),
                     : [a] "w" (a),
                       [b] "w" (b),
@@ -1135,7 +1139,7 @@ pub inline fn vmull_u16(a: u16x4, b: u16x4) u32x4 {
                 return @byteSwap(
                     @shuffle(
                         u32,
-                        asm volatile ("umull %[ret].4s, %[a].4h, %[b].4h"
+                        asm ("umull %[ret].4s, %[a].4h, %[b].4h"
                             : [ret] "=w" (-> u32x4),
                             : [a] "w" (a),
                               [b] "w" (b),
@@ -1147,7 +1151,7 @@ pub inline fn vmull_u16(a: u16x4, b: u16x4) u32x4 {
             },
         }
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vmull.u16 %[ret], %[a], %[b]"
+        return asm ("vmull.u16 %[ret], %[a], %[b]"
             : [ret] "=w" (-> u32x4),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1177,7 +1181,7 @@ pub inline fn vmull_u32(a: u32x2, b: u32x2) u64x2 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
-                return asm volatile ("umull %[ret].2d, %[a].2s, %[b].2s"
+                return asm ("umull %[ret].2d, %[a].2s, %[b].2s"
                     : [ret] "=w" (-> u64x2),
                     : [a] "w" (a),
                       [b] "w" (b),
@@ -1187,7 +1191,7 @@ pub inline fn vmull_u32(a: u32x2, b: u32x2) u64x2 {
                 return @byteSwap(
                     @shuffle(
                         u64,
-                        asm volatile ("umull %[ret].2d, %[a].2s, %[b].2s"
+                        asm ("umull %[ret].2d, %[a].2s, %[b].2s"
                             : [ret] "=w" (-> u64x2),
                             : [a] "w" (a),
                               [b] "w" (b),
@@ -1199,7 +1203,7 @@ pub inline fn vmull_u32(a: u32x2, b: u32x2) u64x2 {
             },
         }
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vmull.u32 %[ret], %[a], %[b]"
+        return asm ("vmull.u32 %[ret], %[a], %[b]"
             : [ret] "=w" (-> u64x2),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1299,13 +1303,13 @@ test vmull_high_u32 {
 /// Absolute difference between two i8x8 vectors
 pub inline fn vabd_s8(a: i8x8, b: i8x8) i8x8 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("sabd %[ret].8b, %[a].8b, %[b].8b"
+        return asm ("sabd %[ret].8b, %[a].8b, %[b].8b"
             : [ret] "=w" (-> i8x8),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.s8 %[ret], %[a], %[b]"
+        return asm ("vabd.s8 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i8x8),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1335,13 +1339,13 @@ test vabd_s8 {
 /// Absolute difference between two i16x4 vectors
 pub inline fn vabd_s16(a: i16x4, b: i16x4) i16x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("sabd %[ret].4h, %[a].4h, %[b].4h"
+        return asm ("sabd %[ret].4h, %[a].4h, %[b].4h"
             : [ret] "=w" (-> i16x4),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.s16 %[ret], %[a], %[b]"
+        return asm ("vabd.s16 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i16x4),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1371,13 +1375,13 @@ test vabd_s16 {
 /// Absolute difference between two i32x2 vectors
 pub inline fn vabd_s32(a: i32x2, b: i32x2) i32x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("sabd %[ret].2s, %[a].2s, %[b].2s"
+        return asm ("sabd %[ret].2s, %[a].2s, %[b].2s"
             : [ret] "=w" (-> i32x2),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.s32 %[ret], %[a], %[b]"
+        return asm ("vabd.s32 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i32x2),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1407,13 +1411,13 @@ test vabd_s32 {
 /// Absolute difference between two u8x8 vectors
 pub inline fn vabd_u8(a: u8x8, b: u8x8) u8x8 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("uabd %[ret].8b, %[a].8b, %[b].8b"
+        return asm ("uabd %[ret].8b, %[a].8b, %[b].8b"
             : [ret] "=w" (-> u8x8),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.u8 %[ret], %[a], %[b]"
+        return asm ("vabd.u8 %[ret], %[a], %[b]"
             : [ret] "=w" (-> u8x8),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1461,13 +1465,13 @@ test vabd_u8 {
 /// Absolute difference between two u16x4 vectors
 pub inline fn vabd_u16(a: u16x4, b: u16x4) u16x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("uabd %[ret].4h, %[a].4h, %[b].4h"
+        return asm ("uabd %[ret].4h, %[a].4h, %[b].4h"
             : [ret] "=w" (-> u16x4),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.u16 %[ret], %[a], %[b]"
+        return asm ("vabd.u16 %[ret], %[a], %[b]"
             : [ret] "=w" (-> u16x4),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1497,13 +1501,13 @@ test vabd_u16 {
 /// Absolute difference between two u32x2 vectors
 pub inline fn vabd_u32(a: u32x2, b: u32x2) u32x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("uabd %[ret].2s, %[a].2s, %[b].2s"
+        return asm ("uabd %[ret].2s, %[a].2s, %[b].2s"
             : [ret] "=w" (-> u32x2),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.u32 %[ret], %[a], %[b]"
+        return asm ("vabd.u32 %[ret], %[a], %[b]"
             : [ret] "=w" (-> u32x2),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1533,13 +1537,13 @@ test vabd_u32 {
 /// Absolute difference between two f32x2 vectors
 pub inline fn vabd_f32(a: f32x2, b: f32x2) f32x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("fabd %[ret].2s, %[a].2s, %[b].2s"
+        return asm ("fabd %[ret].2s, %[a].2s, %[b].2s"
             : [ret] "=w" (-> f32x2),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.f32 %[ret], %[a], %[b]"
+        return asm ("vabd.f32 %[ret], %[a], %[b]"
             : [ret] "=w" (-> f32x2),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1569,7 +1573,7 @@ test vabd_f32 {
 /// Absolute difference between two f64x1 vectors
 pub inline fn vabd_f64(a: f64x1, b: f64x1) f64x1 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("fabd d0, d0, d1"
+        return asm ("fabd d0, d0, d1"
             : [ret] "={d0}" (-> f64x1),
             : [a] "{d0}" (a),
               [b] "{d1}" (b),
@@ -1595,13 +1599,13 @@ test vabd_f64 {
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_s8(a: i8x16, b: i8x16) i8x16 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("sabd %[ret].16b, %[a].16b, %[b].16b"
+        return asm ("sabd %[ret].16b, %[a].16b, %[b].16b"
             : [ret] "=w" (-> i8x16),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.s8 %[ret], %[a], %[b]"
+        return asm ("vabd.s8 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i8x16),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1631,13 +1635,13 @@ test vabdq_s8 {
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_s16(a: i16x8, b: i16x8) i16x8 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("sabd %[ret].8h, %[a].8h, %[b].8h"
+        return asm ("sabd %[ret].8h, %[a].8h, %[b].8h"
             : [ret] "=w" (-> i16x8),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.s16 %[ret], %[a], %[b]"
+        return asm ("vabd.s16 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i16x8),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1667,13 +1671,13 @@ test vabdq_s16 {
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_s32(a: i32x4, b: i32x4) i32x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("sabd %[ret].4s, %[a].4s, %[b].4s"
+        return asm ("sabd %[ret].4s, %[a].4s, %[b].4s"
             : [ret] "=w" (-> i32x4),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.s32 %[ret], %[a], %[b]"
+        return asm ("vabd.s32 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i32x4),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1703,13 +1707,13 @@ test vabdq_s32 {
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u8(a: u8x16, b: u8x16) u8x16 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("uabd %[ret].16b, %[a].16b, %[b].16b"
+        return asm ("uabd %[ret].16b, %[a].16b, %[b].16b"
             : [ret] "=w" (-> u8x16),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.u8 %[ret], %[a], %[b]"
+        return asm ("vabd.u8 %[ret], %[a], %[b]"
             : [ret] "=w" (-> u8x16),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1757,13 +1761,13 @@ test vabdq_u8 {
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u16(a: u16x8, b: u16x8) u16x8 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("uabd %[ret].8h, %[a].8h, %[b].8h"
+        return asm ("uabd %[ret].8h, %[a].8h, %[b].8h"
             : [ret] "=w" (-> u16x8),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.u16 %[ret], %[a], %[b]"
+        return asm ("vabd.u16 %[ret], %[a], %[b]"
             : [ret] "=w" (-> u16x8),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1793,13 +1797,13 @@ test vabdq_u16 {
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_u32(a: u32x4, b: u32x4) u32x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("uabd %[ret].4s, %[a].4s, %[b].4s"
+        return asm ("uabd %[ret].4s, %[a].4s, %[b].4s"
             : [ret] "=w" (-> u32x4),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.u32 %[ret], %[a], %[b]"
+        return asm ("vabd.u32 %[ret], %[a], %[b]"
             : [ret] "=w" (-> u32x4),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1829,13 +1833,13 @@ test vabdq_u32 {
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_f32(a: f32x4, b: f32x4) f32x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("fabd %[ret].4s, %[a].4s, %[b].4s"
+        return asm ("fabd %[ret].4s, %[a].4s, %[b].4s"
             : [ret] "=w" (-> f32x4),
             : [a] "w" (a),
               [b] "w" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vabd.f32 %[ret], %[a], %[b]"
+        return asm ("vabd.f32 %[ret], %[a], %[b]"
             : [ret] "=w" (-> f32x4),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1868,7 +1872,7 @@ test vabdq_f32 {
 /// signed absolute difference and accumulate (128-bit)
 pub inline fn vabdq_f64(a: f64x2, b: f64x2) f64x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("fabd %[ret].2d, %[a].2d, %[b].2d"
+        return asm ("fabd %[ret].2d, %[a].2d, %[b].2d"
             : [ret] "=w" (-> f64x2),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1899,7 +1903,7 @@ pub inline fn vqdmull_s16(a: i16x4, b: i16x4) i32x4 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
-                return asm volatile ("sqdmull %[ret].4s, %[a].4h, %[b].4h"
+                return asm ("sqdmull %[ret].4s, %[a].4h, %[b].4h"
                     : [ret] "=w" (-> i32x4),
                     : [a] "w" (a),
                       [b] "w" (b),
@@ -1909,7 +1913,7 @@ pub inline fn vqdmull_s16(a: i16x4, b: i16x4) i32x4 {
                 return @byteSwap(
                     @shuffle(
                         i32,
-                        asm volatile ("sqdmull %[ret].4s, %[a].4h, %[b].4h"
+                        asm ("sqdmull %[ret].4s, %[a].4h, %[b].4h"
                             : [ret] "=w" (-> i32x4),
                             : [a] "w" (a),
                               [b] "w" (b),
@@ -1921,7 +1925,7 @@ pub inline fn vqdmull_s16(a: i16x4, b: i16x4) i32x4 {
             },
         }
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vqdmull.s16 %[ret], %[a], %[b]"
+        return asm ("vqdmull.s16 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i32x4),
             : [a] "w" (a),
               [b] "w" (b),
@@ -1971,7 +1975,7 @@ pub inline fn vqdmull_s32(a: i32x2, b: i32x2) i64x2 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
-                return asm volatile ("sqdmull %[ret].2d, %[a].2s, %[b].2s"
+                return asm ("sqdmull %[ret].2d, %[a].2s, %[b].2s"
                     : [ret] "=w" (-> i64x2),
                     : [a] "w" (a),
                       [b] "w" (b),
@@ -1981,7 +1985,7 @@ pub inline fn vqdmull_s32(a: i32x2, b: i32x2) i64x2 {
                 return @byteSwap(
                     @shuffle(
                         i64,
-                        asm volatile ("sqdmull %[ret].2d, %[a].2s, %[b].2s"
+                        asm ("sqdmull %[ret].2d, %[a].2s, %[b].2s"
                             : [ret] "=w" (-> i64x2),
                             : [a] "w" (a),
                               [b] "w" (b),
@@ -1993,7 +1997,7 @@ pub inline fn vqdmull_s32(a: i32x2, b: i32x2) i64x2 {
             },
         }
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vqdmull.s32 %[ret], %[a], %[b]"
+        return asm ("vqdmull.s32 %[ret], %[a], %[b]"
             : [ret] "=w" (-> i64x2),
             : [a] "w" (a),
               [b] "w" (b),
@@ -2037,7 +2041,7 @@ test vqdmull_s32 {
 /// Signed saturating doubling multiply long
 pub inline fn vqdmullh_s16(a: i16, b: i16) i32 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile (
+        return asm (
             \\ fmov    s0, w0
             \\ fmov    s1, w1
             \\ sqdmull v0.4s, v0.4h, v1.4h
@@ -2067,7 +2071,7 @@ test vqdmullh_s16 {
 /// Signed saturating doubling multiply long
 pub inline fn vqdmulls_s32(a: i32, b: i32) i64 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile (
+        return asm (
             \\ fmov    s0, w0
             \\ fmov    s1, w1
             \\ sqdmull d0, s0, s1
@@ -3453,7 +3457,7 @@ pub inline fn vaddw_u32(a: u64x2, b: u32x2) u64x2 {
 /// AES single round decryption
 pub inline fn vaesdq_u8(data: u8x16, key: u8x16) u8x16 {
     if (use_asm and aarch64.has_aes) {
-        return asm volatile ("aesd v0.16b, v1.16b"
+        return asm ("aesd v0.16b, v1.16b"
             : [ret] "={v0}" (-> u8x16),
             : [a] "{v0}" (data),
               [b] "{v1}" (key),
@@ -3478,7 +3482,7 @@ test vaesdq_u8 {
 /// AES single round encryption
 pub inline fn vaeseq_u8(data: u8x16, key: u8x16) u8x16 {
     if (use_asm and aarch64.has_aes) {
-        return asm volatile ("aese v0.16b, v1.16b"
+        return asm ("aese v0.16b, v1.16b"
             : [ret] "={v0}" (-> u8x16),
             : [a] "{v0}" (data),
               [b] "{v1}" (key),
@@ -3529,7 +3533,7 @@ test vaeseq_u8 {
 /// AES inverse mix columns
 pub inline fn vaesimcq_u8(data: u8x16) u8x16 {
     if (use_asm and aarch64.has_aes) {
-        return asm volatile ("aesimc v0.16b, v1.16b"
+        return asm ("aesimc v0.16b, v1.16b"
             : [ret] "={v0}" (-> u8x16),
             : [a] "{v1}" (data),
         );
@@ -3552,7 +3556,7 @@ test vaesimcq_u8 {
 /// AES mix columns
 pub inline fn vaesmcq_u8(data: u8x16) u8x16 {
     if (use_asm and aarch64.has_aes) {
-        return asm volatile ("aesmc v0.16b, v1.16b"
+        return asm ("aesmc v0.16b, v1.16b"
             : [ret] "={v0}" (-> u8x16),
             : [a] "{v1}" (data),
         );
@@ -3612,13 +3616,13 @@ test vaesmcq_u8 {
 //// Vector bitwise and
 pub inline fn vand_s8(a: i8x8, b: i8x8) i8x8 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+        return asm ("and v0.8b, v1.8b, v2.8b"
             : [ret] "={v0}" (-> i8x8),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand d0, d1, d2"
+        return asm ("vand d0, d1, d2"
             : [ret] "={d0}" (-> i8x8),
             : [a] "{d1}" (a),
               [b] "{d2}" (b),
@@ -3639,13 +3643,13 @@ test vand_s8 {
 /// Vector bitwise and
 pub inline fn vand_s16(a: i16x4, b: i16x4) i16x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+        return asm ("and v0.8b, v1.8b, v2.8b"
             : [ret] "={v0}" (-> i16x4),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand d0, d1, d2"
+        return asm ("vand d0, d1, d2"
             : [ret] "={d0}" (-> i16x4),
             : [a] "{d1}" (a),
               [b] "{d2}" (b),
@@ -3666,13 +3670,13 @@ test vand_s16 {
 /// Vector bitwise and
 pub inline fn vand_s32(a: i32x2, b: i32x2) i32x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+        return asm ("and v0.8b, v1.8b, v2.8b"
             : [ret] "={v0}" (-> i32x2),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand d0, d1, d2"
+        return asm ("vand d0, d1, d2"
             : [ret] "={d0}" (-> i32x2),
             : [a] "{d1}" (a),
               [b] "{d2}" (b),
@@ -3693,13 +3697,13 @@ test vand_s32 {
 /// Vector bitwise and
 pub inline fn vand_s64(a: i64x1, b: i64x1) i64x1 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+        return asm ("and v0.8b, v1.8b, v2.8b"
             : [ret] "={v0}" (-> i64x1),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand d0, d1, d2"
+        return asm ("vand d0, d1, d2"
             : [ret] "={d0}" (-> i64x1),
             : [a] "{d1}" (a),
               [b] "{d2}" (b),
@@ -3720,13 +3724,13 @@ test vand_s64 {
 /// Vector bitwise and
 pub inline fn vand_u8(a: u8x8, b: u8x8) u8x8 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+        return asm ("and v0.8b, v1.8b, v2.8b"
             : [ret] "={v0}" (-> u8x8),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand d0, d1, d2"
+        return asm ("vand d0, d1, d2"
             : [ret] "={d0}" (-> u8x8),
             : [a] "{d1}" (a),
               [b] "{d2}" (b),
@@ -3747,13 +3751,13 @@ test vand_u8 {
 /// Vector bitwise and
 pub inline fn vand_u16(a: i16x4, b: i16x4) u16x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+        return asm ("and v0.8b, v1.8b, v2.8b"
             : [ret] "={v0}" (-> u16x4),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand d0, d1, d2"
+        return asm ("vand d0, d1, d2"
             : [ret] "={d0}" (-> u16x4),
             : [a] "{d1}" (a),
               [b] "{d2}" (b),
@@ -3774,13 +3778,13 @@ test vand_u16 {
 /// Vector bitwise and
 pub inline fn vand_u32(a: u32x2, b: u32x2) u32x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+        return asm ("and v0.8b, v1.8b, v2.8b"
             : [ret] "={v0}" (-> u32x2),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand d0, d1, d2"
+        return asm ("vand d0, d1, d2"
             : [ret] "={d0}" (-> u32x2),
             : [a] "{d1}" (a),
               [b] "{d2}" (b),
@@ -3801,13 +3805,13 @@ test vand_u32 {
 /// Vector bitwise and
 pub inline fn vand_u64(a: u64x1, b: u64x1) u64x1 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.8b, v1.8b, v2.8b"
+        return asm ("and v0.8b, v1.8b, v2.8b"
             : [ret] "={v0}" (-> u64x1),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand d0, d1, d2"
+        return asm ("vand d0, d1, d2"
             : [ret] "={d0}" (-> u64x1),
             : [a] "{d1}" (a),
               [b] "{d2}" (b),
@@ -3828,13 +3832,13 @@ test vand_u64 {
 /// Vector bitwise and
 pub inline fn vandq_s8(a: i8x16, b: i8x16) i8x16 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+        return asm ("and v0.16b, v1.16b, v2.16b"
             : [ret] "={v0}" (-> i8x16),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand q0, q1, q2"
+        return asm ("vand q0, q1, q2"
             : [ret] "={q0}" (-> i8x16),
             : [a] "{q1}" (a),
               [b] "{q2}" (b),
@@ -3855,13 +3859,13 @@ test vandq_s8 {
 /// Vector bitwise and
 pub inline fn vandq_s16(a: i16x8, b: i16x8) i16x8 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+        return asm ("and v0.16b, v1.16b, v2.16b"
             : [ret] "={v0}" (-> i16x8),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand q0, q1, q2"
+        return asm ("vand q0, q1, q2"
             : [ret] "={q0}" (-> i16x8),
             : [a] "{q1}" (a),
               [b] "{q2}" (b),
@@ -3882,13 +3886,13 @@ test vandq_s16 {
 /// Vector bitwise and
 pub inline fn vandq_s32(a: i32x4, b: i32x4) i32x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+        return asm ("and v0.16b, v1.16b, v2.16b"
             : [ret] "={v0}" (-> i32x4),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand q0, q1, q2"
+        return asm ("vand q0, q1, q2"
             : [ret] "={q0}" (-> i32x4),
             : [a] "{q1}" (a),
               [b] "{q2}" (b),
@@ -3909,13 +3913,13 @@ test vandq_s32 {
 /// Vector bitwise and
 pub inline fn vandq_s64(a: i64x2, b: i64x2) i64x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+        return asm ("and v0.16b, v1.16b, v2.16b"
             : [ret] "={v0}" (-> i64x2),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand q0, q1, q2"
+        return asm ("vand q0, q1, q2"
             : [ret] "={q0}" (-> i64x2),
             : [a] "{q1}" (a),
               [b] "{q2}" (b),
@@ -3936,13 +3940,13 @@ test vandq_s64 {
 /// Vector bitwise and
 pub inline fn vandq_u8(a: u8x16, b: u8x16) u8x16 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+        return asm ("and v0.16b, v1.16b, v2.16b"
             : [ret] "={v0}" (-> u8x16),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand q0, q1, q2"
+        return asm ("vand q0, q1, q2"
             : [ret] "={q0}" (-> u8x16),
             : [a] "{q1}" (a),
               [b] "{q2}" (b),
@@ -3963,13 +3967,13 @@ test vandq_u8 {
 /// Vector bitwise and
 pub inline fn vandq_u16(a: i16x8, b: i16x8) u16x8 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+        return asm ("and v0.16b, v1.16b, v2.16b"
             : [ret] "={v0}" (-> u16x8),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand q0, q1, q2"
+        return asm ("vand q0, q1, q2"
             : [ret] "={q0}" (-> u16x8),
             : [a] "{q1}" (a),
               [b] "{q2}" (b),
@@ -3990,13 +3994,13 @@ test vandq_u16 {
 /// Vector bitwise and
 pub inline fn vandq_u32(a: u32x4, b: u32x4) u32x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+        return asm ("and v0.16b, v1.16b, v2.16b"
             : [ret] "={v0}" (-> u32x4),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand q0, q1, q2"
+        return asm ("vand q0, q1, q2"
             : [ret] "={q0}" (-> u32x4),
             : [a] "{q1}" (a),
               [b] "{q2}" (b),
@@ -4017,13 +4021,13 @@ test vandq_u32 {
 /// Vector bitwise and
 pub inline fn vandq_u64(a: u64x2, b: u64x2) u64x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("and v0.16b, v1.16b, v2.16b"
+        return asm ("and v0.16b, v1.16b, v2.16b"
             : [ret] "={v0}" (-> u64x2),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vand q0, q1, q2"
+        return asm ("vand q0, q1, q2"
             : [ret] "={q0}" (-> u64x2),
             : [a] "{q1}" (a),
               [b] "{q2}" (b),
@@ -4266,7 +4270,7 @@ pub inline fn vbslq_p16(a: p16x8, b: p16x8, c: p16x8) p16x8 {
 /// Bit clear and exclusive OR
 pub inline fn vbcaxq_s8(a: i8x16, b: i8x16, c: i8x16) i8x16 {
     if (use_asm and aarch64.has_neon and aarch64.has_sha3) {
-        return asm volatile ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
+        return asm ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
             : [ret] "=w" (-> i8x16),
             : [a] "w" (a),
               [b] "w" (b),
@@ -4293,7 +4297,7 @@ test vbcaxq_s8 {
 /// Bit clear and exclusive OR
 pub inline fn vbcaxq_s16(a: i16x8, b: i16x8, c: i16x8) i16x8 {
     if (use_asm and aarch64.has_neon and aarch64.has_sha3) {
-        return asm volatile ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
+        return asm ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
             : [ret] "=w" (-> i16x8),
             : [a] "w" (a),
               [b] "w" (b),
@@ -4320,7 +4324,7 @@ test vbcaxq_s16 {
 /// Bit clear and exclusive OR
 pub inline fn vbcaxq_s32(a: i32x4, b: i32x4, c: i32x4) i32x4 {
     if (use_asm and aarch64.has_neon and aarch64.has_sha3) {
-        return asm volatile ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
+        return asm ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
             : [ret] "=w" (-> i32x4),
             : [a] "w" (a),
               [b] "w" (b),
@@ -4347,7 +4351,7 @@ test vbcaxq_s32 {
 /// Bit clear and exclusive OR
 pub inline fn vbcaxq_s64(a: i64x2, b: i64x2, c: i64x2) i64x2 {
     if (use_asm and aarch64.has_neon and aarch64.has_sha3) {
-        return asm volatile ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
+        return asm ("bcax %[ret].16b, %[a].16b, %[b].16b, %[c].16b"
             : [ret] "=w" (-> i64x2),
             : [a] "w" (a),
               [b] "w" (b),
@@ -4374,13 +4378,13 @@ test vbcaxq_s64 {
 /// Floating-point absolute compare greater than or equal
 pub inline fn vcage_f32(a: f32x2, b: f32x2) u32x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("facge v0.2s, v1.2s, v2.2s"
+        return asm ("facge v0.2s, v1.2s, v2.2s"
             : [ret] "={v0}" (-> u32x2),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vacge.f32 d0, d0, d1"
+        return asm ("vacge.f32 d0, d0, d1"
             : [ret] "={d0}" (-> u32x2),
             : [a] "{d0}" (a),
               [b] "{d1}" (b),
@@ -4416,13 +4420,13 @@ test vcage_f32 {
 /// Floating-point absolute compare greater than or equal
 pub inline fn vcageq_f32(a: f32x4, b: f32x4) u32x4 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("facge v0.4s, v1.4s, v2.4s"
+        return asm ("facge v0.4s, v1.4s, v2.4s"
             : [ret] "={v0}" (-> u32x4),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vacge.f32 q0, q0, q1"
+        return asm ("vacge.f32 q0, q0, q1"
             : [ret] "={q0}" (-> u32x4),
             : [a] "{q0}" (a),
               [b] "{q1}" (b),
@@ -4460,7 +4464,7 @@ test vcageq_f32 {
 /// Floating-point absolute compare greater than or equal
 pub inline fn vcageq_f64(a: f64x2, b: f64x2) u64x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("facge v0.2d, v1.2d, v2.2d"
+        return asm ("facge v0.2d, v1.2d, v2.2d"
             : [ret] "={v0}" (-> u64x2),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
@@ -4494,13 +4498,13 @@ test vcageq_f64 {
 /// Floating-point absolute compare greater than
 pub inline fn vcagt_f32(a: f32x2, b: f32x2) u32x2 {
     if (use_asm and aarch64.has_neon) {
-        return asm volatile ("facgt v0.2s, v1.2s, v2.2s"
+        return asm ("facgt v0.2s, v1.2s, v2.2s"
             : [ret] "={v0}" (-> u32x2),
             : [a] "{v1}" (a),
               [b] "{v2}" (b),
         );
     } else if (use_asm and arm.has_neon) {
-        return asm volatile ("vacgt.f32 d0, d0, d1"
+        return asm ("vacgt.f32 d0, d0, d1"
             : [ret] "={d0}" (-> u32x2),
             : [a] "{d0}" (a),
               [b] "{d1}" (b),
@@ -4569,4 +4573,528 @@ pub inline fn vshrq_n_u32(a: u32x4, n: u32) u32x4 {
 /// Shift right
 pub inline fn vshrq_n_u64(a: u64x2, n: u64) u64x2 {
     return a >> @as(u64x2, @splat(n));
+}
+
+/// Unsigned Move vector element to general-purpose register
+inline fn vget_lane_p8(vec: p8x8, comptime lane: usize) p8 {
+    comptime assert(lane < 8);
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("umov w0, %[vec].b[%[lane]]"
+                    : [ret] "={w0}" (-> u8),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[vec].8b, %[vec].8b
+                    \\ umov w0, %[vec].b[%[lane]]
+                    : [ret] "={w0}" (-> p8),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon) {
+        return asm ("vmov.u8 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
+            : [ret] "=r" (-> p8),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_p8 {
+    const v: p8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const lane: usize = 6;
+    const expected: p8 = 6;
+
+    try testIntrinsic("vget_lane_p8", vget_lane_p8, expected, .{ v, lane });
+}
+
+/// Unsigned Move vector element to general-purpose register
+inline fn vget_lane_p16(vec: p16x4, comptime lane: usize) p16 {
+    comptime assert(lane < 4);
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("umov w0, %[vec].h[%[lane]]"
+                    : [ret] "={w0}" (-> p16),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[vec].4h, %[vec].4h
+                    \\ umov w0, %[vec].h[%[lane]]
+                    : [ret] "={w0}" (-> p16),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon) {
+        return asm ("vmov.u16 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
+            : [ret] "=r" (-> p16),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_p16 {
+    const v: p16x4 = .{ 0, 1, 2, 3 };
+    const lane: usize = 2;
+    const expected: p16 = 2;
+
+    try testIntrinsic("vget_lane_p16", vget_lane_p16, expected, .{ v, lane });
+}
+
+/// Unsigned Move vector element to general-purpose register
+inline fn vget_lane_p64(vec: p64x1, comptime lane: usize) p64 {
+    comptime assert(lane < 1);
+    if (use_asm and aarch64.has_neon) {
+        return asm ("fmov %[ret], d0"
+            : [ret] "=r" (-> p64),
+            : [vec] "{d0}" (vec),
+        );
+    } else if (use_asm and arm.has_neon) {
+        return asm (
+            \\ vmov.32 r0, d0[0]
+            \\ vmov.32 r1, d0[1]
+            : [ret] "=r" (-> p64),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_p64 {
+    const v: p64x1 = .{std.math.maxInt(p64)};
+    const lane: usize = 0;
+    const expected: p64 = std.math.maxInt(p64);
+
+    try testIntrinsic("vget_lane_p64", vget_lane_p64, expected, .{ v, lane });
+}
+
+/// Signed Move vector element to general-purpose register
+inline fn vget_lane_s8(vec: i8x8, comptime lane: usize) i8 {
+    comptime assert(lane < 8);
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("smov w0, %[vec].b[%[lane]]"
+                    : [ret] "={w0}" (-> i8),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[vec].8b, %[vec].8b
+                    \\ umov w0, %[vec].b[%[lane]]
+                    : [ret] "={w0}" (-> i8),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon) {
+        return asm ("vmov.s8 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
+            : [ret] "=r" (-> i8),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_s8 {
+    const v: i8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const lane: usize = 5;
+    const expected: i8 = 5;
+
+    try testIntrinsic("vget_lane_s8", vget_lane_s8, expected, .{ v, lane });
+}
+
+/// Signed Move vector element to general-purpose register
+inline fn vget_lane_s16(vec: i16x4, comptime lane: usize) i16 {
+    comptime assert(lane < 4);
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("smov w0, %[vec].h[%[lane]]"
+                    : [ret] "={w0}" (-> i16),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[vec].4h, %[vec].4h
+                    \\ umov w0, %[vec].h[%[lane]]
+                    : [ret] "={w0}" (-> i16),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon) {
+        return asm ("vmov.s16 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
+            : [ret] "=r" (-> i16),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_s16 {
+    const v: i16x4 = .{ 0, 1, 2, 3 };
+    const lane: usize = 2;
+    const expected: i16 = 2;
+
+    try testIntrinsic("vget_lane_s16", vget_lane_s16, expected, .{ v, lane });
+}
+
+/// Signed Move vector element to general-purpose register
+inline fn vget_lane_s32(vec: i32x2, comptime lane: usize) i32 {
+    comptime assert(lane < 2);
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("mov w0, %[vec].s[%[lane]]"
+                    : [ret] "={w0}" (-> i32),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[vec].2s, %[vec].2s
+                    \\ mov w0, %[vec].s[%[lane]]
+                    : [ret] "={w0}" (-> i32),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon) {
+        return asm ("vmov.32 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
+            : [ret] "=r" (-> i32),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_s32 {
+    const v: i32x2 = .{ 0, 1 };
+    const lane: usize = 0;
+    const expected: i32 = 0;
+
+    try testIntrinsic("vget_lane_s32", vget_lane_s32, expected, .{ v, lane });
+}
+
+/// Signed Move vector element to general-purpose register
+inline fn vget_lane_s64(vec: i64x1, comptime lane: usize) i64 {
+    comptime assert(lane < 1);
+    if (use_asm and aarch64.has_neon) {
+        return asm ("fmov %[ret], d0"
+            : [ret] "=r" (-> i64),
+            : [vec] "{d0}" (vec),
+        );
+    } else if (use_asm and arm.has_neon) {
+        return asm (
+            \\ vmov.32 r0, d0[0]
+            \\ vmov.32 r1, d0[1]
+            : [ret] "=r" (-> i64),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_s64 {
+    const v: i64x1 = .{1};
+    const lane: usize = 0;
+    const expected: i64 = 1;
+
+    try testIntrinsic("vget_lane_s64", vget_lane_s64, expected, .{ v, lane });
+}
+
+/// Unigned Move vector element to general-purpose register
+inline fn vget_lane_u8(vec: u8x8, comptime lane: usize) u8 {
+    comptime assert(lane < 8);
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("umov w0, %[vec].b[%[lane]]"
+                    : [ret] "={w0}" (-> u8),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[vec].8b, %[vec].8b
+                    \\ umov w0, %[vec].b[%[lane]]
+                    : [ret] "={w0}" (-> u8),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon) {
+        return asm ("vmov.u8 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
+            : [ret] "=r" (-> u8),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_u8 {
+    const v: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const lane: usize = 5;
+    const expected: u8 = 5;
+
+    try testIntrinsic("vget_lane_u8", vget_lane_u8, expected, .{ v, lane });
+}
+
+/// Unigned Move vector element to general-purpose register
+inline fn vget_lane_u16(vec: u16x4, comptime lane: usize) u16 {
+    comptime assert(lane < 4);
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("umov w0, %[vec].h[%[lane]]"
+                    : [ret] "={w0}" (-> u16),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[vec].4h, %[vec].4h
+                    \\ umov w0, %[vec].h[%[lane]]
+                    : [ret] "={w0}" (-> u16),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon) {
+        return asm ("vmov.u16 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
+            : [ret] "=r" (-> u16),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_u16 {
+    const v: u16x4 = .{ 0, 1, 2, 3 };
+    const lane: usize = 2;
+    const expected: u16 = 2;
+
+    try testIntrinsic("vget_lane_u16", vget_lane_u16, expected, .{ v, lane });
+}
+
+/// Unigned Move vector element to general-purpose register
+inline fn vget_lane_u32(vec: u32x2, comptime lane: usize) u32 {
+    comptime assert(lane < 2);
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("umov w0, %[vec].s[%[lane]]"
+                    : [ret] "={w0}" (-> u32),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[vec].2s, %[vec].2s
+                    \\ umov w0, %[vec].s[%[lane]]
+                    : [ret] "={w0}" (-> u32),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon) {
+        return asm ("vmov.32 %[ret], %[vec][" ++ numToString(lane) ++ "]"
+            : [ret] "=r" (-> u32),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_u32 {
+    const v: u32x2 = .{ 0, 1 };
+    const lane: usize = 0;
+    const expected: u32 = 0;
+
+    try testIntrinsic("vget_lane_u32", vget_lane_u32, expected, .{ v, lane });
+}
+
+/// Unigned Move vector element to general-purpose register
+inline fn vget_lane_u64(vec: u64x1, comptime lane: usize) u64 {
+    comptime assert(lane < 1);
+    if (use_asm and aarch64.has_neon) {
+        return asm ("fmov %[ret], d0"
+            : [ret] "=r" (-> u64),
+            : [vec] "{d0}" (vec),
+        );
+    } else if (use_asm and arm.has_neon) {
+        return asm (
+            \\ vmov.32 r0, d0[0]
+            \\ vmov.32 r1, d0[1]
+            : [ret] "=r" (-> u64),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_u64 {
+    const v: u64x1 = .{1};
+    const lane: usize = 0;
+    const expected: u64 = 1;
+
+    try testIntrinsic("vget_lane_u64", vget_lane_u64, expected, .{ v, lane });
+}
+
+/// Duplicate vector element to vector or scalar (for floating-point)
+inline fn vget_lane_f32(vec: f32x2, comptime lane: usize) f32 {
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                // switch (lane) {
+                //     0 => return asm (""
+                //         : [ret] "={s0}" (-> f32),
+                //         : [vec] "w" (vec),
+                //           [lane] "i" (0),
+                //     ),
+                //     else =>
+                return asm ("mov s0, %[vec].s[%[lane]]"
+                    : [ret] "={s0}" (-> f32),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+                //     ),
+                // }
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[vec].2s, %[vec].2s
+                    \\ mov s0, %[vec].s[%[lane]]
+                    : [ret] "={s0}" (-> f32),
+                    : [vec] "w" (vec),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon) {
+        return asm volatile ("vmov.f32 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
+            : [ret] "=r" (-> f32),
+            : [vec] "w" (vec),
+        );
+    } else {
+        comptime assert(lane < 2);
+        return vec[lane];
+    }
+}
+
+test vget_lane_f32 {
+    const v: f32x2 = .{ 5, 1 };
+    const lane: usize = 0;
+    const expected: f32 = 5;
+
+    try testIntrinsic("vget_lane_f32", vget_lane_f32, expected, .{ v, lane });
+}
+
+/// Floating-point Move vector element to general-purpose register
+inline fn vget_lane_f64(vec: f64x1, comptime lane: usize) f64 {
+    comptime assert(lane < 1);
+    if (use_asm and aarch64.has_neon) {
+        return asm ("mov d0, %[vec].d[0]"
+            : [ret] "={d0}" (-> f64),
+            : [vec] "w" (vec),
+        );
+    } else {
+        return vec[lane];
+    }
+}
+
+test vget_lane_f64 {
+    const v: f64x1 = .{std.math.floatMax(f64)};
+    const lane: usize = 0;
+    const expected: f64 = std.math.floatMax(f64);
+
+    try testIntrinsic("vget_lane_f64", vget_lane_f64, expected, .{ v, lane });
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_u8(mem_addr: [*]const u8) u8x16 {
+    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3], mem_addr[4], mem_addr[5], mem_addr[6], mem_addr[7], mem_addr[8], mem_addr[9], mem_addr[10], mem_addr[11], mem_addr[12], mem_addr[13], mem_addr[14], mem_addr[15] };
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_u16(mem_addr: [*]const u8) u16x8 {
+    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3], mem_addr[4], mem_addr[5], mem_addr[6], mem_addr[7] };
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_u32(mem_addr: [*]const u8) u32x4 {
+    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3] };
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_u64(mem_addr: [*]const u8) u64x2 {
+    return .{ mem_addr[0], mem_addr[1] };
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_i8(mem_addr: [*]const u8) i8x16 {
+    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3], mem_addr[4], mem_addr[5], mem_addr[6], mem_addr[7], mem_addr[8], mem_addr[9], mem_addr[10], mem_addr[11], mem_addr[12], mem_addr[13], mem_addr[14], mem_addr[15] };
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_i16(mem_addr: [*]const u8) i16x8 {
+    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3], mem_addr[4], mem_addr[5], mem_addr[6], mem_addr[7] };
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_i32(mem_addr: [*]const u8) i32x4 {
+    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3] };
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_i64(mem_addr: [*]const u8) i64x2 {
+    return .{ mem_addr[0], mem_addr[1] };
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_f32(mem_addr: [*]const f32) f32x4 {
+    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3] };
+}
+
+/// Load multiple single-element structures to one, two, three, or four registers
+inline fn vld1q_f64(mem_addr: [*]const f32) f64x2 {
+    return .{ mem_addr[0], mem_addr[1] };
 }
