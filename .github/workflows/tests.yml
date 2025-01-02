@@ -43,7 +43,4 @@ jobs:
 
       - name: Build and Test
         run: |
-          zig build test \
-            -fqemu \
-            -freference-trace \
-            --summary all
+          make test

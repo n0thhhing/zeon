@@ -4,11 +4,11 @@ ARM/ARM64 Neon intrinsics implemented in pure zig as well as in assembly!
 
 ## Overview
 
-Zig-Neon aims to provide high-performance Neon intrinsics for ARM and ARM64 architectures, implemented in both pure Zig and inline assembly. This project prioritizes portability, performance, and flexibility, ensuring compatibility across various environments.
+Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64` architectures, implemented in both pure Zig and inline assembly. This project prioritizes portability, performance, and flexibility, ensuring compatibility across various environments.
 
 ## Status
 
-🚧 This project is under active development(318/2983 implemented). Contributions and feedback are welcome!
+🚧 This project is under active development(339/2983 implemented). Contributions and feedback are welcome!
 
 ## Roadmap
 
@@ -18,11 +18,16 @@ Zig-Neon aims to provide high-performance Neon intrinsics for ARM and ARM64 arch
  - [ ] Eliminate repetitive patterns to improve maintainability.
  - [ ] Implement fallbacks for non-ARM architectures.
  - [ ] Instruction Stripping e.g, Functions like vget_lane_f64 should compile down to nothing more than accessing the appropriate register (e.g., s0 for vec in v0). Currently, we are explicitly inserting instructions, which prevents the compiler from optimizing them away when not needed.
+ - [ ] Add support for Big Endian for bot arm and aarch64.
+
+## Notes
+ - When using `vld1*` on non-ARM architectures(or if use_asm and use_builtins is off), it wont pad with 0's, so if the input is less then the specified size, it results in undefined behavior.
+ - Some intrinsics wont have inline assembly because the falback implementation is either faster or the same as the assembly implementation.
 
 ## Getting Started
 
 ### Requirements
-To test and simulate ARM/ARM64 environments, QEMU user mode is required. Make sure QEMU is properly installed and configured before running tests. You'll also need Make for build and test automation.
+To test and simulate ARM/ARM64 environments, `QEMU user mode` is required. Make sure QEMU is properly installed and configured before running tests. You'll also need `Make` for build and test automation.
 
 ### Installation and Usage
 1. Clone the repository:
@@ -38,7 +43,7 @@ To test and simulate ARM/ARM64 environments, QEMU user mode is required. Make su
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+This project is licensed under the `MIT` License. See the [LICENSE](LICENSE) file for more information.
 
 ## Resources
 
