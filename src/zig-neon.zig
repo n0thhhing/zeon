@@ -3334,32 +3334,32 @@ pub inline fn vaddl_u32(a: u32x2, b: u32x2) u64x2 {
     return vmovl_u32(a) + vmovl_u32(b);
 }
 
-///	Signed Add Long (high half)
+/// Signed Add Long (high half)
 pub inline fn vaddl_high_s8(a: i8x16, b: i8x16) i16x8 {
     return vmovl_high_s8(a) + vmovl_high_s8(b);
 }
 
-///	Signed Add Long (high half)
+/// Signed Add Long (high half)
 pub inline fn vaddl_high_s16(a: i16x8, b: i16x8) i32x4 {
     return vmovl_high_s16(a) + vmovl_high_s16(b);
 }
 
-///	Signed Add Long (high half)
+/// Signed Add Long (high half)
 pub inline fn vaddl_high_s32(a: i32x4, b: i32x4) i64x2 {
     return vmovl_high_s32(a) + vmovl_high_s32(b);
 }
 
-///	Unsigned Add Long (high half)
+/// Unsigned Add Long (high half)
 pub inline fn vaddl_high_u8(a: u8x16, b: u8x16) u16x8 {
     return vmovl_high_u8(a) + vmovl_high_u8(b);
 }
 
-///	Unsigned Add Long (high half)
+/// Unsigned Add Long (high half)
 pub inline fn vaddl_high_u16(a: u16x8, b: u16x8) u32x4 {
     return vmovl_high_u16(a) + vmovl_high_u16(b);
 }
 
-///	Unsigned Add Long (high half)
+/// Unsigned Add Long (high half)
 pub inline fn vaddl_high_u32(a: u32x4, b: u32x4) u64x2 {
     return vmovl_high_u32(a) + vmovl_high_u32(b);
 }
@@ -4577,7 +4577,7 @@ pub inline fn vshrq_n_u64(a: u64x2, n: u64) u64x2 {
 }
 
 /// Unsigned Move vector element to general-purpose register
-inline fn vget_lane_p8(vec: p8x8, comptime lane: usize) p8 {
+pub inline fn vget_lane_p8(vec: p8x8, comptime lane: usize) p8 {
     comptime assert(lane < 8);
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
@@ -4617,7 +4617,7 @@ test vget_lane_p8 {
 }
 
 /// Unsigned Move vector element to general-purpose register
-inline fn vget_lane_p16(vec: p16x4, comptime lane: usize) p16 {
+pub inline fn vget_lane_p16(vec: p16x4, comptime lane: usize) p16 {
     comptime assert(lane < 4);
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
@@ -4657,7 +4657,7 @@ test vget_lane_p16 {
 }
 
 /// Unsigned Move vector element to general-purpose register
-inline fn vget_lane_p64(vec: p64x1, comptime lane: usize) p64 {
+pub inline fn vget_lane_p64(vec: p64x1, comptime lane: usize) p64 {
     comptime assert(lane < 1);
     if (use_asm and aarch64.has_neon) {
         return asm ("umov %[ret], %[vec].d[%[lane]]"
@@ -4687,7 +4687,7 @@ test vget_lane_p64 {
 }
 
 /// Signed Move vector element to general-purpose register
-inline fn vget_lane_s8(vec: i8x8, comptime lane: usize) i8 {
+pub inline fn vget_lane_s8(vec: i8x8, comptime lane: usize) i8 {
     comptime assert(lane < 8);
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
@@ -4727,7 +4727,7 @@ test vget_lane_s8 {
 }
 
 /// Signed Move vector element to general-purpose register
-inline fn vget_lane_s16(vec: i16x4, comptime lane: usize) i16 {
+pub inline fn vget_lane_s16(vec: i16x4, comptime lane: usize) i16 {
     comptime assert(lane < 4);
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
@@ -4767,7 +4767,7 @@ test vget_lane_s16 {
 }
 
 /// Signed Move vector element to general-purpose register
-inline fn vget_lane_s32(vec: i32x2, comptime lane: usize) i32 {
+pub inline fn vget_lane_s32(vec: i32x2, comptime lane: usize) i32 {
     comptime assert(lane < 2);
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
@@ -4807,7 +4807,7 @@ test vget_lane_s32 {
 }
 
 /// Signed Move vector element to general-purpose register
-inline fn vget_lane_s64(vec: i64x1, comptime lane: usize) i64 {
+pub inline fn vget_lane_s64(vec: i64x1, comptime lane: usize) i64 {
     comptime assert(lane < 1);
     if (use_asm and aarch64.has_neon) {
         return asm ("fmov %[ret], d0"
@@ -4836,7 +4836,7 @@ test vget_lane_s64 {
 }
 
 /// Unigned Move vector element to general-purpose register
-inline fn vget_lane_u8(vec: u8x8, comptime lane: usize) u8 {
+pub inline fn vget_lane_u8(vec: u8x8, comptime lane: usize) u8 {
     comptime assert(lane < 8);
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
@@ -4876,7 +4876,7 @@ test vget_lane_u8 {
 }
 
 /// Unigned Move vector element to general-purpose register
-inline fn vget_lane_u16(vec: u16x4, comptime lane: usize) u16 {
+pub inline fn vget_lane_u16(vec: u16x4, comptime lane: usize) u16 {
     comptime assert(lane < 4);
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
@@ -4916,7 +4916,7 @@ test vget_lane_u16 {
 }
 
 /// Unigned Move vector element to general-purpose register
-inline fn vget_lane_u32(vec: u32x2, comptime lane: usize) u32 {
+pub inline fn vget_lane_u32(vec: u32x2, comptime lane: usize) u32 {
     comptime assert(lane < 2);
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
@@ -4956,7 +4956,7 @@ test vget_lane_u32 {
 }
 
 /// Unigned Move vector element to general-purpose register
-inline fn vget_lane_u64(vec: u64x1, comptime lane: usize) u64 {
+pub inline fn vget_lane_u64(vec: u64x1, comptime lane: usize) u64 {
     comptime assert(lane < 1);
     if (use_asm and aarch64.has_neon) {
         return asm ("umov %[ret], %[vec].d[%[lane]]"
@@ -4986,7 +4986,7 @@ test vget_lane_u64 {
 }
 
 /// Duplicate vector element to vector or scalar (for floating-point)
-inline fn vget_lane_f32(vec: f32x2, comptime lane: usize) f32 {
+pub inline fn vget_lane_f32(vec: f32x2, comptime lane: usize) f32 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
@@ -5035,7 +5035,7 @@ test vget_lane_f32 {
 }
 
 /// Floating-point Move vector element to general-purpose register
-inline fn vget_lane_f64(vec: f64x1, comptime lane: usize) f64 {
+pub inline fn vget_lane_f64(vec: f64x1, comptime lane: usize) f64 {
     comptime assert(lane < 1);
     if (use_asm and aarch64.has_neon) {
         return asm ("mov d0, %[vec].d[0]"
@@ -5056,14 +5056,14 @@ test vget_lane_f64 {
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_u8(mem_addr: [*]const u8) u8x16 {
+pub inline fn vld1q_u8(mem_addr: [*]const u8) u8x16 {
     if (use_asm and aarch64.has_neon) {
-        return asm ("ld1 {%[ret].16b},[%[addr]]"
+        return asm ("ld1 { %[ret].16b }, [%[addr]]"
             : [ret] "=w" (-> u8x16),
             : [addr] "r" (mem_addr),
         );
     } else if (use_asm and arm.has_neon and arm.has_v7) {
-        return asm ("vld1.8 {%[ret]}, [%[addr]]"
+        return asm ("vld1.8 { %[ret] }, [%[addr]]"
             : [ret] "=w" (-> u8x16),
             : [addr] "r" (mem_addr),
         );
@@ -5077,32 +5077,24 @@ inline fn vld1q_u8(mem_addr: [*]const u8) u8x16 {
 }
 
 test vld1q_u8 {
-    {
-        const addr = ([16]u8{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(u8) })[0..].ptr;
-        const expected: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(u8) };
+    const addr = ([16]u8{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(u8) })[0..].ptr;
+    const expected: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(u8) };
 
-        try testIntrinsic("vld1q_u8", vld1q_u8, expected, .{addr});
-    }
-    // {
-    //     const addr = (@as(*[16]u8,@ptrCast(@constCast(&[8]u8{ 0, 1, 2, 3, 4, 5, 6,  std.math.maxInt(u8) }))).*)[0..].ptr;
-    //     const expected: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, std.math.maxInt(u8), 0,0,0,0,0,0,0,0 };
-
-    //     try testIntrinsic("vld1q_u8", vld1q_u8, expected, .{addr});
-    // }
+    try testIntrinsic("vld1q_u8", vld1q_u8, expected, .{addr});
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_u16(mem_addr: [*]const u16) u16x8 {
+pub inline fn vld1q_u16(mem_addr: [*]const u16) u16x8 {
     if (use_asm and aarch64.has_neon) {
         switch (endianness) {
             inline .little => {
-                return asm ("ld1 {%[ret].8h},[%[addr]]"
+                return asm ("ld1 { %[ret].8h }, [%[addr]]"
                     : [ret] "=w" (-> u16x8),
                     : [addr] "r" (mem_addr),
                 );
             },
             inline .big => {
-                return @byteSwap(asm ("ld1 {%[ret].8h},[%[addr]]"
+                return @byteSwap(asm ("ld1 { %[ret].8h }, [%[addr]]"
                     : [ret] "=w" (-> u16x8),
                     : [addr] "r" (mem_addr),
                 ));
@@ -5130,41 +5122,299 @@ test vld1q_u16 {
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_u32(mem_addr: [*]const u32) u32x4 {
-    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3] };
+pub inline fn vld1q_u32(mem_addr: [*]const u32) u32x4 {
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("ld1 { %[ret].4s }, [%[addr]]"
+                    : [ret] "=w" (-> u32x4),
+                    : [addr] "r" (mem_addr),
+                );
+            },
+            inline .big => {
+                return @byteSwap(asm ("ld1 { %[ret].4s }, [%[addr]]"
+                    : [ret] "=w" (-> u32x4),
+                    : [addr] "r" (mem_addr),
+                ));
+            },
+        }
+    } else if (use_asm and arm.has_neon and arm.has_v7) {
+        return asm ("vld1.32 {%[ret]}, [%[addr]]"
+            : [ret] "=w" (-> u32x4),
+            : [addr] "r" (mem_addr),
+        );
+    } else if (use_builtins and arm.has_neon and arm.has_v7) {
+        return struct {
+            extern fn @"llvm.arm.neon.vld1.v4i32.p0i8"([*]const u32, i32) u32x4;
+        }.@"llvm.arm.neon.vld1.v4i32.p0i8"(mem_addr, @alignOf(u32));
+    } else {
+        return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3] };
+    }
+}
+
+test vld1q_u32 {
+    const addr = ([4]u32{ 0, 1, 2, std.math.maxInt(u32) })[0..].ptr;
+    const expected: u32x4 = .{ 0, 1, 2, std.math.maxInt(u32) };
+
+    try testIntrinsic("vld1q_u32", vld1q_u32, expected, .{addr});
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_u64(mem_addr: [*]const u64) u64x2 {
-    return .{ mem_addr[0], mem_addr[1] };
+pub inline fn vld1q_u64(mem_addr: [*]const u64) u64x2 {
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("ld1 { %[ret].2d }, [%[addr]]"
+                    : [ret] "=w" (-> u64x2),
+                    : [addr] "r" (mem_addr),
+                );
+            },
+            inline .big => {
+                return @byteSwap(asm ("ld1 { %[ret].2d },[%[addr]]"
+                    : [ret] "=w" (-> u64x2),
+                    : [addr] "r" (mem_addr),
+                ));
+            },
+        }
+    } else if (use_asm and arm.has_neon and arm.has_v7) {
+        return asm ("vld1.64 {%[ret]}, [%[addr]]"
+            : [ret] "=w" (-> u64x2),
+            : [addr] "r" (mem_addr),
+        );
+    } else if (use_builtins and arm.has_neon and arm.has_v7) {
+        return struct {
+            extern fn @"llvm.arm.neon.vld1.v2i64.p0i8"([*]const u64, i32) u64x2;
+        }.@"llvm.arm.neon.vld1.v2i64.p0i8"(mem_addr, @alignOf(u64));
+    } else {
+        return .{ mem_addr[0], mem_addr[1] };
+    }
+}
+
+test vld1q_u64 {
+    const addr = ([2]u64{ 0, std.math.maxInt(u64) })[0..].ptr;
+    const expected: u64x2 = .{ 0, std.math.maxInt(u64) };
+
+    try testIntrinsic("vld1q_u64", vld1q_u64, expected, .{addr});
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_i8(mem_addr: [*]const i8) i8x16 {
-    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3], mem_addr[4], mem_addr[5], mem_addr[6], mem_addr[7], mem_addr[8], mem_addr[9], mem_addr[10], mem_addr[11], mem_addr[12], mem_addr[13], mem_addr[14], mem_addr[15] };
+pub inline fn vld1q_i8(mem_addr: [*]const i8) i8x16 {
+    if (use_asm and aarch64.has_neon) {
+        return asm ("ld1 { %[ret].16b }, [%[addr]]"
+            : [ret] "=w" (-> i8x16),
+            : [addr] "r" (mem_addr),
+        );
+    } else if (use_asm and arm.has_neon and arm.has_v7) {
+        return asm ("vld1.8 {%[ret]}, [%[addr]]"
+            : [ret] "=w" (-> i8x16),
+            : [addr] "r" (mem_addr),
+        );
+    } else if (use_builtins and arm.has_neon and arm.has_v7) {
+        return struct {
+            extern fn @"llvm.arm.neon.vld1.v16i8.p0i8"([*]const i8, i32) i8x16;
+        }.@"llvm.arm.neon.vld1.v16i8.p0i8"(mem_addr, @alignOf(i8));
+    } else {
+        return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3], mem_addr[4], mem_addr[5], mem_addr[6], mem_addr[7], mem_addr[8], mem_addr[9], mem_addr[10], mem_addr[11], mem_addr[12], mem_addr[13], mem_addr[14], mem_addr[15] };
+    }
+}
+
+test vld1q_i8 {
+    const addr = ([16]i8{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(i8) })[0..].ptr;
+    const expected: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(i8) };
+
+    try testIntrinsic("vld1q_i8", vld1q_i8, expected, .{addr});
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_i16(mem_addr: [*]const i16) i16x8 {
-    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3], mem_addr[4], mem_addr[5], mem_addr[6], mem_addr[7] };
+pub inline fn vld1q_i16(mem_addr: [*]const i16) i16x8 {
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("ld1 { %[ret].8h }, [%[addr]]"
+                    : [ret] "=w" (-> i16x8),
+                    : [addr] "r" (mem_addr),
+                );
+            },
+            inline .big => {
+                return @byteSwap(asm ("ld1 { %[ret].8h }, [%[addr]]"
+                    : [ret] "=w" (-> i16x8),
+                    : [addr] "r" (mem_addr),
+                ));
+            },
+        }
+    } else if (use_asm and arm.has_neon and arm.has_v7) {
+        return asm ("vld1.16 {%[ret]}, [%[addr]]"
+            : [ret] "=w" (-> i16x8),
+            : [addr] "r" (mem_addr),
+        );
+    } else if (use_builtins and arm.has_neon and arm.has_v7) {
+        return struct {
+            extern fn @"llvm.arm.neon.vld1.v8i16.p0i8"([*]const i16, i32) i16x8;
+        }.@"llvm.arm.neon.vld1.v8i16.p0i8"(mem_addr, @alignOf(i16));
+    } else {
+        return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3], mem_addr[4], mem_addr[5], mem_addr[6], mem_addr[7] };
+    }
+}
+
+test vld1q_i16 {
+    const addr = ([8]i16{ 0, 1, 2, 3, 4, 5, 6, std.math.maxInt(i16) })[0..].ptr;
+    const expected: i16x8 = .{ 0, 1, 2, 3, 4, 5, 6, std.math.maxInt(i16) };
+
+    try testIntrinsic("vld1q_i16", vld1q_i16, expected, .{addr});
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_i32(mem_addr: [*]const i32) i32x4 {
-    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3] };
+pub inline fn vld1q_i32(mem_addr: [*]const i32) i32x4 {
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("ld1 { %[ret].4s }, [%[addr]]"
+                    : [ret] "=w" (-> i32x4),
+                    : [addr] "r" (mem_addr),
+                );
+            },
+            inline .big => {
+                return @byteSwap(asm ("ld1 { %[ret].4s }, [%[addr]]"
+                    : [ret] "=w" (-> i32x4),
+                    : [addr] "r" (mem_addr),
+                ));
+            },
+        }
+    } else if (use_asm and arm.has_neon and arm.has_v7) {
+        return asm ("vld1.32 {%[ret]}, [%[addr]]"
+            : [ret] "=w" (-> i32x4),
+            : [addr] "r" (mem_addr),
+        );
+    } else if (use_builtins and arm.has_neon and arm.has_v7) {
+        return struct {
+            extern fn @"llvm.arm.neon.vld1.v4i32.p0i8"([*]const i32, i32) i32x4;
+        }.@"llvm.arm.neon.vld1.v4i32.p0i8"(mem_addr, @alignOf(i32));
+    } else {
+        return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3] };
+    }
+}
+
+test vld1q_i32 {
+    const addr = ([4]i32{ 0, 1, 2, std.math.maxInt(i32) })[0..].ptr;
+    const expected: i32x4 = .{ 0, 1, 2, std.math.maxInt(i32) };
+
+    try testIntrinsic("vld1q_i32", vld1q_i32, expected, .{addr});
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_i64(mem_addr: [*]const i64) i64x2 {
-    return .{ mem_addr[0], mem_addr[1] };
+pub inline fn vld1q_i64(mem_addr: [*]const i64) i64x2 {
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("ld1 { %[ret].2d }, [%[addr]]"
+                    : [ret] "=w" (-> i64x2),
+                    : [addr] "r" (mem_addr),
+                );
+            },
+            inline .big => {
+                return @byteSwap(asm ("ld1 { %[ret].2d }, [%[addr]]"
+                    : [ret] "=w" (-> i64x2),
+                    : [addr] "r" (mem_addr),
+                ));
+            },
+        }
+    } else if (use_asm and arm.has_neon and arm.has_v7) {
+        return asm ("vld1.64 {%[ret]}, [%[addr]]"
+            : [ret] "=w" (-> i64x2),
+            : [addr] "r" (mem_addr),
+        );
+    } else if (use_builtins and arm.has_neon and arm.has_v7) {
+        return struct {
+            extern fn @"llvm.arm.neon.vld1.v2i64.p0i8"([*]const i64, i32) i64x2;
+        }.@"llvm.arm.neon.vld1.v2i64.p0i8"(mem_addr, @alignOf(i64));
+    } else {
+        return .{ mem_addr[0], mem_addr[1] };
+    }
+}
+
+test vld1q_i64 {
+    const addr = ([2]i64{ 0, std.math.maxInt(i64) })[0..].ptr;
+    const expected: i64x2 = .{ 0, std.math.maxInt(i64) };
+
+    try testIntrinsic("vld1q_i64", vld1q_i64, expected, .{addr});
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_f32(mem_addr: [*]const f32) f32x4 {
-    return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3] };
+pub inline fn vld1q_f32(mem_addr: [*]const f32) f32x4 {
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("ld1 { %[ret].4s }, [%[addr]]"
+                    : [ret] "=w" (-> f32x4),
+                    : [addr] "r" (mem_addr),
+                );
+            },
+            inline .big => {
+                return @bitCast(
+                    @byteSwap(asm ("ld1 { %[ret].4s }, [%[addr]]"
+                        : [ret] "=w" (-> u32x4),
+                        : [addr] "r" (mem_addr),
+                    )),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon and arm.has_v7) {
+        return asm ("vld1.32 {%[ret]}, [%[addr]]"
+            : [ret] "=w" (-> f32x4),
+            : [addr] "r" (mem_addr),
+        );
+    } else if (use_builtins and arm.has_neon and arm.has_v7) {
+        return struct {
+            extern fn @"llvm.arm.neon.vld1.v4f32.p0i8"([*]const f32, i32) f32x4;
+        }.@"llvm.arm.neon.vld1.v4f32.p0i8"(mem_addr, @alignOf(f32));
+    } else {
+        return .{ mem_addr[0], mem_addr[1], mem_addr[2], mem_addr[3] };
+    }
+}
+
+test vld1q_f32 {
+    const addr = ([4]f32{ 0, 1, 2, std.math.floatMax(f32) })[0..].ptr;
+    const expected: f32x4 = .{ 0, 1, 2, std.math.floatMax(f32) };
+
+    try testIntrinsic("vld1q_f32", vld1q_f32, expected, .{addr});
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-inline fn vld1q_f64(mem_addr: [*]const f64) f64x2 {
-    return .{ mem_addr[0], mem_addr[1] };
+pub inline fn vld1q_f64(mem_addr: [*]const f64) f64x2 {
+    if (use_asm and aarch64.has_neon) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("ld1 { %[ret].2d }, [%[addr]]"
+                    : [ret] "=w" (-> f64x2),
+                    : [addr] "r" (mem_addr),
+                );
+            },
+            inline .big => {
+                return @bitCast(
+                    @byteSwap(asm ("ld1 { %[ret].2d }, [%[addr]]"
+                        : [ret] "=w" (-> u64x2),
+                        : [addr] "r" (mem_addr),
+                    )),
+                );
+            },
+        }
+    } else if (use_asm and arm.has_neon and arm.has_v7) {
+        return asm ("vld1.64 {%[ret]}, [%[addr]]"
+            : [ret] "=w" (-> f64x2),
+            : [addr] "r" (mem_addr),
+        );
+    } else if (use_builtins and arm.has_neon and arm.has_v7) {
+        return struct {
+            extern fn @"llvm.arm.neon.vld1.v2f64.p0i8"([*]const f64, i32) f64x2;
+        }.@"llvm.arm.neon.vld1.v2f64.p0i8"(mem_addr, @alignOf(f64));
+    } else {
+        return .{ mem_addr[0], mem_addr[1] };
+    }
+}
+
+test vld1q_f64 {
+    const addr = ([2]f64{ 0, std.math.floatMax(f64) })[0..].ptr;
+    const expected: f64x2 = .{ 0, std.math.floatMax(f64) };
+
+    try testIntrinsic("vld1q_f64", vld1q_f64, expected, .{addr});
 }

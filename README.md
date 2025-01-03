@@ -21,7 +21,7 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
  - [ ] Add support for Big Endian arm/aarch64, and add tests for it.
 
 ## Notes
- - When using `vld1*` on non-ARM architectures(or if use_asm and use_builtins is off), it wont pad with 0's, so if the input is less then the specified size, it results in undefined behavior.
+ - When using `vld1*` on non-ARM architectures(or if use_asm and use_builtins is off), it assumes the underlying type fits the size of the vector.
  - Some intrinsics wont have inline assembly because the falback implementation is either faster or the same as the assembly implementation.
 
 ## Getting Started
