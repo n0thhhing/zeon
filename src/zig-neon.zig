@@ -15,8 +15,7 @@ const is_aarch64 = aarch64.is_aarch64;
 
 /// Max bitsize for vectors on arm/aarch64
 ///
-/// TODO:
-///       aarch64 isnt always limited to 128
+/// TODO: aarch64 isnt always limited to 128
 ///       bits if we have SVE. SVE gives us
 ///       a handy instruction called `cntb`
 ///       that we can use to determine this
@@ -365,8 +364,7 @@ test toLarge {
 
 /// Absolute difference between arguments
 ///
-/// TODO:
-///       If we are using AArch/arm, then we can
+/// TODO: If we are using AArch/arm, then we can
 ///       dynamically build an instruction based
 ///       on the current cpu, that way we can
 ///       reduce at least some of the repetitiveness.

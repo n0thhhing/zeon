@@ -1,149 +1,59 @@
 const std = @import("std");
 
-// TODO: Figure out how to test armeb
 const test_targets = [_]std.Target.Query{
     .{},
     std.Target.Query{
         .cpu_arch = .arm,
         .os_tag = .linux,
-        .cpu_features_add = blk: {
-            var enabled_features = std.Target.Cpu.Feature.Set.empty;
-            enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.neon));
-            enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.aes));
-            enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.sha2));
-            enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.crc));
-            enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.dotprod));
-            enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.has_v7));
-            enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.has_v8));
-            enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.i8mm));
-            break :blk enabled_features;
-        },
+        .cpu_features_add = arm_target_features,
     },
+    // TODO: When 0.14.0 officially releases, we need to cover armeb
     // std.Target.Query{
     //     .cpu_arch = .armeb,
     //     .os_tag = .linux,
-    //     .cpu_features_add = blk: {
-    //         var enabled_features = std.Target.Cpu.Feature.Set.empty;
-    //         enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.neon));
-    //         enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.aes));
-    //         enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.sha2));
-    //         enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.crc));
-    //         enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.dotprod));
-    //         enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.has_v7));
-    //         enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.has_v8));
-    //         enabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.i8mm));
-    //         break :blk enabled_features;
-    //     },
-    // },
-    std.Target.Query{
-        .cpu_arch = .arm,
-        .os_tag = .linux,
-        .cpu_features_sub = blk: {
-            var disabled_features = std.Target.Cpu.Feature.Set.empty;
-            disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.neon));
-            disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.aes));
-            disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.sha2));
-            disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.crc));
-            disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.dotprod));
-            disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.has_v7));
-            disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.has_v8));
-            disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.i8mm));
-            break :blk disabled_features;
-        },
-    },
-    // std.Target.Query{
-    //     .cpu_arch = .armeb,
-    //     .os_tag = .linux,
-    //     .cpu_features_sub = blk: {
-    //         var disabled_features = std.Target.Cpu.Feature.Set.empty;
-    //         disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.neon));
-    //         disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.aes));
-    //         disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.sha2));
-    //         disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.crc));
-    //         disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.dotprod));
-    //         disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.has_v7));
-    //         disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.has_v8));
-    //         disabled_features.addFeature(@intFromEnum(std.Target.arm.Feature.i8mm));
-    //         break :blk disabled_features;
-    //     },
+    //     .cpu_features_add = arm_target_features,
     // },
     std.Target.Query{
         .cpu_arch = .aarch64,
         .os_tag = .linux,
-        .cpu_features_add = blk: {
-            var enabled_features = std.Target.Cpu.Feature.Set.empty;
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.neon));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.aes));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.rdm));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sha2));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sha3));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.dotprod));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.i8mm));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sm4));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.crypto));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sve));
-            break :blk enabled_features;
-        },
-    },
-    std.Target.Query{
-        .cpu_arch = .aarch64,
-        .os_tag = .linux,
-        .cpu_features_sub = blk: {
-            var disabled_features = std.Target.Cpu.Feature.Set.empty;
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.neon));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.aes));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.rdm));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sha2));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sha3));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.dotprod));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.i8mm));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sm4));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.crypto));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sve));
-            break :blk disabled_features;
-        },
+        .cpu_features_add = aarch64_target_features,
     },
     std.Target.Query{
         .cpu_arch = .aarch64_be,
         .os_tag = .linux,
-        .cpu_features_sub = blk: {
-            var disabled_features = std.Target.Cpu.Feature.Set.empty;
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.neon));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.aes));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.rdm));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sha2));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sha3));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.dotprod));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.i8mm));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sm4));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.crypto));
-            disabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sve));
-            break :blk disabled_features;
-        },
+        .cpu_features_add = aarch64_target_features,
     },
-    std.Target.Query{
-        .cpu_arch = .aarch64_be,
-        .os_tag = .linux,
-        .cpu_features_add = blk: {
-            var enabled_features = std.Target.Cpu.Feature.Set.empty;
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.neon));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.aes));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.rdm));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sha2));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sha3));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.dotprod));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.i8mm));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sm4));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.crypto));
-            enabled_features.addFeature(@intFromEnum(std.Target.aarch64.Feature.sve));
-            break :blk enabled_features;
-        },
-    },
-    std.Target.Query{
-        .cpu_arch = .x86,
-        .os_tag = .linux,
-    },
+    // Not needed until we add x86 assembly fallbacks
+    // std.Target.Query{
+    //     .cpu_arch = .x86,
+    //     .os_tag = .linux,
+    // },
 };
+
+const arm_target_features = std.Target.arm.featureSet(&.{
+    .neon,
+    .aes,
+    .sha2,
+    .crc,
+    .dotprod,
+    .has_v7,
+    .has_v8,
+    .i8mm,
+});
+
+const aarch64_target_features = std.Target.aarch64.featureSet(&.{
+    .neon,
+    .aes,
+    .rdm,
+    .sha2,
+    .sha3,
+    .dotprod,
+    .i8mm,
+    .sm4,
+    .crypto,
+    // Messes with emulation when not using qemu
+    // .sve,
+});
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -157,7 +67,7 @@ pub fn build(b: *std.Build) void {
 
     const target_filter = b.option(
         []const u8,
-        "target_filter",
+        "target-filter",
         "Specify a target filter, e.g. -Dtarget_filter=arm,aarch64",
     ) orelse "none";
 
@@ -166,53 +76,32 @@ pub fn build(b: *std.Build) void {
         var filters = std.mem.splitScalar(u8, target_filter, ',');
         while (filters.next()) |unprocessed_filter| {
             const filter = std.mem.trim(u8, unprocessed_filter, " ");
-            if (std.mem.eql(u8, filter, "arm")) {
-                inline for (.{ test_targets[1], test_targets[2] }) |filter_target| {
-                    const unit_tests = b.addTest(.{
-                        .root_source_file = mod.root_source_file.?,
-                        .target = b.resolveTargetQuery(filter_target),
-                        .optimize = optimize,
-                    });
-
-                    const run_unit_tests = b.addRunArtifact(unit_tests);
-                    test_step.dependOn(&run_unit_tests.step);
+            const fl = blk: {
+                if (std.mem.eql(u8, filter, "native")) {
+                    break :blk .{test_targets[0]};
+                } else if (std.mem.eql(u8, filter, "arm")) {
+                    break :blk .{test_targets[1]};
+                } else if (std.mem.eql(u8, filter, "aarch64")) {
+                    break :blk .{test_targets[2]};
+                } else if (std.mem.eql(u8, filter, "aarch64_be")) {
+                    break :blk .{test_targets[3]};
+                } else {
+                    std.debug.print(
+                        \\Invalid filter: {s}\n
+                        \\Filters include native, arm, aarch64, and aarch64_be
+                    , .{filter});
+                    std.process.exit(1);
                 }
-            } else if (std.mem.eql(u8, filter, "aarch64")) {
-                inline for (.{ test_targets[3], test_targets[4] }) |filter_target| {
-                    const unit_tests = b.addTest(.{
-                        .root_source_file = mod.root_source_file.?,
-                        .target = b.resolveTargetQuery(filter_target),
-                        .optimize = optimize,
-                    });
+            };
+            inline for (fl) |filter_target| {
+                const unit_tests = b.addTest(.{
+                    .root_source_file = mod.root_source_file.?,
+                    .target = b.resolveTargetQuery(filter_target),
+                    .optimize = optimize,
+                });
 
-                    const run_unit_tests = b.addRunArtifact(unit_tests);
-                    test_step.dependOn(&run_unit_tests.step);
-                }
-            } else if (std.mem.eql(u8, filter, "aarch64_be")) {
-                inline for (.{ test_targets[5], test_targets[6] }) |filter_target| {
-                    const unit_tests = b.addTest(.{
-                        .root_source_file = mod.root_source_file.?,
-                        .target = b.resolveTargetQuery(filter_target),
-                        .optimize = optimize,
-                    });
-
-                    const run_unit_tests = b.addRunArtifact(unit_tests);
-                    test_step.dependOn(&run_unit_tests.step);
-                }
-            } else if (std.mem.eql(u8, filter, "other")) {
-                inline for (.{ test_targets[7] }) |filter_target| {
-                    const unit_tests = b.addTest(.{
-                        .root_source_file = mod.root_source_file.?,
-                        .target = b.resolveTargetQuery(filter_target),
-                        .optimize = optimize,
-                    });
-
-                    const run_unit_tests = b.addRunArtifact(unit_tests);
-                    test_step.dependOn(&run_unit_tests.step);
-                }
-            } else {
-                std.debug.print("Invalid filter: {s}\n", .{filter});
-                std.process.exit(1);
+                const run_unit_tests = b.addRunArtifact(unit_tests);
+                test_step.dependOn(&run_unit_tests.step);
             }
         }
     } else {
