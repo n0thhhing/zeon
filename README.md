@@ -18,7 +18,7 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
  - [ ] Eliminate repetitive patterns to improve maintainability.
  - [ ] Implement fallbacks for non-ARM architectures.
  - [ ] Instruction Stripping e.g, Functions like vget_lane_f64 should compile down to nothing more than accessing the appropriate register (e.g., s0 for vec in v0). Currently, we are explicitly inserting instructions, which prevents the compiler from optimizing them away when not needed.
- - [ ] Add support for Big Endian for bot arm and aarch64.
+ - [ ] Add support for Big Endian arm/aarch64, and add tests for it.
 
 ## Notes
  - When using `vld1*` on non-ARM architectures(or if use_asm and use_builtins is off), it wont pad with 0's, so if the input is less then the specified size, it results in undefined behavior.
