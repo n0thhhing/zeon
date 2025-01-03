@@ -1,4 +1,4 @@
-make better # Zig-Neon
+# Zig-Neon
 
 ARM/ARM64 Neon intrinsics implemented in pure zig as well as in assembly!
 
