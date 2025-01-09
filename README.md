@@ -8,17 +8,19 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
 
 ## Status
 
-🚧 This project is under active development(339/2983 implemented). Contributions and feedback are welcome!
+🚧 This project is under active development(370/2983 implemented). Contributions and feedback are welcome!
 
 ## Roadmap
 
  - [ ] Complete inline assembly/LLVM builtin implementations.
  - [ ] Write thorough tests for all functions to ensure correctness.
- - [ ] Refactor into multiple files for better organization.
+ - [ ] Refactor into multiple files.
  - [ ] Eliminate repetitive patterns to improve maintainability.
  - [ ] Implement fallbacks for non-ARM architectures.
- - [ ] Instruction Stripping e.g, Functions like vget_lane_f64 should compile down to nothing more than accessing the appropriate register (e.g., s0 for vec in v0). Currently, we are explicitly inserting instructions, which prevents the compiler from optimizing them away when not needed.
+ - [ ] Instruction Stripping e.g, Functions like `vget_lane_f64` should compile down to nothing more than accessing the appropriate register (e.g., s0 for vec in v0). Currently, we are explicitly inserting instructions, which prevents the compiler from optimizing them away when not needed.
  - [ ] Add support for Big Endian arm/aarch64, and add tests for it.
+ - [ ] For Vector Load intrinsics, dont assume the input length is the exact length of the output vector.
+ - [ ] Test against C/C++ implementation.
 
 ## Notes
  - When using `vld1*` on non-ARM architectures(or if use_asm and use_builtins is off), it assumes the underlying type fits the size of the vector.

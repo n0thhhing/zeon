@@ -5,6 +5,7 @@ const features = builtin.cpu.features;
 
 pub const is_arm = arch == .arm or arch == .armeb;
 
+/// Checks if the current CPU is arm and has the input features
 pub inline fn hasFeatures(comptime arm_features: []const std.Target.arm.Feature) bool {
     if (!@inComptime()) @panic("Please move this into comptime, orelse it will result in an unnecessary branch");
     inline for (arm_features) |f| {
