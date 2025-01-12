@@ -65,6 +65,7 @@ pub var use_builtins = blk: {
     else
         break :blk true;
 };
+
 pub const p8 = u8;
 pub const p16 = u16;
 pub const p64 = u64;
@@ -515,6 +516,7 @@ test fmtFn {
 fn testIntrinsic(comptime fn_name: []const u8, func: anytype, expected: anytype, args: anytype) !void {
     if (is_aarch64 or is_arm) {
         inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opt| {
+            if (opt[0] and builtin.zig_backend != .stage2_llvm) continue;
             use_asm = opt[0];
             use_builtins = opt[1];
             const result = @call(.auto, func, args);
@@ -522,8 +524,10 @@ fn testIntrinsic(comptime fn_name: []const u8, func: anytype, expected: anytype,
                 const T = @TypeOf(func);
                 const fmt_str =
                     \\({s})({any}):
-                    \\    Expected: {d},
-                    \\    Actual: {d},
+                    \\    Expected: 
+                ++ (if (@typeInfo(@TypeOf(expected, result)) == .Struct) "{any},\n" else "{d},\n") ++
+                    \\    Actual: 
+                ++ (if (@typeInfo(@TypeOf(expected, result)) == .Struct) "{any},\n" else "{d},\n") ++
                     \\    Arch: {},
                     \\    Features: {s},
                     \\    Endianness: {},
@@ -605,8 +609,8 @@ inline fn join(
     std.meta.Child(@TypeOf(a, b)),
 ) {
     const Child = std.meta.Child(@TypeOf(a));
-    const a_len = vecLen(@TypeOf(a));
-    const b_len = vecLen(@TypeOf(b));
+    const a_len = comptime vecLen(@TypeOf(a));
+    const b_len = comptime vecLen(@TypeOf(b));
 
     return @shuffle(
         Child,
@@ -1092,6 +1096,36 @@ pub inline fn vget_low_p16(vec: p16x8) p16x4 {
         vec,
         undefined,
         p16x4{ 0, 1, 2, 3 },
+    );
+}
+
+/// Get low elements of a f16x8 vector
+pub inline fn vget_low_f16(vec: f16x8) f16x4 {
+    return @shuffle(
+        f16,
+        vec,
+        undefined,
+        f16x4{ 0, 1, 2, 3 },
+    );
+}
+
+/// Get low elements of a f32x4 vector
+pub inline fn vget_low_f32(vec: f32x4) f32x2 {
+    return @shuffle(
+        f32,
+        vec,
+        undefined,
+        f32x2{ 0, 1 },
+    );
+}
+
+/// Get low elements of a f64x2 vector
+pub inline fn vget_low_f64(vec: f64x2) f64x1 {
+    return @shuffle(
+        f64,
+        vec,
+        undefined,
+        f64x1{0},
     );
 }
 
@@ -6133,7 +6167,7 @@ test vmlaq_f64 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_u8(scalar: u8) u8x16 {
+pub inline fn vdupq_n_u8(scalar: u8) u8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("dup %[ret].16b, %[scalar:w]"
             : [ret] "=w" (-> u8x16),
@@ -6156,7 +6190,7 @@ test vdupq_n_u8 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_u16(scalar: u16) u16x8 {
+pub inline fn vdupq_n_u16(scalar: u16) u16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             .little => {
@@ -6191,7 +6225,7 @@ test vdupq_n_u16 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_u32(scalar: u32) u32x4 {
+pub inline fn vdupq_n_u32(scalar: u32) u32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             .little => {
@@ -6226,7 +6260,7 @@ test vdupq_n_u32 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_s8(scalar: i8) i8x16 {
+pub inline fn vdupq_n_s8(scalar: i8) i8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("dup %[ret].16b, %[scalar:w]"
             : [ret] "=w" (-> i8x16),
@@ -6249,7 +6283,7 @@ test vdupq_n_s8 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_s16(scalar: i16) i16x8 {
+pub inline fn vdupq_n_s16(scalar: i16) i16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             .little => {
@@ -6284,7 +6318,7 @@ test vdupq_n_s16 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_s32(scalar: i32) i32x4 {
+pub inline fn vdupq_n_s32(scalar: i32) i32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             .little => {
@@ -6319,7 +6353,7 @@ test vdupq_n_s32 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_p8(scalar: p8) p8x16 {
+pub inline fn vdupq_n_p8(scalar: p8) p8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("dup %[ret].16b, %[scalar:w]"
             : [ret] "=w" (-> p8x16),
@@ -6342,7 +6376,7 @@ test vdupq_n_p8 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_p16(scalar: p16) p16x8 {
+pub inline fn vdupq_n_p16(scalar: p16) p16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             .little => {
@@ -6377,7 +6411,7 @@ test vdupq_n_p16 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_f16(scalar: f16) f16x8 {
+pub inline fn vdupq_n_f16(scalar: f16) f16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             .little => {
@@ -6412,7 +6446,7 @@ test vdupq_n_f16 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_f32(scalar: f32) f32x4 {
+pub inline fn vdupq_n_f32(scalar: f32) f32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             .little => {
@@ -6447,7 +6481,7 @@ test vdupq_n_f32 {
 }
 
 /// Duplicate vector element to vector or scalar
-pub fn vdupq_n_f64(scalar: f64) f64x2 {
+pub inline fn vdupq_n_f64(scalar: f64) f64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             .little => {
@@ -6474,4 +6508,315 @@ test vdupq_n_f64 {
     try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ 5, 5 }, .{5});
     try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ 0, 0 }, .{0});
     try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ std.math.floatMax(f64), std.math.floatMax(f64) }, .{std.math.floatMax(f64)});
+}
+
+/// Zip vectors
+pub inline fn vzip1_s8(a: i8x8, b: i8x8) i8x8 {
+    return @shuffle(i8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+}
+
+test vzip1_s8 {
+    const a: i8x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: i8x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: i8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip1_s8", vzip1_s8, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip1_s16(a: i16x4, b: i16x4) i16x4 {
+    return @shuffle(i16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+}
+
+test vzip1_s16 {
+    const a: i16x4 = .{ 0, 2, 4, 6 };
+    const b: i16x4 = .{ 1, 3, 5, 7 };
+    const expected: i16x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vzip1_s16", vzip1_s16, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip1_s32(a: i32x2, b: i32x2) i32x2 {
+    return @shuffle(i32, a, b, i32x2{ 0, ~@as(i32, 0) });
+}
+
+test vzip1_s32 {
+    const a: i32x2 = .{ 0, 2 };
+    const b: i32x2 = .{ 1, 3 };
+    const expected: i32x2 = .{ 0, 1 };
+
+    try testIntrinsic("vzip1_s32", vzip1_s32, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip1_u8(a: u8x8, b: u8x8) u8x8 {
+    return @shuffle(u8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+}
+
+test vzip1_u8 {
+    const a: u8x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: u8x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip1_u8", vzip1_u8, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip1_u16(a: u16x4, b: u16x4) u16x4 {
+    return @shuffle(u16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+}
+
+test vzip1_u16 {
+    const a: u16x4 = .{ 0, 2, 4, 6 };
+    const b: u16x4 = .{ 1, 3, 5, 7 };
+    const expected: u16x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vzip1_u16", vzip1_u16, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip1_u32(a: u32x2, b: u32x2) u32x2 {
+    return @shuffle(u32, a, b, i32x2{ 0, ~@as(i32, 0) });
+}
+
+test vzip1_u32 {
+    const a: u32x2 = .{ 0, 2 };
+    const b: u32x2 = .{ 1, 3 };
+    const expected: u32x2 = .{ 0, 1 };
+
+    try testIntrinsic("vzip1_u32", vzip1_u32, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip1_f32(a: f32x2, b: f32x2) f32x2 {
+    return @shuffle(f32, a, b, i32x2{ 0, ~@as(i32, 0) });
+}
+
+test vzip1_f32 {
+    const a: f32x2 = .{ 0, 2 };
+    const b: f32x2 = .{ 1, 3 };
+    const expected: f32x2 = .{ 0, 1 };
+
+    try testIntrinsic("vzip1_f32", vzip1_f32, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip2_s8(a: i8x8, b: i8x8) i8x8 {
+    return @shuffle(i8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+}
+
+test vzip2_s8 {
+    const a: i8x8 = .{ 0, 16, 16, 18, 16, 18, 20, 22 };
+    const b: i8x8 = .{ 1, 17, 17, 19, 17, 19, 21, 23 };
+    const expected: i8x8 = .{ 16, 17, 18, 19, 20, 21, 22, 23 };
+
+    try testIntrinsic("vzip2_s8", vzip2_s8, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip2_s16(a: i16x4, b: i16x4) i16x4 {
+    return @shuffle(i16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+}
+
+test vzip2_s16 {
+    const a: i16x4 = .{ 0, 16, 16, 18 };
+    const b: i16x4 = .{ 1, 17, 17, 19 };
+    const expected: i16x4 = .{ 16, 17, 18, 19 };
+
+    try testIntrinsic("vzip2_s16", vzip2_s16, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip2_s32(a: i32x2, b: i32x2) i32x2 {
+    return @shuffle(i32, a, b, i32x2{ 1, ~@as(i32, 1) });
+}
+
+test vzip2_s32 {
+    const a: i32x2 = .{ 0, 16 };
+    const b: i32x2 = .{ 1, 17 };
+    const expected: i32x2 = .{ 16, 17 };
+
+    try testIntrinsic("vzip2_s32", vzip2_s32, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip2_u8(a: u8x8, b: u8x8) u8x8 {
+    return @shuffle(u8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+}
+
+test vzip2_u8 {
+    const a: u8x8 = .{ 0, 16, 16, 18, 16, 18, 20, 22 };
+    const b: u8x8 = .{ 1, 17, 17, 19, 17, 19, 21, 23 };
+    const expected: u8x8 = .{ 16, 17, 18, 19, 20, 21, 22, 23 };
+
+    try testIntrinsic("vzip2_u8", vzip2_u8, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip2_u16(a: u16x4, b: u16x4) u16x4 {
+    return @shuffle(u16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+}
+
+test vzip2_u16 {
+    const a: u16x4 = .{ 0, 16, 16, 18 };
+    const b: u16x4 = .{ 1, 17, 17, 19 };
+    const expected: u16x4 = .{ 16, 17, 18, 19 };
+
+    try testIntrinsic("vzip2_u16", vzip2_u16, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip2_u32(a: u32x2, b: u32x2) u32x2 {
+    return @shuffle(u32, a, b, i32x2{ 1, ~@as(i32, 1) });
+}
+
+test vzip2_u32 {
+    const a: u32x2 = .{ 0, 16 };
+    const b: u32x2 = .{ 1, 17 };
+    const expected: u32x2 = .{ 16, 17 };
+
+    try testIntrinsic("vzip2_u32", vzip2_u32, expected, .{ a, b });
+}
+
+/// Zip vectors
+pub inline fn vzip2_f32(a: f32x2, b: f32x2) f32x2 {
+    return @shuffle(f32, a, b, i32x2{ 1, ~@as(i32, 1) });
+}
+
+test vzip2_f32 {
+    const a: f32x2 = .{ 0, 16 };
+    const b: f32x2 = .{ 1, 17 };
+    const expected: f32x2 = .{ 16, 17 };
+
+    try testIntrinsic("vzip2_f32", vzip2_f32, expected, .{ a, b });
+}
+
+/// Transpose elements
+pub inline fn vtrnq_s8(a: i8x16, b: i8x16) i8x16x2 {
+    const a1: i8x16 = @shuffle(i8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
+    const b1: i8x16 = @shuffle(i8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    return .{ a1, b1 };
+}
+
+test vtrnq_s8 {
+    const a: i8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: i8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: i8x16x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 }, .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 } };
+
+    try testIntrinsic("vtrnq_s8", vtrnq_s8, expected, .{ a, b });
+}
+
+/// Transpose elements
+pub inline fn vtrnq_s16(a: i16x8, b: i16x8) i16x8x2 {
+    const a1: i16x8 = @shuffle(i16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
+    const b1: i16x8 = @shuffle(i16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    return .{ a1, b1 };
+}
+
+test vtrnq_s16 {
+    const a: i16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: i16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: i16x8x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7 }, .{ 2, 3, 6, 7, 10, 1, 14, 15 } };
+
+    try testIntrinsic("vtrnq_s16", vtrnq_s16, expected, .{ a, b });
+}
+
+
+/// Transpose elements
+pub inline fn vtrnq_s32(a: i32x4, b: i32x4) i32x4x2 {
+    const a1: i32x4 = @shuffle(i32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
+    const b1: i32x4 = @shuffle(i32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    return .{ a1, b1 };
+}
+
+test vtrnq_s32 {
+    const a: i32x4 = .{ 0, 2, 2, 6 };
+    const b: i32x4 = .{ 1, 3, 3, 7 };
+    const expected: i32x4x2 = .{ .{ 0, 1, 2, 3 }, .{ 2, 3, 6, 7 } };
+
+    try testIntrinsic("vtrnq_s32", vtrnq_s32, expected, .{ a, b });
+}
+
+
+/// Transpose elements
+pub inline fn vtrnq_u8(a: u8x16, b: u8x16) u8x16x2 {
+    const a1: u8x16 = @shuffle(u8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
+    const b1: u8x16 = @shuffle(u8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    return .{ a1, b1 };
+}
+
+test vtrnq_u8 {
+    const a: u8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: u8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: u8x16x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 }, .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 } };
+
+    try testIntrinsic("vtrnq_u8", vtrnq_u8, expected, .{ a, b });
+}
+
+/// Transpose elements
+pub inline fn vtrnq_u16(a: u16x8, b: u16x8) u16x8x2 {
+    const a1: u16x8 = @shuffle(u16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
+    const b1: u16x8 = @shuffle(u16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    return .{ a1, b1 };
+}
+
+test vtrnq_u16 {
+    const a: u16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: u16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: u16x8x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7 }, .{ 2, 3, 6, 7, 10, 1, 14, 15 } };
+
+    try testIntrinsic("vtrnq_u16", vtrnq_u16, expected, .{ a, b });
+}
+
+
+/// Transpose elements
+pub inline fn vtrnq_u32(a: u32x4, b: u32x4) u32x4x2 {
+    const a1: u32x4 = @shuffle(u32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
+    const b1: u32x4 = @shuffle(u32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    return .{ a1, b1 };
+}
+
+test vtrnq_u32 {
+    const a: u32x4 = .{ 0, 2, 2, 6 };
+    const b: u32x4 = .{ 1, 3, 3, 7 };
+    const expected: u32x4x2 = .{ .{ 0, 1, 2, 3 }, .{ 2, 3, 6, 7 } };
+
+    try testIntrinsic("vtrnq_u32", vtrnq_u32, expected, .{ a, b });
+}
+
+/// Transpose elements
+pub inline fn vtrnq_f32(a: f32x4, b: f32x4) f32x4x2 {
+    const a1: f32x4 = @shuffle(f32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
+    const b1: f32x4 = @shuffle(f32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    return .{ a1, b1 };
+}
+
+test vtrnq_f32 {
+    const a: f32x4 = .{ 0, 2, 2, 6 };
+    const b: f32x4 = .{ 1, 3, 3, 7 };
+    const expected: f32x4x2 = .{ .{ 0, 1, 2, 3 }, .{ 2, 3, 6, 7 } };
+
+    try testIntrinsic("vtrnq_f32", vtrnq_f32, expected, .{ a, b });
+}
+/// Transpose elements
+pub inline fn vtrnq_p8(a: p8x16, b: p8x16) p8x16x2 {
+    const a1: p8x16 = @shuffle(p8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
+    const b1: p8x16 = @shuffle(p8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    return .{ a1, b1 };
+}
+
+test vtrnq_p8 {
+    const a: p8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: p8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: p8x16x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 }, .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 } };
+
+    try testIntrinsic("vtrnq_p8", vtrnq_p8, expected, .{ a, b });
+}
+
+/// Transpose elements
+pub inline fn vtrnq_p16(a: p16x8, b: p16x8) p16x8x2 {
+    const a1: p16x8 = @shuffle(p16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
+    const b1: p16x8 = @shuffle(p16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    return .{ a1, b1 };
 }

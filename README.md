@@ -8,7 +8,7 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
 
 ## Status
 
-🚧 This project is under active development(370/2983 implemented). Contributions and feedback are welcome!
+🚧 This project is under active development(407/2983 implemented). Contributions and feedback are welcome!
 
 ## Roadmap
 
@@ -21,10 +21,11 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
  - [ ] Add support for Big Endian arm/aarch64, and add tests for it.
  - [ ] For Vector Load intrinsics, dont assume the input length is the exact length of the output vector.
  - [ ] Test against C/C++ implementation.
+ - [ ] Add a better way to switch between implementations(like assembly, builtins and the fallback).
 
 ## Notes
  - When using `vld1*` on non-ARM architectures(or if use_asm and use_builtins is off), it assumes the underlying type fits the size of the vector.
- - Some intrinsics wont have inline assembly because the falback implementation is either faster or the same as the assembly implementation.
+ - Some intrinsics wont have inline assembly because the fallback implementation is either faster or the same as the assembly implementation. If the target function does not use inline assembly, then it wont be optimized to the target neon intrinsic unless your in `ReleaseFast`.
 
 ## Getting Started
 
