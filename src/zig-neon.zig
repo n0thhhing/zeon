@@ -1234,17 +1234,14 @@ pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
                 );
             },
             inline .big => {
-                return @byteSwap(
-                    @shuffle(
-                        i16,
-                        asm ("smull %[ret].8h, %[a].8b, %[b].8b"
-                            : [ret] "=w" (-> i16x8),
-                            : [a] "w" (a),
-                              [b] "w" (b),
-                        ),
-                        undefined,
-                        i16x8{ 7, 6, 5, 4, 3, 2, 1, 0 },
-                    ),
+                return asm (
+                    \\ smull %[ret].8h, %[a].8b, %[b].8b
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    \\ rev64 %[ret].8h, %[ret].8h
+                    \\ ext   %[ret].16b, %[ret].16b, %[ret].16b, #8
+                    : [ret] "=w" (-> i16x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
                 );
             },
         }
@@ -1285,17 +1282,14 @@ pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
                 );
             },
             inline .big => {
-                return @byteSwap(
-                    @shuffle(
-                        i32,
-                        asm ("smull %[ret].4s, %[a].4h, %[b].4h"
-                            : [ret] "=w" (-> i32x4),
-                            : [a] "w" (a),
-                              [b] "w" (b),
-                        ),
-                        undefined,
-                        i32x4{ 3, 2, 1, 0 },
-                    ),
+                return asm (
+                    \\ smull %[ret].4s, %[a].4h, %[b].4h
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    \\ rev64 %[ret].4s, %[ret].4s
+                    \\ ext   %[ret].16b, %[ret].16b, %[ret].16b, #8
+                    : [ret] "=w" (-> i32x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
                 );
             },
         }
@@ -1337,17 +1331,13 @@ pub inline fn vmull_s32(a: i32x2, b: i32x2) i64x2 {
                 );
             },
             inline .big => {
-                return @byteSwap(
-                    @shuffle(
-                        i64,
-                        asm ("smull %[ret].2d, %[a].2s, %[b].2s"
-                            : [ret] "=w" (-> i64x2),
-                            : [a] "w" (a),
-                              [b] "w" (b),
-                        ),
-                        undefined,
-                        i64x2{ 1, 0 },
-                    ),
+                return asm (
+                    \\ smull %[ret].2d, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    \\ ext   %[ret].16b, %[ret].16b, %[ret].16b, #8
+                    : [ret] "=w" (-> i64x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
                 );
             },
         }
@@ -1389,17 +1379,14 @@ pub inline fn vmull_u8(a: u8x8, b: u8x8) u16x8 {
                 );
             },
             inline .big => {
-                return @byteSwap(
-                    @shuffle(
-                        u16,
-                        asm ("umull %[ret].8h, %[a].8b, %[b].8b"
-                            : [ret] "=w" (-> u16x8),
-                            : [a] "w" (a),
-                              [b] "w" (b),
-                        ),
-                        undefined,
-                        u16x8{ 7, 6, 5, 4, 3, 2, 1, 0 },
-                    ),
+                return asm (
+                    \\ umull %[ret].8h, %[a].8b, %[b].8b
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    \\ rev64 %[ret].8h, %[ret].8h
+                    \\ ext   %[ret].16b, %[ret].16b, %[ret].16b, #8
+                    : [ret] "=w" (-> u16x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
                 );
             },
         }
@@ -1441,17 +1428,14 @@ pub inline fn vmull_u16(a: u16x4, b: u16x4) u32x4 {
                 );
             },
             inline .big => {
-                return @byteSwap(
-                    @shuffle(
-                        u32,
-                        asm ("umull %[ret].4s, %[a].4h, %[b].4h"
-                            : [ret] "=w" (-> u32x4),
-                            : [a] "w" (a),
-                              [b] "w" (b),
-                        ),
-                        undefined,
-                        u32x4{ 3, 2, 1, 0 },
-                    ),
+                return asm (
+                    \\ umull %[ret].4s, %[a].4h, %[b].4h
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    \\ rev64 %[ret].4s, %[ret].4s
+                    \\ ext   %[ret].16b, %[ret].16b, %[ret].16b, #8
+                    : [ret] "=w" (-> u32x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
                 );
             },
         }
@@ -1493,17 +1477,13 @@ pub inline fn vmull_u32(a: u32x2, b: u32x2) u64x2 {
                 );
             },
             inline .big => {
-                return @byteSwap(
-                    @shuffle(
-                        u64,
-                        asm ("umull %[ret].2d, %[a].2s, %[b].2s"
-                            : [ret] "=w" (-> u64x2),
-                            : [a] "w" (a),
-                              [b] "w" (b),
-                        ),
-                        undefined,
-                        u64x2{ 1, 0 },
-                    ),
+                return asm (
+                    \\ umull %[ret].2d, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    \\ ext   %[ret].16b, %[ret].16b, %[ret].16b, #8
+                    : [ret] "=w" (-> u64x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
                 );
             },
         }
@@ -2227,17 +2207,14 @@ pub inline fn vqdmull_s16(a: i16x4, b: i16x4) i32x4 {
                 );
             },
             inline .big => {
-                return @byteSwap(
-                    @shuffle(
-                        i32,
-                        asm ("sqdmull %[ret].4s, %[a].4h, %[b].4h"
-                            : [ret] "=w" (-> i32x4),
-                            : [a] "w" (a),
-                              [b] "w" (b),
-                        ),
-                        undefined,
-                        i32x4{ 3, 2, 1, 0 },
-                    ),
+                return asm (
+                    \\ sqdmull %[ret].4s, %[a].4h, %[b].4h
+                    \\ rev32   %[ret].16b, %[ret].16b
+                    \\ rev64   %[ret].4s, %[ret].4s
+                    \\ ext     %[ret].16b, %[ret].16b, %[ret].16b, #8
+                    : [ret] "=w" (-> i32x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
                 );
             },
         }
@@ -2299,17 +2276,13 @@ pub inline fn vqdmull_s32(a: i32x2, b: i32x2) i64x2 {
                 );
             },
             inline .big => {
-                return @byteSwap(
-                    @shuffle(
-                        i64,
-                        asm ("sqdmull %[ret].2d, %[a].2s, %[b].2s"
-                            : [ret] "=w" (-> i64x2),
-                            : [a] "w" (a),
-                              [b] "w" (b),
-                        ),
-                        undefined,
-                        i64x2{ 1, 0 },
-                    ),
+                return asm (
+                    \\ sqdmull %[ret].2d, %[a].2s, %[b].2s
+                    \\ rev64   %[ret].16b, %[ret].16b
+                    \\ ext     %[ret].16b, %[ret].16b, %[ret].16b, #8
+                    : [ret] "=w" (-> i64x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
                 );
             },
         }
@@ -5419,12 +5392,12 @@ test vget_lane_f64 {
 /// Load multiple single-element structures to one, two, three, or four registers
 pub inline fn vld1q_u8(mem_addr: [*]const u8) u8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("ld1 { %[ret].16b }, [%[addr]]"
+        return asm ("ld1 {%[ret].16b}, [%[addr]]"
             : [ret] "=w" (-> u8x16),
             : [addr] "r" (mem_addr),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
-        return asm ("vld1.8 { %[ret] }, [%[addr]]"
+        return asm ("vld1.8 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> u8x16),
             : [addr] "r" (mem_addr),
         );
@@ -5449,16 +5422,18 @@ pub inline fn vld1q_u16(mem_addr: [*]const u16) u16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("ld1 { %[ret].8h }, [%[addr]]"
+                return asm ("ld1 {%[ret].8h}, [%[addr]]"
                     : [ret] "=w" (-> u16x8),
                     : [addr] "r" (mem_addr),
                 );
             },
             inline .big => {
-                return @byteSwap(asm ("ld1 { %[ret].8h }, [%[addr]]"
+                return asm (
+                    \\ ld1   {%[ret].8h}, [%[addr]]
+                    \\ rev16 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> u16x8),
                     : [addr] "r" (mem_addr),
-                ));
+                );
             },
         }
     } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
@@ -5487,16 +5462,18 @@ pub inline fn vld1q_u32(mem_addr: [*]const u32) u32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("ld1 { %[ret].4s }, [%[addr]]"
+                return asm ("ld1 {%[ret].4s}, [%[addr]]"
                     : [ret] "=w" (-> u32x4),
                     : [addr] "r" (mem_addr),
                 );
             },
             inline .big => {
-                return @byteSwap(asm ("ld1 { %[ret].4s }, [%[addr]]"
+                return asm (
+                    \\ ld1   {%[ret].4s}, [%[addr]]
+                    \\ rev32 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> u32x4),
                     : [addr] "r" (mem_addr),
-                ));
+                );
             },
         }
     } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
@@ -5525,16 +5502,18 @@ pub inline fn vld1q_u64(mem_addr: [*]const u64) u64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("ld1 { %[ret].2d }, [%[addr]]"
+                return asm ("ld1 {%[ret].2d}, [%[addr]]"
                     : [ret] "=w" (-> u64x2),
                     : [addr] "r" (mem_addr),
                 );
             },
             inline .big => {
-                return @byteSwap(asm ("ld1 { %[ret].2d }, [%[addr]]"
+                return asm (
+                    \\ ld1   {%[ret].2d}, [%[addr]]
+                    \\ rev64 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> u64x2),
                     : [addr] "r" (mem_addr),
-                ));
+                );
             },
         }
     } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
@@ -5561,7 +5540,7 @@ test vld1q_u64 {
 /// Load multiple single-element structures to one, two, three, or four registers
 pub inline fn vld1q_i8(mem_addr: [*]const i8) i8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("ld1 { %[ret].16b }, [%[addr]]"
+        return asm ("ld1 {%[ret].16b}, [%[addr]]"
             : [ret] "=w" (-> i8x16),
             : [addr] "r" (mem_addr),
         );
@@ -5591,16 +5570,18 @@ pub inline fn vld1q_i16(mem_addr: [*]const i16) i16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("ld1 { %[ret].8h }, [%[addr]]"
+                return asm ("ld1 {%[ret].8h}, [%[addr]]"
                     : [ret] "=w" (-> i16x8),
                     : [addr] "r" (mem_addr),
                 );
             },
             inline .big => {
-                return @byteSwap(asm ("ld1 { %[ret].8h }, [%[addr]]"
+                return asm (
+                    \\ ld1 {%[ret].8h}, [%[addr]]
+                    \\ rev16 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> i16x8),
                     : [addr] "r" (mem_addr),
-                ));
+                );
             },
         }
     } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
@@ -5629,16 +5610,18 @@ pub inline fn vld1q_i32(mem_addr: [*]const i32) i32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("ld1 { %[ret].4s }, [%[addr]]"
+                return asm ("ld1 {%[ret].4s}, [%[addr]]"
                     : [ret] "=w" (-> i32x4),
                     : [addr] "r" (mem_addr),
                 );
             },
             inline .big => {
-                return @byteSwap(asm ("ld1 { %[ret].4s }, [%[addr]]"
+                return asm (
+                    \\ ld1   {%[ret].4s}, [%[addr]]
+                    \\ rev32 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> i32x4),
                     : [addr] "r" (mem_addr),
-                ));
+                );
             },
         }
     } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
@@ -5667,16 +5650,18 @@ pub inline fn vld1q_i64(mem_addr: [*]const i64) i64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("ld1 { %[ret].2d }, [%[addr]]"
+                return asm ("ld1 {%[ret].2d}, [%[addr]]"
                     : [ret] "=w" (-> i64x2),
                     : [addr] "r" (mem_addr),
                 );
             },
             inline .big => {
-                return @byteSwap(asm ("ld1 { %[ret].2d }, [%[addr]]"
+                return asm (
+                    \\ ld1   {%[ret].2d}, [%[addr]]
+                    \\ rev64 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> i64x2),
                     : [addr] "r" (mem_addr),
-                ));
+                );
             },
         }
     } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
@@ -5705,17 +5690,17 @@ pub inline fn vld1q_f32(mem_addr: [*]const f32) f32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("ld1 { %[ret].4s }, [%[addr]]"
+                return asm ("ld1 {%[ret].4s}, [%[addr]]"
                     : [ret] "=w" (-> f32x4),
                     : [addr] "r" (mem_addr),
                 );
             },
             inline .big => {
-                return @bitCast(
-                    @byteSwap(asm ("ld1 { %[ret].4s }, [%[addr]]"
-                        : [ret] "=w" (-> u32x4),
-                        : [addr] "r" (mem_addr),
-                    )),
+                return asm (
+                    \\ ld1   {%[ret].4s}, [%[addr]]
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> f32x4),
+                    : [addr] "r" (mem_addr),
                 );
             },
         }
@@ -5745,17 +5730,17 @@ pub inline fn vld1q_f64(mem_addr: [*]const f64) f64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("ld1 { %[ret].2d }, [%[addr]]"
+                return asm ("ld1 {%[ret].2d}, [%[addr]]"
                     : [ret] "=w" (-> f64x2),
                     : [addr] "r" (mem_addr),
                 );
             },
             inline .big => {
-                return @bitCast(
-                    @byteSwap(asm ("ld1 { %[ret].2d }, [%[addr]]"
-                        : [ret] "=w" (-> u64x2),
-                        : [addr] "r" (mem_addr),
-                    )),
+                return asm (
+                    \\ ld1   {%[ret].2d}, [%[addr]]
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> f64x2),
+                    : [addr] "r" (mem_addr),
                 );
             },
         }
@@ -5825,10 +5810,9 @@ test vmlaq_s8 {
 /// Multiply-add to accumulator
 pub inline fn vmlaq_s16(a: i16x8, b: i16x8, c: i16x8) i16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        var result: i16x8 = undefined;
+        var result: i16x8 = a;
         switch (endianness) {
             .little => {
-                result = a;
                 asm ("mla %[ret].8h, %[b].8h, %[c].8h"
                     : [ret] "+w" (result),
                     : [b] "w" (b),
@@ -5836,13 +5820,16 @@ pub inline fn vmlaq_s16(a: i16x8, b: i16x8, c: i16x8) i16x8 {
                 );
             },
             .big => {
-                result = @byteSwap(a);
-                asm ("mla   %[ret].8h, %[c].8h, %[b].8h"
+                asm (
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    \\ rev16 %[b].16b, %[b].16b
+                    \\ rev16 %[c].16b, %[c].16b
+                    \\ mla   %[ret].8h, %[c].8h, %[b].8h
+                    \\ rev16 %[ret].16b, %[ret].16b
                     : [ret] "+w" (result),
-                    : [b] "w" (@byteSwap(b)),
-                      [c] "w" (@byteSwap(c)),
+                    : [b] "w" (b),
+                      [c] "w" (c),
                 );
-                result = @byteSwap(result);
             },
         }
         return result;
@@ -5871,10 +5858,9 @@ test vmlaq_s16 {
 /// Multiply-add to accumulator
 pub inline fn vmlaq_s32(a: i32x4, b: i32x4, c: i32x4) i32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        var result: i32x4 = undefined;
+        var result: i32x4 = a;
         switch (endianness) {
             .little => {
-                result = a;
                 asm ("mla %[ret].4s, %[b].4s, %[c].4s"
                     : [ret] "+w" (result),
                     : [b] "w" (b),
@@ -5882,13 +5868,16 @@ pub inline fn vmlaq_s32(a: i32x4, b: i32x4, c: i32x4) i32x4 {
                 );
             },
             .big => {
-                result = @byteSwap(a);
-                asm ("mla %[ret].4s, %[c].4s, %[b].4s"
+                asm (
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    \\ rev32 %[b].16b, %[b].16b
+                    \\ rev32 %[c].16b, %[c].16b
+                    \\ mla   %[ret].4s, %[c].4s, %[b].4s
+                    \\ rev32 %[ret].16b, %[ret].16b
                     : [ret] "+w" (result),
-                    : [b] "w" (@byteSwap(b)),
-                      [c] "w" (@byteSwap(c)),
+                    : [b] "w" (b),
+                      [c] "w" (c),
                 );
-                result = @byteSwap(result);
             },
         }
         return result;
@@ -5959,10 +5948,9 @@ test vmlaq_u8 {
 /// Multiply-add to accumulator
 pub inline fn vmlaq_u16(a: u16x8, b: u16x8, c: u16x8) u16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        var result: u16x8 = undefined;
+        var result: u16x8 = a;
         switch (endianness) {
             .little => {
-                result = a;
                 asm ("mla %[ret].8h, %[b].8h, %[c].8h"
                     : [ret] "+w" (result),
                     : [b] "w" (b),
@@ -5970,13 +5958,16 @@ pub inline fn vmlaq_u16(a: u16x8, b: u16x8, c: u16x8) u16x8 {
                 );
             },
             .big => {
-                result = @byteSwap(a);
-                asm ("mla %[ret].8h, %[c].8h, %[b].8h"
+                asm (
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    \\ rev16 %[b].16b, %[b].16b
+                    \\ rev16 %[c].16b, %[c].16b
+                    \\ mla   %[ret].8h, %[c].8h, %[b].8h
+                    \\ rev16 %[ret].16b, %[ret].16b
                     : [ret] "+w" (result),
-                    : [b] "w" (@byteSwap(b)),
-                      [c] "w" (@byteSwap(c)),
+                    : [b] "w" (b),
+                      [c] "w" (c),
                 );
-                result = @byteSwap(result);
             },
         }
         return result;
@@ -6005,10 +5996,9 @@ test vmlaq_u16 {
 /// Multiply-add to accumulator
 pub inline fn vmlaq_u32(a: u32x4, b: u32x4, c: u32x4) u32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        var result: u32x4 = undefined;
+        var result: u32x4 = a;
         switch (endianness) {
             .little => {
-                result = a;
                 asm ("mla %[ret].4s, %[b].4s, %[c].4s"
                     : [ret] "+w" (result),
                     : [b] "w" (b),
@@ -6016,13 +6006,16 @@ pub inline fn vmlaq_u32(a: u32x4, b: u32x4, c: u32x4) u32x4 {
                 );
             },
             .big => {
-                result = @byteSwap(a);
-                asm ("mla %[ret].4s, %[c].4s, %[b].4s"
+                asm (
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    \\ rev32 %[b].16b, %[b].16b
+                    \\ rev32 %[c].16b, %[c].16b
+                    \\ mla   %[ret].4s, %[c].4s, %[b].4s
+                    \\ rev32 %[ret].16b, %[ret].16b
                     : [ret] "+w" (result),
-                    : [b] "w" (@byteSwap(b)),
-                      [c] "w" (@byteSwap(c)),
+                    : [b] "w" (b),
+                      [c] "w" (c),
                 );
-                result = @byteSwap(result);
             },
         }
         return result;
@@ -6051,7 +6044,7 @@ test vmlaq_u32 {
 /// Multiply-add to accumulator
 pub inline fn vmlaq_f32(a: f32x4, b: f32x4, c: f32x4) f32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        var result: f32x4 = undefined;
+        var result: f32x4 = a;
         switch (endianness) {
             .little => {
                 result = a;
@@ -6062,13 +6055,16 @@ pub inline fn vmlaq_f32(a: f32x4, b: f32x4, c: f32x4) f32x4 {
                 );
             },
             .big => {
-                result = @as(f32x4, @bitCast(@byteSwap(@as(u32x4, @bitCast(a)))));
-                asm ("fmla %[ret].4s, %[b].4s, %[c].4s"
+                asm (
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    \\ rev32 %[b].16b, %[b].16b
+                    \\ rev32 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].4s, %[b].4s, %[c].4s
+                    \\ rev32 %[ret].16b, %[ret].16b
                     : [ret] "+w" (result),
-                    : [b] "w" (@as(f32x4, @bitCast(@byteSwap(@as(u32x4, @bitCast(b)))))),
-                      [c] "w" (@as(f32x4, @bitCast(@byteSwap(@as(u32x4, @bitCast(c)))))),
+                    : [b] "w" (b),
+                      [c] "w" (c),
                 );
-                result = @as(f32x4, @bitCast(@byteSwap(@as(u32x4, @bitCast(result)))));
             },
         }
 
@@ -6098,25 +6094,26 @@ test vmlaq_f32 {
 /// Multiply-add to accumulator
 pub inline fn vmlaq_f64(a: f64x2, b: f64x2, c: f64x2) f64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        var result: f64x2 = undefined;
+        var result: f64x2 = a;
         switch (endianness) {
             .little => {
-                result = a;
                 asm ("fmla %[ret].2d, %[b].2d, %[c].2d"
                     : [ret] "+w" (result),
                     : [b] "w" (b),
                       [c] "w" (c),
                 );
             },
-
             .big => {
-                result = @as(f64x2, @bitCast(@byteSwap(@as(u64x2, @bitCast(a)))));
-                asm ("fmla %[ret].2d, %[b].2d, %[c].2d"
+                asm (
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    \\ rev64 %[b].16b, %[b].16b
+                    \\ rev64 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].2d, %[b].2d, %[c].2d
+                    \\ rev64 %[ret].16b, %[ret].16b
                     : [ret] "+w" (result),
-                    : [b] "w" (@as(f64x2, @bitCast(@byteSwap(@as(u64x2, @bitCast(b)))))),
-                      [c] "w" (@as(f64x2, @bitCast(@byteSwap(@as(u64x2, @bitCast(c)))))),
+                    : [b] "w" (b),
+                      [c] "w" (c),
                 );
-                result = @as(f64x2, @bitCast(@byteSwap(@as(u64x2, @bitCast(result)))));
             },
         }
 
@@ -6133,4 +6130,348 @@ test vmlaq_f64 {
     const expected: f64x2 = .{ 6, 7 };
 
     try testIntrinsic("vmlaq_f64", vmlaq_f64, expected, .{ a, b, c });
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_u8(scalar: u8) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("dup %[ret].16b, %[scalar:w]"
+            : [ret] "=w" (-> u8x16),
+            : [scalar] "r" (scalar),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vdup.8 %[ret], %[scalar]"
+            : [ret] "=w" (-> u8x16),
+            : [scalar] "r" (scalar),
+        );
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_u8 {
+    try testIntrinsic("vdupq_n_u8", vdupq_n_u8, u8x16{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_u8", vdupq_n_u8, u8x16{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_u8", vdupq_n_u8, u8x16{ std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8) }, .{std.math.maxInt(u8)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_u16(scalar: u16) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].8h, %[scalar:w]"
+                    : [ret] "=w" (-> u16x8),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].8h, %[scalar:w]
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> u16x8),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vdup.16 %[ret], %[scalar]"
+            : [ret] "=w" (-> u16x8),
+            : [scalar] "r" (scalar),
+        );
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_u16 {
+    try testIntrinsic("vdupq_n_u16", vdupq_n_u16, u16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_u16", vdupq_n_u16, u16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_u16", vdupq_n_u16, u16x8{ std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16) }, .{std.math.maxInt(u16)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_u32(scalar: u32) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].4s, %[scalar:w]"
+                    : [ret] "=w" (-> u32x4),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].4s, %[scalar:w]
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> u32x4),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vdup.32 %[ret], %[scalar]"
+            : [ret] "=w" (-> u32x4),
+            : [scalar] "r" (scalar),
+        );
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_u32 {
+    try testIntrinsic("vdupq_n_u32", vdupq_n_u32, u32x4{ 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_u32", vdupq_n_u32, u32x4{ 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_u32", vdupq_n_u32, u32x4{ std.math.maxInt(u32), std.math.maxInt(u32), std.math.maxInt(u32), std.math.maxInt(u32) }, .{std.math.maxInt(u32)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_s8(scalar: i8) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("dup %[ret].16b, %[scalar:w]"
+            : [ret] "=w" (-> i8x16),
+            : [scalar] "r" (scalar),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vdup.8 %[ret], %[scalar]"
+            : [ret] "=w" (-> i8x16),
+            : [scalar] "r" (scalar),
+        );
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_s8 {
+    try testIntrinsic("vdupq_n_s8", vdupq_n_s8, i8x16{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_s8", vdupq_n_s8, i8x16{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_s8", vdupq_n_s8, i8x16{ std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8) }, .{std.math.maxInt(i8)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_s16(scalar: i16) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].8h, %[scalar:w]"
+                    : [ret] "=w" (-> i16x8),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].8h, %[scalar:w]
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> i16x8),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vdup.16 %[ret], %[scalar]"
+            : [ret] "=w" (-> i16x8),
+            : [scalar] "r" (scalar),
+        );
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_s16 {
+    try testIntrinsic("vdupq_n_s16", vdupq_n_s16, i16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_s16", vdupq_n_s16, i16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_s16", vdupq_n_s16, i16x8{ std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16) }, .{std.math.maxInt(i16)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_s32(scalar: i32) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].4s, %[scalar:w]"
+                    : [ret] "=w" (-> i32x4),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].4s, %[scalar:w]
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> i32x4),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vdup.32 %[ret], %[scalar]"
+            : [ret] "=w" (-> i32x4),
+            : [scalar] "r" (scalar),
+        );
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_s32 {
+    try testIntrinsic("vdupq_n_s32", vdupq_n_s32, i32x4{ 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_s32", vdupq_n_s32, i32x4{ 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_s32", vdupq_n_s32, i32x4{ std.math.maxInt(i32), std.math.maxInt(i32), std.math.maxInt(i32), std.math.maxInt(i32) }, .{std.math.maxInt(i32)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_p8(scalar: p8) p8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("dup %[ret].16b, %[scalar:w]"
+            : [ret] "=w" (-> p8x16),
+            : [scalar] "r" (scalar),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vdup.8 %[ret], %[scalar]"
+            : [ret] "=w" (-> p8x16),
+            : [scalar] "r" (scalar),
+        );
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_p8 {
+    try testIntrinsic("vdupq_n_p8", vdupq_n_p8, p8x16{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_p8", vdupq_n_p8, p8x16{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_p8", vdupq_n_p8, p8x16{ std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8) }, .{std.math.maxInt(p8)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_p16(scalar: p16) p16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].8h, %[scalar:w]"
+                    : [ret] "=w" (-> p16x8),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].8h, %[scalar:w]
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> p16x8),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vdup.16 %[ret], %[scalar]"
+            : [ret] "=w" (-> p16x8),
+            : [scalar] "r" (scalar),
+        );
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_p16 {
+    try testIntrinsic("vdupq_n_p16", vdupq_n_p16, p16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_p16", vdupq_n_p16, p16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_p16", vdupq_n_p16, p16x8{ std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16) }, .{std.math.maxInt(p16)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_f16(scalar: f16) f16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].8h, %[scalar:w]"
+                    : [ret] "=w" (-> f16x8),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].8h, %[scalar:w]
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> f16x8),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return @bitCast(asm ("vdup.16 %[ret], %[scalar]"
+            : [ret] "=w" (-> u16x8),
+            : [scalar] "r" (scalar),
+        ));
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_f16 {
+    try testIntrinsic("vdupq_n_f16", vdupq_n_f16, f16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_f16", vdupq_n_f16, f16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_f16", vdupq_n_f16, f16x8{ std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16) }, .{std.math.floatMax(f16)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_f32(scalar: f32) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].4s, %[scalar:w]"
+                    : [ret] "=w" (-> f32x4),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].4s, %[scalar:w]
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> f32x4),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vdup.32 %[ret], %[scalar]"
+            : [ret] "=w" (-> f32x4),
+            : [scalar] "r" (scalar),
+        );
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_f32 {
+    try testIntrinsic("vdupq_n_f32", vdupq_n_f32, f32x4{ 5, 5, 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_f32", vdupq_n_f32, f32x4{ 0, 0, 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_f32", vdupq_n_f32, f32x4{ std.math.floatMax(f32), std.math.floatMax(f32), std.math.floatMax(f32), std.math.floatMax(f32) }, .{std.math.floatMax(f32)});
+}
+
+/// Duplicate vector element to vector or scalar
+pub fn vdupq_n_f64(scalar: f64) f64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].2d, %[scalar]"
+                    : [ret] "=w" (-> f64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].2d, %[scalar]
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> f64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_f64 {
+    try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ 5, 5 }, .{5});
+    try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ 0, 0 }, .{0});
+    try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ std.math.floatMax(f64), std.math.floatMax(f64) }, .{std.math.floatMax(f64)});
 }
