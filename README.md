@@ -8,7 +8,7 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
 
 ## Status
 
-🚧 This project is under active development(407/2983 implemented). Contributions and feedback are welcome!
+🚧 This project is under active development(430/2983 implemented). Contributions and feedback are welcome!
 
 ## Roadmap
 

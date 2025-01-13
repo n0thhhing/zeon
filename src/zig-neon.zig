@@ -514,68 +514,61 @@ test fmtFn {
 
 /// Helps test builtins and inline assembly
 fn testIntrinsic(comptime fn_name: []const u8, func: anytype, expected: anytype, args: anytype) !void {
+    const arch_features = blk: {
+        if (is_aarch64) {
+            break :blk .{
+                .neon = comptime aarch64.hasFeatures(&.{.neon}),
+                .aes = comptime aarch64.hasFeatures(&.{.aes}),
+                .rdm = comptime aarch64.hasFeatures(&.{.rdm}),
+                .sha2 = comptime aarch64.hasFeatures(&.{.sha2}),
+                .sha3 = comptime aarch64.hasFeatures(&.{.sha3}),
+                .dotprod = comptime aarch64.hasFeatures(&.{.dotprod}),
+                .i8mm = comptime aarch64.hasFeatures(&.{.i8mm}),
+                .sm4 = comptime aarch64.hasFeatures(&.{.sm4}),
+                .crypto = comptime aarch64.hasFeatures(&.{.crypto}),
+                .sve = comptime aarch64.hasFeatures(&.{.sve}),
+            };
+        } else if (is_arm) {
+            break :blk .{
+                .neon = comptime arm.hasFeatures(&.{.neon}),
+                .aes = comptime arm.hasFeatures(&.{.aes}),
+                .sha2 = comptime arm.hasFeatures(&.{.sha2}),
+                .crc = comptime arm.hasFeatures(&.{.crc}),
+                .dotprod = comptime arm.hasFeatures(&.{.dotprod}),
+                .v7 = comptime arm.hasFeatures(&.{.has_v7}),
+                .v8 = comptime arm.hasFeatures(&.{.has_v8}),
+                .i8mm = comptime arm.hasFeatures(&.{.i8mm}),
+            };
+        } else {
+            break :blk .{};
+        }
+    };
+
     if (is_aarch64 or is_arm) {
-        inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opt| {
-            if (opt[0] and builtin.zig_backend != .stage2_llvm) continue;
-            use_asm = opt[0];
-            use_builtins = opt[1];
+        inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opts| {
+            const asm_opt = opts[0];
+            const builtin_opt = opts[1];
+
+            // Skip LLVM-specific tests if not using LLVM as a backend
+            if (opts[1] and builtin.zig_backend != .stage2_llvm) {
+                std.once(struct {
+                    pub fn cb() void {
+                        @compileLog("Skipping LLVM builtin tests: Non-LLVM backend detected.");
+                    }
+                }.cb);
+                continue;
+            }
+
+            use_asm = asm_opt;
+            use_builtins = builtin_opt;
+
             const result = @call(.auto, func, args);
             expectEqual(expected, result) catch |err| {
-                const T = @TypeOf(func);
-                const fmt_str =
-                    \\({s})({any}):
-                    \\    Expected: 
-                ++ (if (@typeInfo(@TypeOf(expected, result)) == .Struct) "{any},\n" else "{d},\n") ++
-                    \\    Actual: 
-                ++ (if (@typeInfo(@TypeOf(expected, result)) == .Struct) "{any},\n" else "{d},\n") ++
-                    \\    Arch: {},
-                    \\    Features: {s},
-                    \\    Endianness: {},
-                    \\    Use Asm: {},
-                    \\    Use Builtins: {},
-                    \\
-                    \\
-                ;
-                std.debug.print(fmt_str, .{
-                    fmtFn(fn_name, @typeInfo(T).Fn),
-                    args,
-                    expected,
-                    result,
-                    arch,
-                    blk: {
-                        if (is_aarch64) {
-                            break :blk "{\n" ++
-                                "        has_neon: " ++ (if (comptime aarch64.hasFeatures(&.{.neon})) "true,\n" else "false,\n") ++
-                                "        has_aes: " ++ (if (comptime aarch64.hasFeatures(&.{.aes})) "true,\n" else "false,\n") ++
-                                "        has_rdm: " ++ (if (comptime aarch64.hasFeatures(&.{.rdm})) "true,\n" else "false,\n") ++
-                                "        has_sha2: " ++ (if (comptime aarch64.hasFeatures(&.{.sha2})) "true,\n" else "false,\n") ++
-                                "        has_sha3: " ++ (if (comptime aarch64.hasFeatures(&.{.sha3})) "true,\n" else "false,\n") ++
-                                "        has_dotprod: " ++ (if (comptime aarch64.hasFeatures(&.{.dotprod})) "true,\n" else "false,\n") ++
-                                "        has_i8mm: " ++ (if (comptime aarch64.hasFeatures(&.{.i8mm})) "true,\n" else "false,\n") ++
-                                "        has_sm4: " ++ (if (comptime aarch64.hasFeatures(&.{.sm4})) "true,\n" else "false,\n") ++
-                                "        has_crypto: " ++ (if (comptime aarch64.hasFeatures(&.{.crypto})) "true,\n" else "false,\n") ++
-                                "        has_sve: " ++ (if (comptime aarch64.hasFeatures(&.{.sve})) "true,\n" else "false,\n") ++
-                                "    }";
-                        } else if (is_arm) {
-                            break :blk "{\n" ++
-                                "        has_neon: " ++ (if (comptime arm.hasFeatures(&.{.neon})) "true,\n" else "false,\n") ++
-                                "        has_aes: " ++ (if (comptime arm.hasFeatures(&.{.aes})) "true,\n" else "false,\n") ++
-                                "        has_sha2: " ++ (if (comptime arm.hasFeatures(&.{.sha2})) "true,\n" else "false,\n") ++
-                                "        has_crc: " ++ (if (comptime arm.hasFeatures(&.{.crc})) "true,\n" else "false,\n") ++
-                                "        has_dotprod: " ++ (if (comptime arm.hasFeatures(&.{.dotprod})) "true,\n" else "false,\n") ++
-                                "        has_v7: " ++ (if (comptime arm.hasFeatures(&.{.has_v7})) "true,\n" else "false,\n") ++
-                                "        has_v8: " ++ (if (comptime arm.hasFeatures(&.{.has_v8})) "true,\n" else "false,\n") ++
-                                "        has_i8mm: " ++ (if (comptime arm.hasFeatures(&.{.i8mm})) "true,\n" else "false,\n") ++
-                                "    }";
-                        } else break :blk "Irrelevant";
-                    },
-                    endianness,
-                    use_asm,
-                    use_builtins,
-                });
+                printError(fn_name, func, expected, result, args, arch_features);
                 return err;
             };
         }
+
         use_asm = true;
         use_builtins = true;
     } else {
@@ -584,8 +577,48 @@ fn testIntrinsic(comptime fn_name: []const u8, func: anytype, expected: anytype,
     }
 }
 
+/// Prints detailed error messages when a test fails
+fn printError(
+    comptime fn_name: []const u8,
+    func: anytype,
+    expected: anytype,
+    result: anytype,
+    args: anytype,
+    arch_features: anytype,
+) void {
+    const T = @TypeOf(func);
+    const fmt_str =
+        \\Function: {s}({any})
+        \\    Expected: {any}
+        \\    Actual: {any}
+        \\    Arch: {s}
+        \\    Features: {s}
+        \\    Endianness: {s}
+        \\    Use Asm: {}
+        \\    Use Builtins: {}
+        \\
+        \\
+    ;
+
+    std.debug.print(fmt_str, .{
+        fmtFn(fn_name, @typeInfo(T).Fn),
+        args,
+        expected,
+        result,
+        @tagName(arch),
+        std.fmt.comptimePrint("{any}", .{arch_features}),
+        @tagName(endianness),
+        use_asm,
+        use_builtins,
+    });
+}
+
 inline fn numToString(comptime n: usize) []const u8 {
     return std.fmt.comptimePrint("{d}", .{n});
+}
+
+test numToString {
+    try std.testing.expectEqualStrings("5", numToString(5));
 }
 
 /// Gets the length of a vector
@@ -1137,7 +1170,7 @@ pub inline fn vmovl_s8(a: i8x8) i16x8 {
     // the same if we do use inline assembly), but it still
     // has the same result, therefore we wont need inline
     // assembly here.
-    return @intCast(a);
+    return @as(i16x8, a);
 }
 
 test vmovl_s8 {
@@ -1148,7 +1181,7 @@ test vmovl_s8 {
 
 /// Vector long move
 pub inline fn vmovl_s16(a: i16x4) i32x4 {
-    return @intCast(a);
+    return @as(i32x4, a);
 }
 
 test vmovl_s16 {
@@ -1158,7 +1191,7 @@ test vmovl_s16 {
 
 /// Vector long move
 pub inline fn vmovl_s32(a: i32x2) i64x2 {
-    return @intCast(a);
+    return @as(i64x2, a);
 }
 
 test vmovl_s32 {
@@ -1168,7 +1201,7 @@ test vmovl_s32 {
 
 /// Vector long move
 pub inline fn vmovl_u8(a: u8x8) u16x8 {
-    return @intCast(a);
+    return @as(u16x8, a);
 }
 
 test vmovl_u8 {
@@ -1178,7 +1211,7 @@ test vmovl_u8 {
 
 /// Vector long move
 pub inline fn vmovl_u16(a: u16x4) u32x4 {
-    return @intCast(a);
+    return @as(u32x4, a);
 }
 
 test vmovl_u16 {
@@ -1188,7 +1221,7 @@ test vmovl_u16 {
 
 /// Vector long move
 pub inline fn vmovl_u32(a: u32x2) u64x2 {
-    return @intCast(a);
+    return @as(u64x2, a);
 }
 
 test vmovl_u32 {
@@ -1759,30 +1792,35 @@ test vabd_u8 {
         const a: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
         const b: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
         const expected: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+
         try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
     }
     {
         const a: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
         const b: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
         const expected: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
     }
     {
         const a: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
         const b: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
         const expected: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+
         try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
     }
     {
         const a: u8x8 = .{ 0, 255, 128, 64, 32, 16, 8, 4 };
         const b: u8x8 = .{ 255, 0, 64, 128, 16, 32, 4, 8 };
         const expected: u8x8 = .{ 255, 255, 64, 64, 16, 16, 4, 4 };
+
         try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
     }
     {
         const a: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const b: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const expected: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
     }
 }
@@ -2061,30 +2099,35 @@ test vabdq_u8 {
         const a: u8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8 };
         const b: u8x16 = .{ 16, 15, 14, 13, 12, 11, 10, 9, 16, 15, 14, 13, 12, 11, 10, 9 };
         const expected: u8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1 };
+
         try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
     }
     {
         const a: u8x16 = .{ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
         const b: u8x16 = .{ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
         const expected: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
     }
     {
         const a: u8x16 = .{ 16, 15, 14, 13, 12, 11, 10, 9, 16, 15, 14, 13, 12, 11, 10, 9 };
         const b: u8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8 };
         const expected: u8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1 };
+
         try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
     }
     {
         const a: u8x16 = .{ 0, 255, 128, 64, 32, 16, 8, 4, 0, 255, 128, 64, 32, 16, 8, 4 };
         const b: u8x16 = .{ 255, 0, 64, 128, 16, 32, 4, 8, 255, 0, 64, 128, 16, 32, 4, 8 };
         const expected: u8x16 = .{ 255, 255, 64, 64, 16, 16, 4, 4, 255, 255, 64, 64, 16, 16, 4, 4 };
+
         try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
     }
     {
         const a: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         const b: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         const expected: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
     }
 }
@@ -2387,8 +2430,8 @@ pub inline fn vqdmullh_s16(a: i16, b: i16) i32 {
 test vqdmullh_s16 {
     const a: i16 = std.math.maxInt(i16);
     const b: i16 = 20;
-
     const expected: i32 = 1310680;
+
     try testIntrinsic("vqdmullh_s16", vqdmullh_s16, expected, .{ a, b });
 }
 
@@ -2417,8 +2460,8 @@ pub inline fn vqdmulls_s32(a: i32, b: i32) i64 {
 test vqdmulls_s32 {
     const a: i32 = std.math.maxInt(i32);
     const b: i32 = 20;
-
     const expected: i64 = 85899345880;
+
     try testIntrinsic("vqdmulls_s32", vqdmulls_s32, expected, .{ a, b });
 }
 
@@ -2530,6 +2573,7 @@ pub inline fn vaddlv_s8(a: i8x8) i16 {
 test vaddlv_s8 {
     const a: i8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i16 = 8;
+
     try expectEqual(expected, vaddlv_s8(a));
 }
 
@@ -2541,6 +2585,7 @@ pub inline fn vaddlv_s16(a: i16x4) i32 {
 test vaddlv_s16 {
     const a: i16x4 = .{ 1, 1, 1, 1 };
     const expected: i32 = 4;
+
     try expectEqual(expected, vaddlv_s16(a));
 }
 
@@ -2552,6 +2597,7 @@ pub inline fn vaddlv_s32(a: i32x2) i64 {
 test vaddlv_s32 {
     const a: i32x2 = .{ 1, 1 };
     const expected: i64 = 2;
+
     try expectEqual(expected, vaddlv_s32(a));
 }
 
@@ -2563,6 +2609,7 @@ pub inline fn vaddlv_u8(a: u8x8) u16 {
 test vaddlv_u8 {
     const a: u8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u16 = 8;
+
     try expectEqual(expected, vaddlv_u8(a));
 }
 
@@ -2574,6 +2621,7 @@ pub inline fn vaddlv_u16(a: u16x4) u32 {
 test vaddlv_u16 {
     const a: u16x4 = .{ 1, 1, 1, 1 };
     const expected: u32 = 4;
+
     try expectEqual(expected, vaddlv_u16(a));
 }
 
@@ -2585,6 +2633,7 @@ pub inline fn vaddlv_u32(a: u32x2) u64 {
 test vaddlv_u32 {
     const a: u32x2 = .{ 1, 1 };
     const expected: u64 = 2;
+
     try expectEqual(expected, vaddlv_u32(a));
 }
 
@@ -2596,6 +2645,7 @@ pub inline fn vaddlvq_s8(a: i8x16) i16 {
 test vaddlvq_s8 {
     const a: i8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i16 = 16;
+
     try expectEqual(expected, vaddlvq_s8(a));
 }
 
@@ -2607,6 +2657,7 @@ pub inline fn vaddlvq_s16(a: i16x8) i32 {
 test vaddlvq_s16 {
     const a: i16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i32 = 8;
+
     try expectEqual(expected, vaddlvq_s16(a));
 }
 
@@ -2618,6 +2669,7 @@ pub inline fn vaddlvq_s32(a: i32x4) i64 {
 test vaddlvq_s32 {
     const a: i32x4 = .{ 1, 1, 1, 1 };
     const expected: i64 = 4;
+
     try expectEqual(expected, vaddlvq_s32(a));
 }
 
@@ -2629,6 +2681,7 @@ pub inline fn vaddlvq_u8(a: u8x16) u16 {
 test vaddlvq_u8 {
     const a: u8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u16 = 16;
+
     try expectEqual(expected, vaddlvq_u8(a));
 }
 
@@ -2640,6 +2693,7 @@ pub inline fn vaddlvq_u16(a: u16x8) u32 {
 test vaddlvq_u16 {
     const a: u16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u32 = 8;
+
     try expectEqual(expected, vaddlvq_u16(a));
 }
 
@@ -2651,6 +2705,7 @@ pub inline fn vaddlvq_u32(a: u32x4) u64 {
 test vaddlvq_u32 {
     const a: u32x4 = .{ 1, 1, 1, 1 };
     const expected: u64 = 4;
+
     try expectEqual(expected, vaddlvq_u32(a));
 }
 
@@ -2662,6 +2717,7 @@ pub inline fn vaddv_s8(a: i8x8) i8 {
 test vaddv_s8 {
     const a: i8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i8 = 8;
+
     try expectEqual(expected, vaddv_s8(a));
 }
 
@@ -2673,6 +2729,7 @@ pub inline fn vaddv_s16(a: i16x4) i16 {
 test vaddv_s16 {
     const a: i16x4 = .{ 1, 1, 1, 1 };
     const expected: i16 = 4;
+
     try expectEqual(expected, vaddv_s16(a));
 }
 
@@ -2684,6 +2741,7 @@ pub inline fn vaddv_s32(a: i32x2) i32 {
 test vaddv_s32 {
     const a: i32x2 = .{ 1, 1 };
     const expected: i32 = 2;
+
     try expectEqual(expected, vaddv_s32(a));
 }
 
@@ -2695,6 +2753,7 @@ pub inline fn vaddv_u8(a: u8x8) u8 {
 test vaddv_u8 {
     const a: u8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u8 = 8;
+
     try expectEqual(expected, vaddv_u8(a));
 }
 
@@ -2706,6 +2765,7 @@ pub inline fn vaddv_u16(a: u16x4) u16 {
 test vaddv_u16 {
     const a: u16x4 = .{ 1, 1, 1, 1 };
     const expected: u16 = 4;
+
     try expectEqual(expected, vaddv_u16(a));
 }
 
@@ -2717,6 +2777,7 @@ pub inline fn vaddv_u32(a: u32x2) u32 {
 test vaddv_u32 {
     const a: u32x2 = .{ 1, 1 };
     const expected: u32 = 2;
+
     try expectEqual(expected, vaddv_u32(a));
 }
 
@@ -2733,6 +2794,7 @@ pub inline fn vaddvq_s8(a: i8x16) i8 {
 test vaddvq_s8 {
     const a: i8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i8 = 16;
+
     try expectEqual(expected, vaddvq_s8(a));
 }
 
@@ -2744,6 +2806,7 @@ pub inline fn vaddvq_s16(a: i16x8) i16 {
 test vaddvq_s16 {
     const a: i16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i16 = 8;
+
     try expectEqual(expected, vaddvq_s16(a));
 }
 
@@ -2755,6 +2818,7 @@ pub inline fn vaddvq_s32(a: i32x4) i32 {
 test vaddvq_s32 {
     const a: i32x4 = .{ 1, 1, 1, 1 };
     const expected: i32 = 4;
+
     try expectEqual(expected, vaddvq_s32(a));
 }
 
@@ -2766,6 +2830,7 @@ pub inline fn vaddvq_s64(a: i64x2) i64 {
 test vaddvq_s64 {
     const a: i64x2 = .{ 1, 1 };
     const expected: i64 = 2;
+
     try expectEqual(expected, vaddvq_s64(a));
 }
 
@@ -2777,6 +2842,7 @@ pub inline fn vaddvq_u8(a: u8x16) u8 {
 test vaddvq_u8 {
     const a: u8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u8 = 16;
+
     try expectEqual(expected, vaddvq_u8(a));
 }
 
@@ -2788,6 +2854,7 @@ pub inline fn vaddvq_u16(a: u16x8) u16 {
 test vaddvq_u16 {
     const a: u16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u16 = 8;
+
     try expectEqual(expected, vaddvq_u16(a));
 }
 
@@ -2799,6 +2866,7 @@ pub inline fn vaddvq_u32(a: u32x4) u32 {
 test vaddvq_u32 {
     const a: u32x4 = .{ 1, 1, 1, 1 };
     const expected: u32 = 4;
+
     try expectEqual(expected, vaddvq_u32(a));
 }
 
@@ -2810,6 +2878,7 @@ pub inline fn vaddvq_u64(a: u64x2) u64 {
 test vaddvq_u64 {
     const a: u64x2 = .{ 1, 1 };
     const expected: u64 = 2;
+
     try expectEqual(expected, vaddvq_u64(a));
 }
 
@@ -2831,6 +2900,7 @@ pub inline fn vmaxnmv_f32(a: f32x2) f32 {
 test vmaxnmv_f32 {
     const a: f32x2 = .{ 0.59, 0.5 };
     const expected: f32 = 0.59;
+
     try expectEqual(expected, vmaxnmv_f32(a));
 }
 
@@ -2842,6 +2912,7 @@ pub inline fn vmaxnmvq_f32(a: f32x4) f32 {
 test vmaxnmvq_f32 {
     const a: f32x4 = .{ 0.59, 0.5, 2.5, 50.2 };
     const expected: f32 = 50.2;
+
     try expectEqual(expected, vmaxnmvq_f32(a));
 }
 
@@ -2923,6 +2994,7 @@ pub inline fn vminnmv_f32(a: f32x2) f32 {
 test vminnmv_f32 {
     const a: f32x2 = .{ 0.59, 0.5 };
     const expected: f32 = 0.5;
+
     try expectEqual(expected, vminnmv_f32(a));
 }
 
@@ -2934,6 +3006,7 @@ pub inline fn vminnmvq_f32(a: f32x4) f32 {
 test vminnmvq_f32 {
     const a: f32x4 = .{ 0.59, 0.5, 2.5, 50.2 };
     const expected: f32 = 0.5;
+
     try expectEqual(expected, vminnmvq_f32(a));
 }
 
@@ -3222,30 +3295,35 @@ test vabdl_u8 {
         const a: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
         const b: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
         const expected: u16x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+
         try expectEqual(expected, vabdl_u8(a, b));
     }
     {
         const a: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
         const b: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
         const expected: u16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try expectEqual(expected, vabdl_u8(a, b));
     }
     {
         const a: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
         const b: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
         const expected: u16x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+
         try expectEqual(expected, vabd_u8(a, b));
     }
     {
         const a: u8x8 = .{ 0, 255, 128, 64, 32, 16, 8, 4 };
         const b: u8x8 = .{ 255, 0, 64, 128, 16, 32, 4, 8 };
         const expected: u16x8 = .{ 255, 255, 64, 64, 16, 16, 4, 4 };
+
         try expectEqual(expected, vabd_u8(a, b));
     }
     {
         const a: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const b: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const expected: u16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try expectEqual(expected, vabdl_u8(a, b));
     }
 }
@@ -3533,22 +3611,22 @@ test vaddhn_s16 {
     {
         const a: i16x8 = .{ 256, 512, 1024, 2048, 4096, 8192, 16384, 32767 };
         const b: i16x8 = .{ 128, 256, 512, 1024, 2048, 4096, 8192, 32767 };
-
         const expected: i8x8 = .{ 1, 3, 6, 12, 24, 48, 96, -1 }; // -1 due to wrapping
+
         try expectEqual(expected, vaddhn_s16(a, b));
     }
     {
         const a: i16x8 = .{ -256, -512, -1024, -2048, -4096, -8192, -16384, -32768 };
         const b: i16x8 = .{ -128, -256, -512, -1024, -2048, -4096, -8192, -32768 };
-
         const expected: i8x8 = .{ -2, -3, -6, -12, -24, -48, -96, 0 };
+
         try expectEqual(expected, vaddhn_s16(a, b));
     }
     {
         const a: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const b: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-
         const expected: i8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try expectEqual(expected, vaddhn_s16(a, b));
     }
 }
@@ -3874,8 +3952,8 @@ fn AESShiftRows(data: u8x16, comptime inverse: bool) u8x16 {
 test vaeseq_u8 {
     const state = u8x16{ 0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34 };
     const key = u8x16{ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0xcf, 0xfb, 0x73, 0x73, 0x73, 0x73 };
-
     const expected = u8x16{ 212, 191, 91, 160, 224, 180, 146, 174, 184, 27, 17, 241, 220, 39, 152, 203 };
+
     try testIntrinsic("vaeseq_u8", vaeseq_u8, expected, .{ state, key });
 }
 
@@ -4046,16 +4124,16 @@ test vand_s32 {
 /// Vector bitwise and
 pub inline fn vand_s64(a: i64x1, b: i64x1) i64x1 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> i64x1),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> i64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> i64x1),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4063,9 +4141,9 @@ pub inline fn vand_s64(a: i64x1, b: i64x1) i64x1 {
 }
 
 test vand_s64 {
-    const a: i64x1 = .{0x00};
+    const a: i64x1 = .{0xFF};
     const b: i64x1 = .{0x0F};
-    const expected: i64x1 = .{0x00};
+    const expected: i64x1 = .{0x0F};
 
     try testIntrinsic("vand_s64", vand_s64, expected, .{ a, b });
 }
@@ -4073,16 +4151,16 @@ test vand_s64 {
 /// Vector bitwise and
 pub inline fn vand_u8(a: u8x8, b: u8x8) u8x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> u8x8),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> u8x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> u8x8),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u8x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4100,16 +4178,16 @@ test vand_u8 {
 /// Vector bitwise and
 pub inline fn vand_u16(a: i16x4, b: i16x4) u16x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> u16x4),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> u16x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> u16x4),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u16x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4127,16 +4205,16 @@ test vand_u16 {
 /// Vector bitwise and
 pub inline fn vand_u32(a: u32x2, b: u32x2) u32x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> u32x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> u32x2),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4154,16 +4232,16 @@ test vand_u32 {
 /// Vector bitwise and
 pub inline fn vand_u64(a: u64x1, b: u64x1) u64x1 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> u64x1),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> u64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> u64x1),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4181,16 +4259,16 @@ test vand_u64 {
 /// Vector bitwise and
 pub inline fn vandq_s8(a: i8x16, b: i8x16) i8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> i8x16),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> i8x16),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4208,16 +4286,16 @@ test vandq_s8 {
 /// Vector bitwise and
 pub inline fn vandq_s16(a: i16x8, b: i16x8) i16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> i16x8),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> i16x8),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4235,16 +4313,16 @@ test vandq_s16 {
 /// Vector bitwise and
 pub inline fn vandq_s32(a: i32x4, b: i32x4) i32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> i32x4),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> i32x4),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4262,16 +4340,16 @@ test vandq_s32 {
 /// Vector bitwise and
 pub inline fn vandq_s64(a: i64x2, b: i64x2) i64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> i64x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> i64x2),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4289,16 +4367,16 @@ test vandq_s64 {
 /// Vector bitwise and
 pub inline fn vandq_u8(a: u8x16, b: u8x16) u8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> u8x16),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> u8x16),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4316,16 +4394,16 @@ test vandq_u8 {
 /// Vector bitwise and
 pub inline fn vandq_u16(a: i16x8, b: i16x8) u16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> u16x8),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> u16x8),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4343,16 +4421,16 @@ test vandq_u16 {
 /// Vector bitwise and
 pub inline fn vandq_u32(a: u32x4, b: u32x4) u32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> u32x4),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> u32x4),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4370,16 +4448,16 @@ test vandq_u32 {
 /// Vector bitwise and
 pub inline fn vandq_u64(a: u64x2, b: u64x2) u64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> u64x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> u64x2),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4562,12 +4640,64 @@ pub inline fn vbsl_u64(a: i64x1, b: i64x1, c: i64x1) i64x1 {
 }
 
 /// Bitwise Select
+/// TODO: Once zig implements bitwise operations on vector
+///       of floats, we can just do c ^ ((c ^ b) & a).
 pub inline fn vbsl_f32(a: f32x2, b: f32x2, c: f32x2) f32x2 {
-    return c ^ ((c ^ b) & a);
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result = a;
+        asm ("bsl %[ret].8b, %[b].8b, %[c].8b"
+            : [ret] "+w" (result),
+            : [b] "w" (b),
+              [c] "w" (c),
+        );
+        return result;
+    } else {
+        return @bitCast(@as(u32x2, @bitCast(c)) ^ ((@as(u32x2, @bitCast(c)) ^ @as(u32x2, @bitCast(b))) & @as(u32x2, @bitCast(a))));
+    }
+}
+
+test vbsl_f32 {
+    const a: f32x2 = .{ std.math.floatMax(f32), 0 };
+    const b: f32x2 = .{ 5, 5 };
+    const c: f32x2 = .{ std.math.floatMin(f32), std.math.floatMin(f32) };
+    const expected: f32x2 = .{ 5, std.math.floatMin(f32) };
+
+    try testIntrinsic("vbsl_f32", vbsl_f32, expected, .{ a, b, c });
+}
+
+/// Bitwise Select
+/// TODO: Once zig implements bitwise operations on vector
+///       of floats, we can just do c ^ ((c ^ b) & a).
+pub inline fn vbsl_f64(a: f64x1, b: f64x1, c: f64x1) f64x1 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result = a;
+        asm ("bsl %[ret].8b, %[b].8b, %[c].8b"
+            : [ret] "+w" (result),
+            : [b] "w" (b),
+              [c] "w" (c),
+        );
+        return result;
+    } else {
+        return @bitCast(@as(u64x1, @bitCast(c)) ^ ((@as(u64x1, @bitCast(c)) ^ @as(u64x1, @bitCast(b))) & @as(u64x1, @bitCast(a))));
+    }
+}
+
+test vbsl_f64 {
+    const a: f64x1 = .{std.math.floatMax(f64)};
+    const b: f64x1 = .{5};
+    const c: f64x1 = .{std.math.floatMin(f64)};
+    const expected: f64x1 = .{5};
+
+    try expectEqual(expected, vbsl_f64(a, b, c));
 }
 
 /// Bitwise Select
 pub inline fn vbsl_p8(a: p8x8, b: p8x8, c: p8x8) p8x8 {
+    return c ^ ((c ^ b) & a);
+}
+
+/// Bitwise Select
+pub inline fn vbsl_p64(a: p64x1, b: p64x1, c: p64x1) p64x1 {
     return c ^ ((c ^ b) & a);
 }
 
@@ -4633,6 +4763,11 @@ pub inline fn vbslq_p8(a: p8x16, b: p8x16, c: p8x16) p8x16 {
 
 /// Bitwise Select
 pub inline fn vbslq_p16(a: p16x8, b: p16x8, c: p16x8) p16x8 {
+    return c ^ ((c ^ b) & a);
+}
+
+/// Bitwise Select
+pub inline fn vbslq_p64(a: p64x2, b: p64x2, c: p64x2) p64x2 {
     return c ^ ((c ^ b) & a);
 }
 
@@ -4747,16 +4882,16 @@ test vbcaxq_s64 {
 /// Floating-point absolute compare greater than or equal
 pub inline fn vcage_f32(a: f32x2, b: f32x2) u32x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("facge v0.2s, v1.2s, v2.2s"
-            : [ret] "={v0}" (-> u32x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("facge %[ret].2s, %[a].2s, %[b].2s"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vacge.f32 d0, d0, d1"
-            : [ret] "={d0}" (-> u32x2),
-            : [a] "{d0}" (a),
-              [b] "{d1}" (b),
+        return asm ("vacge.f32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
         return struct {
@@ -4779,26 +4914,24 @@ pub inline fn vcage_f32(a: f32x2, b: f32x2) u32x2 {
 test vcage_f32 {
     const a = f32x2{ 1.0, -2.0 };
     const b = f32x2{ 1.5, 2.0 };
-
-    // Expected: absolute(1.0) >= absolute(1.5) -> false -> 0x00000000
-    //           absolute(-2.0) >= absolute(2.0) -> true -> 0xffffffff
     const expected = u32x2{ 0x00000000, 0xffffffff };
+
     try testIntrinsic("vcage_f32", vcage_f32, expected, .{ a, b });
 }
 
 /// Floating-point absolute compare greater than or equal
 pub inline fn vcageq_f32(a: f32x4, b: f32x4) u32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("facge v0.4s, v1.4s, v2.4s"
-            : [ret] "={v0}" (-> u32x4),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("facge %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vacge.f32 q0, q0, q1"
-            : [ret] "={q0}" (-> u32x4),
-            : [a] "{q0}" (a),
-              [b] "{q1}" (b),
+        return asm ("vacge.f32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
         return struct {
@@ -4821,22 +4954,18 @@ pub inline fn vcageq_f32(a: f32x4, b: f32x4) u32x4 {
 test vcageq_f32 {
     const a = f32x4{ 1.0, -2.0, 3.0, -4.0 };
     const b = f32x4{ 1.5, 2.0, -2.5, 4.0 };
-
-    // Expected: absolute(1.0) >= absolute(1.5) -> false -> 0x00000000
-    //           absolute(-2.0) >= absolute(2.0) -> true -> 0xffffffff
-    //           absolute(3.0) >= absolute(-2.5) -> true -> 0xffffffff
-    //           absolute(-4.0) >= absolute(4.0) -> true -> 0xffffffff
     const expected = u32x4{ 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff };
+
     try testIntrinsic("vcageq_f32", vcageq_f32, expected, .{ a, b });
 }
 
 /// Floating-point absolute compare greater than or equal
 pub inline fn vcageq_f64(a: f64x2, b: f64x2) u64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("facge v0.2d, v1.2d, v2.2d"
-            : [ret] "={v0}" (-> u64x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("facge %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
         return struct {
@@ -4857,26 +4986,24 @@ pub inline fn vcageq_f64(a: f64x2, b: f64x2) u64x2 {
 test vcageq_f64 {
     const a = f64x2{ 1.0, -4.0 };
     const b = f64x2{ 1.5, 3.0 };
-
-    // Expected: absolute(1.0) >= absolute(1.5) -> false -> 0x0000000000000000
-    //           absolute(-4.0) >= absolute(3.0) -> true -> 0xffffffffffffffff
     const expected = u64x2{ 0x0000000000000000, 0xffffffffffffffff };
+
     try testIntrinsic("vcageq_f64", vcageq_f64, expected, .{ a, b });
 }
 
 /// Floating-point absolute compare greater than
 pub inline fn vcagt_f32(a: f32x2, b: f32x2) u32x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("facgt v0.2s, v1.2s, v2.2s"
-            : [ret] "={v0}" (-> u32x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("facgt %[ret].2s, %[a].2s, %[b].2s"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vacgt.f32 d0, d0, d1"
-            : [ret] "={d0}" (-> u32x2),
-            : [a] "{d0}" (a),
-              [b] "{d1}" (b),
+        return asm ("vacgt.f32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
         return struct {
@@ -4899,8 +5026,8 @@ pub inline fn vcagt_f32(a: f32x2, b: f32x2) u32x2 {
 test vcagt_f32 {
     const a = f32x2{ -1.2, 0.0 };
     const b = f32x2{ -1.1, 0.0 };
-
     const expected = u32x2{ 0xffffffff, 0x00000000 };
+
     try testIntrinsic("vcagt_f32", vcagt_f32, expected, .{ a, b });
 }
 
@@ -4950,8 +5077,8 @@ pub inline fn vget_lane_p8(vec: p8x8, comptime lane: usize) p8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].b[%[lane]]"
-                    : [ret] "={w0}" (-> u8),
+                return asm ("umov %[ret:w], %[vec].b[%[lane]]"
+                    : [ret] "=r" (-> u8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -4959,8 +5086,8 @@ pub inline fn vget_lane_p8(vec: p8x8, comptime lane: usize) p8 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].8b, %[vec].8b
-                    \\ umov  w0, %[vec].b[%[lane]]
-                    : [ret] "={w0}" (-> p8),
+                    \\ umov  %[ret:w], %[vec].b[%[lane]]
+                    : [ret] "=r" (-> p8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -4990,8 +5117,8 @@ pub inline fn vget_lane_p16(vec: p16x4, comptime lane: usize) p16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].h[%[lane]]"
-                    : [ret] "={w0}" (-> p16),
+                return asm ("umov %[ret:w], %[vec].h[%[lane]]"
+                    : [ret] "=r" (-> p16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -4999,8 +5126,8 @@ pub inline fn vget_lane_p16(vec: p16x4, comptime lane: usize) p16 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].4h, %[vec].4h
-                    \\ umov  w0, %[vec].h[%[lane]]
-                    : [ret] "={w0}" (-> p16),
+                    \\ umov  %[ret:w], %[vec].h[%[lane]]
+                    : [ret] "=r" (-> p16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5060,8 +5187,8 @@ pub inline fn vget_lane_s8(vec: i8x8, comptime lane: usize) i8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("smov w0, %[vec].b[%[lane]]"
-                    : [ret] "={w0}" (-> i8),
+                return asm ("smov %[ret:w], %[vec].b[%[lane]]"
+                    : [ret] "=r" (-> i8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5069,8 +5196,8 @@ pub inline fn vget_lane_s8(vec: i8x8, comptime lane: usize) i8 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].8b, %[vec].8b
-                    \\ umov w0, %[vec].b[%[lane]]
-                    : [ret] "={w0}" (-> i8),
+                    \\ umov %[ret:w], %[vec].b[%[lane]]
+                    : [ret] "=r" (-> i8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5100,8 +5227,8 @@ pub inline fn vget_lane_s16(vec: i16x4, comptime lane: usize) i16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("smov w0, %[vec].h[%[lane]]"
-                    : [ret] "={w0}" (-> i16),
+                return asm ("smov %[ret:w], %[vec].h[%[lane]]"
+                    : [ret] "=r" (-> i16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5109,8 +5236,8 @@ pub inline fn vget_lane_s16(vec: i16x4, comptime lane: usize) i16 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].4h, %[vec].4h
-                    \\ umov w0, %[vec].h[%[lane]]
-                    : [ret] "={w0}" (-> i16),
+                    \\ umov %[ret:w], %[vec].h[%[lane]]
+                    : [ret] "=r" (-> i16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5140,8 +5267,8 @@ pub inline fn vget_lane_s32(vec: i32x2, comptime lane: usize) i32 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("mov w0, %[vec].s[%[lane]]"
-                    : [ret] "={w0}" (-> i32),
+                return asm ("mov %[ret:w], %[vec].s[%[lane]]"
+                    : [ret] "=r" (-> i32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5149,8 +5276,8 @@ pub inline fn vget_lane_s32(vec: i32x2, comptime lane: usize) i32 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].2s, %[vec].2s
-                    \\ mov w0, %[vec].s[%[lane]]
-                    : [ret] "={w0}" (-> i32),
+                    \\ mov %[ret:w], %[vec].s[%[lane]]
+                    : [ret] "=r" (-> i32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5178,9 +5305,9 @@ test vget_lane_s32 {
 pub inline fn vget_lane_s64(vec: i64x1, comptime lane: usize) i64 {
     comptime assert(lane < 1);
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("fmov %[ret], d0"
+        return asm ("fmov %[ret], %[vec:d]"
             : [ret] "=r" (-> i64),
-            : [vec] "{d0}" (vec),
+            : [vec] "w" (vec),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
         return asm (
@@ -5209,8 +5336,8 @@ pub inline fn vget_lane_u8(vec: u8x8, comptime lane: usize) u8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].b[%[lane]]"
-                    : [ret] "={w0}" (-> u8),
+                return asm ("umov %[ret:w], %[vec].b[%[lane]]"
+                    : [ret] "=r" (-> u8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5218,8 +5345,8 @@ pub inline fn vget_lane_u8(vec: u8x8, comptime lane: usize) u8 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].8b, %[vec].8b
-                    \\ umov w0, %[vec].b[%[lane]]
-                    : [ret] "={w0}" (-> u8),
+                    \\ umov %[ret:w], %[vec].b[%[lane]]
+                    : [ret] "=r" (-> u8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5249,8 +5376,8 @@ pub inline fn vget_lane_u16(vec: u16x4, comptime lane: usize) u16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].h[%[lane]]"
-                    : [ret] "={w0}" (-> u16),
+                return asm ("umov %[ret:w], %[vec].h[%[lane]]"
+                    : [ret] "=r" (-> u16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5258,8 +5385,8 @@ pub inline fn vget_lane_u16(vec: u16x4, comptime lane: usize) u16 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].4h, %[vec].4h
-                    \\ umov w0, %[vec].h[%[lane]]
-                    : [ret] "={w0}" (-> u16),
+                    \\ umov %[ret:w], %[vec].h[%[lane]]
+                    : [ret] "=r" (-> u16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5289,8 +5416,8 @@ pub inline fn vget_lane_u32(vec: u32x2, comptime lane: usize) u32 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].s[%[lane]]"
-                    : [ret] "={w0}" (-> u32),
+                return asm ("umov %[ret:w], %[vec].s[%[lane]]"
+                    : [ret] "=r" (-> u32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5298,8 +5425,8 @@ pub inline fn vget_lane_u32(vec: u32x2, comptime lane: usize) u32 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].2s, %[vec].2s
-                    \\ umov w0, %[vec].s[%[lane]]
-                    : [ret] "={w0}" (-> u32),
+                    \\ umov %[ret:w], %[vec].s[%[lane]]
+                    : [ret] "=r" (-> u32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5358,26 +5485,17 @@ pub inline fn vget_lane_f32(vec: f32x2, comptime lane: usize) f32 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                // switch (lane) {
-                //     0 => return asm (""
-                //         : [ret] "={s0}" (-> f32),
-                //         : [vec] "w" (vec),
-                //           [lane] "i" (0),
-                //     ),
-                //     else =>
-                return asm ("mov s0, %[vec].s[%[lane]]"
-                    : [ret] "={s0}" (-> f32),
+                return asm ("mov %[ret:s], %[vec].s[%[lane]]"
+                    : [ret] "=w" (-> f32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
-                //     ),
-                // }
             },
             inline .big => {
                 return asm (
-                    \\ rev64   %[vec].2s, %[vec].2s
-                    \\ mov s0, %[vec].s[%[lane]]
-                    : [ret] "={s0}" (-> f32),
+                    \\ rev64 %[vec].2s, %[vec].2s
+                    \\ mov   %[ret:s], %[vec].s[%[lane]]
+                    : [ret] "=w" (-> f32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5406,8 +5524,8 @@ test vget_lane_f32 {
 pub inline fn vget_lane_f64(vec: f64x1, comptime lane: usize) f64 {
     comptime assert(lane < 1);
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("mov d0, %[vec].d[0]"
-            : [ret] "={d0}" (-> f64),
+        return asm ("mov %[ret:d], %[vec].d[0]"
+            : [ret] "=w" (-> f64),
             : [vec] "w" (vec),
         );
     } else {
@@ -6692,10 +6810,430 @@ test vzip2_f32 {
     try testIntrinsic("vzip2_f32", vzip2_f32, expected, .{ a, b });
 }
 
+/// Transpose vectors
+pub inline fn vtrn1q_s8(a: i8x16, b: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
+    }
+}
+
+test vtrn1q_s8 {
+    const a: i8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: i8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: i8x16 = .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 };
+
+    try testIntrinsic("vtrn1q_s8", vtrn1q_s8, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_s16(a: i16x8, b: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
+    }
+}
+
+test vtrn1q_s16 {
+    const a: i16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: i16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: i16x8 = .{ 0, 1, 2, 3, 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn1q_s16", vtrn1q_s16, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_s32(a: i32x4, b: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
+    }
+}
+
+test vtrn1q_s32 {
+    const a: i32x4 = .{ 0, 2, 2, 6 };
+    const b: i32x4 = .{ 1, 3, 3, 7 };
+    const expected: i32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vtrn1q_s32", vtrn1q_s32, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_s64(a: i64x2, b: i64x2) i64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vtrn1q_s64 {
+    const a: i64x2 = .{ 0, 2 };
+    const b: i64x2 = .{ 1, 3 };
+    const expected: i64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vtrn1q_s64", vtrn1q_s64, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_u8(a: u8x16, b: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
+    }
+}
+
+test vtrn1q_u8 {
+    const a: u8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: u8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: u8x16 = .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 };
+
+    try testIntrinsic("vtrn1q_u8", vtrn1q_u8, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_u16(a: u16x8, b: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
+    }
+}
+
+test vtrn1q_u16 {
+    const a: u16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: u16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: u16x8 = .{ 0, 1, 2, 3, 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn1q_u16", vtrn1q_u16, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_u32(a: u32x4, b: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
+    }
+}
+
+test vtrn1q_u32 {
+    const a: u32x4 = .{ 0, 2, 2, 6 };
+    const b: u32x4 = .{ 1, 3, 3, 7 };
+    const expected: u32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vtrn1q_u32", vtrn1q_u32, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_u64(a: u64x2, b: u64x2) u64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vtrn1q_u64 {
+    const a: u64x2 = .{ 0, 2 };
+    const b: u64x2 = .{ 1, 3 };
+    const expected: u64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vtrn1q_u64", vtrn1q_u64, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_f32(a: f32x4, b: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
+    }
+}
+
+test vtrn1q_f32 {
+    const a: f32x4 = .{ 0, 2, 2, 6 };
+    const b: f32x4 = .{ 1, 3, 3, 7 };
+    const expected: f32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vtrn1q_f32", vtrn1q_f32, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_f64(a: f64x2, b: f64x2) f64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> f64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vtrn1q_f64 {
+    const a: f64x2 = .{ 0, 2 };
+    const b: f64x2 = .{ 1, 3 };
+    const expected: f64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vtrn1q_f64", vtrn1q_f64, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_s8(a: i8x16, b: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    }
+}
+
+test vtrn2q_s8 {
+    const a: i8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: i8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: i8x16 = .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 };
+
+    try testIntrinsic("vtrn2q_s8", vtrn2q_s8, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_s16(a: i16x8, b: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    }
+}
+
+test vtrn2q_s16 {
+    const a: i16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: i16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: i16x8 = .{ 2, 3, 6, 7, 10, 1, 14, 15 };
+
+    try testIntrinsic("vtrn2q_s16", vtrn2q_s16, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_s32(a: i32x4, b: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    }
+}
+
+test vtrn2q_s32 {
+    const a: i32x4 = .{ 0, 2, 2, 6 };
+    const b: i32x4 = .{ 1, 3, 3, 7 };
+    const expected: i32x4 = .{ 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn2q_s32", vtrn2q_s32, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_s64(a: i64x2, b: i64x2) i64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
+
+test vtrn2q_s64 {
+    const a: i64x2 = .{ 0, 2 };
+    const b: i64x2 = .{ 1, 3 };
+    const expected: i64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vtrn2q_s64", vtrn2q_s64, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_u8(a: u8x16, b: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    }
+}
+
+test vtrn2q_u8 {
+    const a: u8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: u8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: u8x16 = .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 };
+
+    try testIntrinsic("vtrn2q_u8", vtrn2q_u8, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_u16(a: u16x8, b: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    }
+}
+
+test vtrn2q_u16 {
+    const a: u16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: u16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: u16x8 = .{ 2, 3, 6, 7, 10, 1, 14, 15 };
+
+    try testIntrinsic("vtrn2q_u16", vtrn2q_u16, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_u32(a: u32x4, b: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    }
+}
+
+test vtrn2q_u32 {
+    const a: u32x4 = .{ 0, 2, 2, 6 };
+    const b: u32x4 = .{ 1, 3, 3, 7 };
+    const expected: u32x4 = .{ 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn2q_u32", vtrn2q_u32, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_u64(a: u64x2, b: u64x2) u64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
+
+test vtrn2q_u64 {
+    const a: u64x2 = .{ 0, 2 };
+    const b: u64x2 = .{ 1, 3 };
+    const expected: u64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vtrn2q_u64", vtrn2q_u64, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_f32(a: f32x4, b: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    }
+}
+
+test vtrn2q_f32 {
+    const a: f32x4 = .{ 0, 2, 2, 6 };
+    const b: f32x4 = .{ 1, 3, 3, 7 };
+    const expected: f32x4 = .{ 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn2q_f32", vtrn2q_f32, expected, .{ a, b });
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_f64(a: f64x2, b: f64x2) f64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> f64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
+
+test vtrn2q_f64 {
+    const a: f64x2 = .{ 0, 2 };
+    const b: f64x2 = .{ 1, 3 };
+    const expected: f64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vtrn2q_f64", vtrn2q_f64, expected, .{ a, b });
+}
+
 /// Transpose elements
 pub inline fn vtrnq_s8(a: i8x16, b: i8x16) i8x16x2 {
-    const a1: i8x16 = @shuffle(i8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
-    const b1: i8x16 = @shuffle(i8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    const a1: i8x16 = vtrn1q_s8(a, b);
+    const b1: i8x16 = vtrn2q_s8(a, b);
     return .{ a1, b1 };
 }
 
@@ -6709,8 +7247,8 @@ test vtrnq_s8 {
 
 /// Transpose elements
 pub inline fn vtrnq_s16(a: i16x8, b: i16x8) i16x8x2 {
-    const a1: i16x8 = @shuffle(i16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
-    const b1: i16x8 = @shuffle(i16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    const a1: i16x8 = vtrn1q_s16(a, b);
+    const b1: i16x8 = vtrn2q_s16(a, b);
     return .{ a1, b1 };
 }
 
@@ -6722,11 +7260,10 @@ test vtrnq_s16 {
     try testIntrinsic("vtrnq_s16", vtrnq_s16, expected, .{ a, b });
 }
 
-
 /// Transpose elements
 pub inline fn vtrnq_s32(a: i32x4, b: i32x4) i32x4x2 {
-    const a1: i32x4 = @shuffle(i32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
-    const b1: i32x4 = @shuffle(i32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    const a1: i32x4 = vtrn1q_s32(a, b);
+    const b1: i32x4 = vtrn2q_s32(a, b);
     return .{ a1, b1 };
 }
 
@@ -6738,11 +7275,10 @@ test vtrnq_s32 {
     try testIntrinsic("vtrnq_s32", vtrnq_s32, expected, .{ a, b });
 }
 
-
 /// Transpose elements
 pub inline fn vtrnq_u8(a: u8x16, b: u8x16) u8x16x2 {
-    const a1: u8x16 = @shuffle(u8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
-    const b1: u8x16 = @shuffle(u8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    const a1: u8x16 = vtrn1q_u8(a, b);
+    const b1: u8x16 = vtrn2q_u8(a, b);
     return .{ a1, b1 };
 }
 
@@ -6756,8 +7292,8 @@ test vtrnq_u8 {
 
 /// Transpose elements
 pub inline fn vtrnq_u16(a: u16x8, b: u16x8) u16x8x2 {
-    const a1: u16x8 = @shuffle(u16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
-    const b1: u16x8 = @shuffle(u16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    const a1: u16x8 = vtrn1q_u16(a, b);
+    const b1: u16x8 = vtrn2q_u16(a, b);
     return .{ a1, b1 };
 }
 
@@ -6769,11 +7305,10 @@ test vtrnq_u16 {
     try testIntrinsic("vtrnq_u16", vtrnq_u16, expected, .{ a, b });
 }
 
-
 /// Transpose elements
 pub inline fn vtrnq_u32(a: u32x4, b: u32x4) u32x4x2 {
-    const a1: u32x4 = @shuffle(u32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
-    const b1: u32x4 = @shuffle(u32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    const a1: u32x4 = vtrn1q_u32(a, b);
+    const b1: u32x4 = vtrn2q_u32(a, b);
     return .{ a1, b1 };
 }
 
@@ -6787,8 +7322,8 @@ test vtrnq_u32 {
 
 /// Transpose elements
 pub inline fn vtrnq_f32(a: f32x4, b: f32x4) f32x4x2 {
-    const a1: f32x4 = @shuffle(f32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
-    const b1: f32x4 = @shuffle(f32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    const a1: f32x4 = vtrn1q_f32(a, b);
+    const b1: f32x4 = vtrn2q_f32(a, b);
     return .{ a1, b1 };
 }
 
@@ -6799,10 +7334,11 @@ test vtrnq_f32 {
 
     try testIntrinsic("vtrnq_f32", vtrnq_f32, expected, .{ a, b });
 }
+
 /// Transpose elements
 pub inline fn vtrnq_p8(a: p8x16, b: p8x16) p8x16x2 {
-    const a1: p8x16 = @shuffle(p8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
-    const b1: p8x16 = @shuffle(p8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    const a1: p8x16 = vtrn1q_u8(a, b);
+    const b1: p8x16 = vtrn2q_u8(a, b);
     return .{ a1, b1 };
 }
 
@@ -6816,7 +7352,19 @@ test vtrnq_p8 {
 
 /// Transpose elements
 pub inline fn vtrnq_p16(a: p16x8, b: p16x8) p16x8x2 {
-    const a1: p16x8 = @shuffle(p16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
-    const b1: p16x8 = @shuffle(p16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    const a1: p16x8 = vtrn1q_u16(a, b);
+    const b1: p16x8 = vtrn2q_u16(a, b);
     return .{ a1, b1 };
+}
+
+test vtrnq_p16 {
+    const a: p16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: p16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: p16x8x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7 }, .{ 2, 3, 6, 7, 10, 1, 14, 15 } };
+
+    try testIntrinsic("vtrnq_p16", vtrnq_p16, expected, .{ a, b });
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }

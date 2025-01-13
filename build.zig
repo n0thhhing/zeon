@@ -13,6 +13,17 @@ const test_targets = [_]std.Target.Query{
     //     .os_tag = .linux,
     //     .cpu_features_add = arm_target_features,
     // },
+    // TODO: Figure out how to test thumb/thumbeb
+    // std.Target.Query{
+    //     .cpu_arch = .thumb,
+    //     .os_tag = .linux,
+    //     .cpu_features_add = arm_target_features,
+    // },
+    // std.Target.Query{
+    //     .cpu_arch = .thumbeb,
+    //     .os_tag = .linux,
+    //     .cpu_features_add = arm_target_features,
+    // },
     std.Target.Query{
         .cpu_arch = .aarch64,
         .os_tag = .linux,
@@ -76,15 +87,15 @@ pub fn build(b: *std.Build) void {
         var filters = std.mem.splitScalar(u8, target_filter, ',');
         while (filters.next()) |unprocessed_filter| {
             const filter = std.mem.trim(u8, unprocessed_filter, " ");
-            const fl = blk: {
+            const fl: []const std.Target.Query = blk: {
                 if (std.mem.eql(u8, filter, "native")) {
-                    break :blk .{test_targets[0]};
+                    break :blk &.{test_targets[0]};
                 } else if (std.mem.eql(u8, filter, "arm")) {
-                    break :blk .{test_targets[1]};
+                    break :blk &.{test_targets[1]};
                 } else if (std.mem.eql(u8, filter, "aarch64")) {
-                    break :blk .{test_targets[2]};
+                    break :blk &.{test_targets[2]};
                 } else if (std.mem.eql(u8, filter, "aarch64_be")) {
-                    break :blk .{test_targets[3]};
+                    break :blk &.{test_targets[3]};
                 } else {
                     std.debug.print(
                         \\Invalid filter: {s}\n
@@ -93,7 +104,7 @@ pub fn build(b: *std.Build) void {
                     std.process.exit(1);
                 }
             };
-            inline for (fl) |filter_target| {
+            for (fl) |filter_target| {
                 const unit_tests = b.addTest(.{
                     .root_source_file = mod.root_source_file.?,
                     .target = b.resolveTargetQuery(filter_target),
