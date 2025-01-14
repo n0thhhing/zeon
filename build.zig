@@ -62,6 +62,7 @@ const aarch64_target_features = std.Target.aarch64.featureSet(&.{
     .i8mm,
     .sm4,
     .crypto,
+    .fullfp16,
     // Messes with emulation when not using qemu
     // .sve,
 });

@@ -7365,6 +7365,492 @@ test vtrnq_p16 {
     try testIntrinsic("vtrnq_p16", vtrnq_p16, expected, .{ a, b });
 }
 
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_s8(a: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].16b, %[a].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.8 %[ret], %[a]"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(i8, a, undefined, i8x16{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 });
+    }
+}
+
+test vrev64q_s8 {
+    const a: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    const expected: i8x16 = .{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 };
+
+    try testIntrinsic("vrev64q_s8", vrev64q_s8, expected, .{a});
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_s16(a: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].8h, %[a].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.16 %[ret], %[a]"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(i16, a, undefined, i16x8{ 3, 2, 1, 0, 7, 6, 5, 4 });
+    }
+}
+
+test vrev64q_s16 {
+    const a: i16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const expected: i16x8 = .{ 3, 2, 1, 0, 7, 6, 5, 4 };
+
+    try testIntrinsic("vrev64q_s16", vrev64q_s16, expected, .{a});
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_s32(a: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].4s, %[a].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.32 %[ret], %[a]"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(i32, a, undefined, i32x4{ 1, 0, 3, 2 });
+    }
+}
+
+test vrev64q_s32 {
+    const a: i32x4 = .{ 0, 1, 2, 3 };
+    const expected: i32x4 = .{ 1, 0, 3, 2 };
+
+    try testIntrinsic("vrev64q_s32", vrev64q_s32, expected, .{a});
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_u8(a: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].16b, %[a].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.8 %[ret], %[a]"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(u8, a, undefined, u8x16{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 });
+    }
+}
+
+test vrev64q_u8 {
+    const a: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    const expected: u8x16 = .{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 };
+
+    try testIntrinsic("vrev64q_u8", vrev64q_u8, expected, .{a});
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_u16(a: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].8h, %[a].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.16 %[ret], %[a]"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(u16, a, undefined, u16x8{ 3, 2, 1, 0, 7, 6, 5, 4 });
+    }
+}
+
+test vrev64q_u16 {
+    const a: u16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const expected: u16x8 = .{ 3, 2, 1, 0, 7, 6, 5, 4 };
+
+    try testIntrinsic("vrev64q_u16", vrev64q_u16, expected, .{a});
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_u32(a: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].4s, %[a].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.32 %[ret], %[a]"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(u32, a, undefined, u32x4{ 1, 0, 3, 2 });
+    }
+}
+
+test vrev64q_u32 {
+    const a: u32x4 = .{ 0, 1, 2, 3 };
+    const expected: u32x4 = .{ 1, 0, 3, 2 };
+
+    try testIntrinsic("vrev64q_u32", vrev64q_u32, expected, .{a});
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_p8(a: p8x16) p8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].16b, %[a].16b"
+            : [ret] "=w" (-> p8x16),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.8 %[ret], %[a]"
+            : [ret] "=w" (-> p8x16),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(p8, a, undefined, p8x16{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 });
+    }
+}
+
+test vrev64q_p8 {
+    const a: p8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    const expected: p8x16 = .{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 };
+
+    try testIntrinsic("vrev64q_p8", vrev64q_p8, expected, .{a});
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_p16(a: p16x8) p16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].8h, %[a].8h"
+            : [ret] "=w" (-> p16x8),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.16 %[ret], %[a]"
+            : [ret] "=w" (-> p16x8),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(p16, a, undefined, p16x8{ 3, 2, 1, 0, 7, 6, 5, 4 });
+    }
+}
+
+test vrev64q_p16 {
+    const a: p16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const expected: p16x8 = .{ 3, 2, 1, 0, 7, 6, 5, 4 };
+
+    try testIntrinsic("vrev64q_p16", vrev64q_p16, expected, .{a});
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_f32(a: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].4s, %[a].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.32 %[ret], %[a]"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(f32, a, undefined, f32x4{ 1, 0, 3, 2 });
+    }
+}
+
+test vrev64q_f32 {
+    const a: f32x4 = .{ 0, 1, 2, 3 };
+    const expected: f32x4 = .{ 1, 0, 3, 2 };
+
+    try testIntrinsic("vrev64q_f32", vrev64q_f32, expected, .{a});
+}
+
+/// Multiply-add to accumulator
+pub inline fn vfmaq_f16(a: f16x8, b: f16x8, c: f16x8) f16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{ .neon, .fullfp16 })) {
+        var result: f16x8 = a;
+        switch (endianness) {
+            .little => {
+                result = a;
+                asm ("fmla %[ret].8h, %[b].8h, %[c].8h"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    \\ rev16 %[b].16b, %[b].16b
+                    \\ rev16 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].8h, %[b].8h, %[c].8h
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return a + (b * c);
+    }
+}
+
+test vfmaq_f16 {
+    const a: f16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const b: f16x8 = .{ 2, 2, 2, 2, 2, 2, 2, 2 };
+    const c: f16x8 = .{ 3, 3, 3, 3, 3, 3, 3, 3 };
+    const expected: f16x8 = .{ 6, 7, 8, 9, 10, 11, 12, 13 };
+
+    try testIntrinsic("vfmaq_f16", vfmaq_f16, expected, .{ a, b, c });
+}
+
+/// Multiply-add to accumulator
+pub inline fn vfmaq_f32(a: f32x4, b: f32x4, c: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result: f32x4 = a;
+        switch (endianness) {
+            .little => {
+                result = a;
+                asm ("fmla %[ret].4s, %[b].4s, %[c].4s"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    \\ rev32 %[b].16b, %[b].16b
+                    \\ rev32 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].4s, %[b].4s, %[c].4s
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+        }
+
+        return result;
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        var result = a;
+        asm ("vmla.f32 %[ret], %[b], %[c]"
+            : [ret] "+w" (result),
+            : [b] "w" (b),
+              [c] "w" (c),
+        );
+        return result;
+    } else {
+        return a + (b * c);
+    }
+}
+
+test vfmaq_f32 {
+    const a: f32x4 = .{ 0, 1, 2, 3 };
+    const b: f32x4 = .{ 2, 2, 2, 2 };
+    const c: f32x4 = .{ 3, 3, 3, 3 };
+    const expected: f32x4 = .{ 6, 7, 8, 9 };
+
+    try testIntrinsic("vfmaq_f32", vfmaq_f32, expected, .{ a, b, c });
+}
+
+/// Multiply-add to accumulator
+pub inline fn vfmaq_f64(a: f64x2, b: f64x2, c: f64x2) f64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result: f64x2 = a;
+        switch (endianness) {
+            .little => {
+                asm ("fmla %[ret].2d, %[b].2d, %[c].2d"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    \\ rev64 %[b].16b, %[b].16b
+                    \\ rev64 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].2d, %[b].2d, %[c].2d
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return a + (b * c);
+    }
+}
+
+test vfmaq_f64 {
+    const a: f64x2 = .{ 0, 1 };
+    const b: f64x2 = .{ 2, 2 };
+    const c: f64x2 = .{ 3, 3 };
+    const expected: f64x2 = .{ 6, 7 };
+
+    try testIntrinsic("vfmaq_f64", vfmaq_f64, expected, .{ a, b, c });
+}
+
+/// Multiply-add to accumulator
+pub inline fn vfmaq_laneq_f16(a: f16x8, b: f16x8, c: f16x8, comptime lane: usize) f16x8 {
+    comptime assert(lane < 8);
+    if (use_asm and comptime aarch64.hasFeatures(&.{ .neon, .fullfp16 })) {
+        var result: f16x8 = a;
+        switch (endianness) {
+            .little => {
+                result = a;
+                asm ("fmla %[ret].8h, %[b].8h, %[c].h[%[lane]]"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    \\ rev16 %[b].16b, %[b].16b
+                    \\ rev16 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].8h, %[b].8h, %[c].8h[%[lane]]
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return vfmaq_f16(a, b, vdupq_n_f16(c[lane]));
+    }
+}
+
+test vfmaq_laneq_f16 {
+    const a: f16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const b: f16x8 = .{ 2, 2, 2, 2, 2, 2, 2, 2 };
+    const c: f16x8 = .{ 3, 0, 0, 0, 0, 0, 0, 0 };
+    const lane: usize = 0;
+    const expected: f16x8 = .{ 6, 7, 8, 9, 10, 11, 12, 13 };
+
+    try testIntrinsic("vfmaq_laneq_f16", vfmaq_laneq_f16, expected, .{ a, b, c, lane });
+}
+
+/// Multiply-add to accumulator
+pub inline fn vfmaq_laneq_f32(a: f32x4, b: f32x4, c: f32x4, comptime lane: usize) f32x4 {
+    comptime assert(lane < 4);
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result: f32x4 = a;
+        switch (endianness) {
+            .little => {
+                result = a;
+                asm ("fmla %[ret].4s, %[b].4s, %[c].s[%[lane]]"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    \\ rev32 %[b].16b, %[b].16b
+                    \\ rev32 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].4s, %[b].4s, %[c].s[%[lane]]
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return vfmaq_f32(a, b, vdupq_n_f32(c[lane]));
+    }
+}
+
+test vfmaq_laneq_f32 {
+    const a: f32x4 = .{ 0, 1, 2, 3 };
+    const b: f32x4 = .{ 2, 2, 2, 2 };
+    const c: f32x4 = .{ 3, 0, 0, 0 };
+    const lane: usize = 0;
+    const expected: f32x4 = .{ 6, 7, 8, 9 };
+
+    try testIntrinsic("vfmaq_laneq_f32", vfmaq_laneq_f32, expected, .{ a, b, c, lane });
+}
+
+/// Multiply-add to accumulator
+pub inline fn vfmaq_laneq_f64(a: f64x2, b: f64x2, c: f64x2, comptime lane: usize) f64x2 {
+    comptime assert(lane < 2);
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result: f64x2 = a;
+        switch (endianness) {
+            .little => {
+                asm ("fmla %[ret].2d, %[b].2d, %[c].d[%[lane]]"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    \\ rev64 %[b].16b, %[b].16b
+                    \\ rev64 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].2d, %[b].2d, %[c].d[%[lane]]
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return vfmaq_f64(a, b, vdupq_n_f64(c[lane]));
+    }
+}
+
+test vfmaq_laneq_f64 {
+    const a: f64x2 = .{ 0, 1 };
+    const b: f64x2 = .{ 2, 2 };
+    const c: f64x2 = .{ 3, 0 };
+    const lane: usize = 0;
+    const expected: f64x2 = .{ 6, 7 };
+
+    try testIntrinsic("vfmaq_laneq_f64", vfmaq_laneq_f64, expected, .{ a, b, c, lane });
+}
+
 test {
     std.testing.refAllDecls(@This());
 }
