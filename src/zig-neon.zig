@@ -613,6 +613,7 @@ fn printError(
     });
 }
 
+/// Prints the string representation of the input `n` to the result
 inline fn numToString(comptime n: usize) []const u8 {
     return std.fmt.comptimePrint("{d}", .{n});
 }
@@ -7734,7 +7735,7 @@ pub inline fn vfmaq_laneq_f16(a: f16x8, b: f16x8, c: f16x8, comptime lane: usize
                     \\ rev16 %[ret].16b, %[ret].16b
                     \\ rev16 %[b].16b, %[b].16b
                     \\ rev16 %[c].16b, %[c].16b
-                    \\ fmla  %[ret].8h, %[b].8h, %[c].8h[%[lane]]
+                    \\ fmla  %[ret].8h, %[b].8h, %[c].h[%[lane]]
                     \\ rev16 %[ret].16b, %[ret].16b
                     : [ret] "+w" (result),
                     : [b] "w" (b),
@@ -7850,6 +7851,11 @@ test vfmaq_laneq_f64 {
 
     try testIntrinsic("vfmaq_laneq_f64", vfmaq_laneq_f64, expected, .{ a, b, c, lane });
 }
+
+// pub fn vcombine_s8(a: i8x8, b: i8x8) i8x16 {
+//     _ = a;
+//     _ = b;
+// }
 
 test {
     std.testing.refAllDecls(@This());
