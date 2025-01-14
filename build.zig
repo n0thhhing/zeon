@@ -129,9 +129,10 @@ pub fn build(b: *std.Build) void {
         }
     }
 
-    //addExample(b, target, optimize, test_step, "matrix/rotate.zig", "rotate_matrix");
+    addExample(b, target, optimize, test_step, "matrixMultiply/main.zig", "rotate_multiply");
 }
 
+// TODO: Apply target-filter to this
 fn addExample(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -174,8 +175,10 @@ fn addExample(
             .target = b.resolveTargetQuery(t),
             .optimize = optimize,
         });
+        unit_tests.root_module.addImport("neon", mod);
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
+
         example_test_step.dependOn(&run_unit_tests.step);
         test_step.dependOn(&run_unit_tests.step);
     }
