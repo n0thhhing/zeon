@@ -8368,9 +8368,9 @@ pub inline fn vst1q_u8(mem_addr: [*]u8, vec: u8x16) void {
 }
 
 test vst1q_u8 {
-    const vec: u8x16 = .{ 236, 33, 210, 78, 179, 206, 109, 207, 152, 168, 162, 126, 76, 61, 77, 190 };
+    const vec: u8x16 = .{ 87, 7, 66, 94, 76, 60, 92, 164, 117, 14, 58, 249, 14, 224, 177, 97 };
     var result: [16]u8 = undefined;
-    const expected: [16]u8 = .{ 236, 33, 210, 78, 179, 206, 109, 207, 152, 168, 162, 126, 76, 61, 77, 190 };
+    const expected: [16]u8 = .{ 87, 7, 66, 94, 76, 60, 92, 164, 117, 14, 58, 249, 14, 224, 177, 97 };
 
     try testIntrinsic("vst1q_u8", vst1q_u8, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8390,7 +8390,7 @@ pub inline fn vst1q_u16(mem_addr: [*]u16, vec: u16x8) void {
             inline .big => {
                 asm volatile (
                     \\ rev16 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].8h}, [%[mem_addr]]
+                    \\ st1   {%[vec].8h}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8416,9 +8416,9 @@ pub inline fn vst1q_u16(mem_addr: [*]u16, vec: u16x8) void {
 }
 
 test vst1q_u16 {
-    const vec: u16x8 = .{ 27532, 26145, 58915, 59, 41654, 47134, 39583, 44854 };
+    const vec: u16x8 = .{ 29455, 5763, 22951, 12746, 53163, 34315, 47952, 42506 };
     var result: [8]u16 = undefined;
-    const expected: [8]u16 = .{ 27532, 26145, 58915, 59, 41654, 47134, 39583, 44854 };
+    const expected: [8]u16 = .{ 29455, 5763, 22951, 12746, 53163, 34315, 47952, 42506 };
 
     try testIntrinsic("vst1q_u16", vst1q_u16, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8438,7 +8438,7 @@ pub inline fn vst1q_u32(mem_addr: [*]u32, vec: u32x4) void {
             inline .big => {
                 asm volatile (
                     \\ rev32 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].4s}, [%[mem_addr]]
+                    \\ st1   {%[vec].4s}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8464,9 +8464,9 @@ pub inline fn vst1q_u32(mem_addr: [*]u32, vec: u32x4) void {
 }
 
 test vst1q_u32 {
-    const vec: u32x4 = .{ 3354973996, 746720317, 4225385117, 4062122914 };
+    const vec: u32x4 = .{ 3180044669, 3392582875, 1914261745, 906567832 };
     var result: [4]u32 = undefined;
-    const expected: [4]u32 = .{ 3354973996, 746720317, 4225385117, 4062122914 };
+    const expected: [4]u32 = .{ 3180044669, 3392582875, 1914261745, 906567832 };
 
     try testIntrinsic("vst1q_u32", vst1q_u32, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8486,7 +8486,7 @@ pub inline fn vst1q_u64(mem_addr: [*]u64, vec: u64x2) void {
             inline .big => {
                 asm volatile (
                     \\ rev64 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].2d}, [%[mem_addr]]
+                    \\ st1   {%[vec].2d}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8512,9 +8512,9 @@ pub inline fn vst1q_u64(mem_addr: [*]u64, vec: u64x2) void {
 }
 
 test vst1q_u64 {
-    const vec: u64x2 = .{ 12042161327598524000, 9161203957071127000 };
+    const vec: u64x2 = .{ 3829217874799001600, 2533292073724029000 };
     var result: [2]u64 = undefined;
-    const expected: [2]u64 = .{ 12042161327598524000, 9161203957071127000 };
+    const expected: [2]u64 = .{ 3829217874799001600, 2533292073724029000 };
 
     try testIntrinsic("vst1q_u64", vst1q_u64, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8546,9 +8546,9 @@ pub inline fn vst1q_s8(mem_addr: [*]i8, vec: i8x16) void {
 }
 
 test vst1q_s8 {
-    const vec: i8x16 = .{ 110, 114, 21, 101, 18, 41, 33, 54, 72, 32, 41, 28, 89, 93, 88, 100 };
+    const vec: i8x16 = .{ 75, 36, 6, 85, 22, 75, 44, 100, 116, 47, 61, 71, 119, 72, 64, 11 };
     var result: [16]i8 = undefined;
-    const expected: [16]i8 = .{ 110, 114, 21, 101, 18, 41, 33, 54, 72, 32, 41, 28, 89, 93, 88, 100 };
+    const expected: [16]i8 = .{ 75, 36, 6, 85, 22, 75, 44, 100, 116, 47, 61, 71, 119, 72, 64, 11 };
 
     try testIntrinsic("vst1q_s8", vst1q_s8, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8568,7 +8568,7 @@ pub inline fn vst1q_s16(mem_addr: [*]i16, vec: i16x8) void {
             inline .big => {
                 asm volatile (
                     \\ rev16 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].8h}, [%[mem_addr]]
+                    \\ st1   {%[vec].8h}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8594,9 +8594,9 @@ pub inline fn vst1q_s16(mem_addr: [*]i16, vec: i16x8) void {
 }
 
 test vst1q_s16 {
-    const vec: i16x8 = .{ 9435, 20212, 16038, 30208, 30023, 14788, 23121, 18624 };
+    const vec: i16x8 = .{ 6747, 3471, 19603, 32482, 30815, 18526, 26523, 13944 };
     var result: [8]i16 = undefined;
-    const expected: [8]i16 = .{ 9435, 20212, 16038, 30208, 30023, 14788, 23121, 18624 };
+    const expected: [8]i16 = .{ 6747, 3471, 19603, 32482, 30815, 18526, 26523, 13944 };
 
     try testIntrinsic("vst1q_s16", vst1q_s16, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8616,7 +8616,7 @@ pub inline fn vst1q_s32(mem_addr: [*]i32, vec: i32x4) void {
             inline .big => {
                 asm volatile (
                     \\ rev32 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].4s}, [%[mem_addr]]
+                    \\ st1   {%[vec].4s}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8642,9 +8642,9 @@ pub inline fn vst1q_s32(mem_addr: [*]i32, vec: i32x4) void {
 }
 
 test vst1q_s32 {
-    const vec: i32x4 = .{ 560444551, 353435440, 1626271552, 845878873 };
+    const vec: i32x4 = .{ 145830768, 1580484351, 1402177468, 1969206225 };
     var result: [4]i32 = undefined;
-    const expected: [4]i32 = .{ 560444551, 353435440, 1626271552, 845878873 };
+    const expected: [4]i32 = .{ 145830768, 1580484351, 1402177468, 1969206225 };
 
     try testIntrinsic("vst1q_s32", vst1q_s32, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8664,7 +8664,7 @@ pub inline fn vst1q_s64(mem_addr: [*]i64, vec: i64x2) void {
             inline .big => {
                 asm volatile (
                     \\ rev64 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].2d}, [%[mem_addr]]
+                    \\ st1   {%[vec].2d}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8690,9 +8690,9 @@ pub inline fn vst1q_s64(mem_addr: [*]i64, vec: i64x2) void {
 }
 
 test vst1q_s64 {
-    const vec: i64x2 = .{ 6110050611160973000, 7767669772641292000 };
+    const vec: i64x2 = .{ 4686198271250203000, 6004792972826735000 };
     var result: [2]i64 = undefined;
-    const expected: [2]i64 = .{ 6110050611160973000, 7767669772641292000 };
+    const expected: [2]i64 = .{ 4686198271250203000, 6004792972826735000 };
 
     try testIntrinsic("vst1q_s64", vst1q_s64, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8724,9 +8724,9 @@ pub inline fn vst1q_p8(mem_addr: [*]p8, vec: p8x16) void {
 }
 
 test vst1q_p8 {
-    const vec: p8x16 = .{ 180, 93, 38, 215, 245, 192, 91, 140, 59, 237, 112, 168, 211, 47, 178, 32 };
+    const vec: p8x16 = .{ 143, 78, 26, 229, 142, 239, 26, 113, 27, 52, 212, 81, 86, 171, 140, 40 };
     var result: [16]p8 = undefined;
-    const expected: [16]p8 = .{ 180, 93, 38, 215, 245, 192, 91, 140, 59, 237, 112, 168, 211, 47, 178, 32 };
+    const expected: [16]p8 = .{ 143, 78, 26, 229, 142, 239, 26, 113, 27, 52, 212, 81, 86, 171, 140, 40 };
 
     try testIntrinsic("vst1q_p8", vst1q_p8, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8746,7 +8746,7 @@ pub inline fn vst1q_p16(mem_addr: [*]p16, vec: p16x8) void {
             inline .big => {
                 asm volatile (
                     \\ rev16 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].8h}, [%[mem_addr]]
+                    \\ st1   {%[vec].8h}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8772,9 +8772,9 @@ pub inline fn vst1q_p16(mem_addr: [*]p16, vec: p16x8) void {
 }
 
 test vst1q_p16 {
-    const vec: p16x8 = .{ 12118, 599, 30156, 5448, 27466, 59800, 27939, 3023 };
+    const vec: p16x8 = .{ 63916, 47385, 18732, 19304, 846, 25686, 17032, 5781 };
     var result: [8]p16 = undefined;
-    const expected: [8]p16 = .{ 12118, 599, 30156, 5448, 27466, 59800, 27939, 3023 };
+    const expected: [8]p16 = .{ 63916, 47385, 18732, 19304, 846, 25686, 17032, 5781 };
 
     try testIntrinsic("vst1q_p16", vst1q_p16, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8794,7 +8794,7 @@ pub inline fn vst1q_p46(mem_addr: [*]p64, vec: p64x2) void {
             inline .big => {
                 asm volatile (
                     \\ rev64 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].2d}, [%[mem_addr]]
+                    \\ st1   {%[vec].2d}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8820,9 +8820,9 @@ pub inline fn vst1q_p46(mem_addr: [*]p64, vec: p64x2) void {
 }
 
 test vst1q_p46 {
-    const vec: p64x2 = .{ 6976283156876990000, 4200661370399584000 };
+    const vec: p64x2 = .{ 15170803338505576000, 1743042069843003400 };
     var result: [2]p64 = undefined;
-    const expected: [2]p64 = .{ 6976283156876990000, 4200661370399584000 };
+    const expected: [2]p64 = .{ 15170803338505576000, 1743042069843003400 };
 
     try testIntrinsic("vst1q_p46", vst1q_p46, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8842,7 +8842,7 @@ pub inline fn vst1q_f32(mem_addr: [*]f32, vec: f32x4) void {
             inline .big => {
                 asm volatile (
                     \\ rev32 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].4s}, [%[mem_addr]]
+                    \\ st1   {%[vec].4s}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8868,9 +8868,9 @@ pub inline fn vst1q_f32(mem_addr: [*]f32, vec: f32x4) void {
 }
 
 test vst1q_f32 {
-    const vec: f32x4 = .{ 1.9953549021230256e+38, 3.0835651134935786e+38, 4.3442345078968616e+35, 2.852609862201755e+38 };
+    const vec: f32x4 = .{ 1.9548056513544903e+38, 2.332183452987896e+38, 1.6590733076880947e+38, 7.974587841002587e+37 };
     var result: [4]f32 = undefined;
-    const expected: [4]f32 = .{ 1.9953549021230256e+38, 3.0835651134935786e+38, 4.3442345078968616e+35, 2.852609862201755e+38 };
+    const expected: [4]f32 = .{ 1.9548056513544903e+38, 2.332183452987896e+38, 1.6590733076880947e+38, 7.974587841002587e+37 };
 
     try testIntrinsic("vst1q_f32", vst1q_f32, expected, .{ result[0..].ptr, vec }, &result);
 }
@@ -8890,7 +8890,7 @@ pub inline fn vst1q_f64(mem_addr: [*]f64, vec: f64x2) void {
             inline .big => {
                 asm volatile (
                     \\ rev64 %[vec].16b, %[vec].16b
-                    \\ st1  {%[vec].2d}, [%[mem_addr]]
+                    \\ st1   {%[vec].2d}, [%[mem_addr]]
                     :
                     : [mem_addr] "r" (mem_addr),
                       [vec] "w" (vec),
@@ -8905,9 +8905,9 @@ pub inline fn vst1q_f64(mem_addr: [*]f64, vec: f64x2) void {
 }
 
 test vst1q_f64 {
-    const vec: f64x2 = .{ 8.249783137743353e+307, 1.167780772277414e+308 };
+    const vec: f64x2 = .{ 8.485324487224609e+307, 1.0542911763881099e+308 };
     var result: [2]f64 = undefined;
-    const expected: [2]f64 = .{ 8.249783137743353e+307, 1.167780772277414e+308 };
+    const expected: [2]f64 = .{ 8.485324487224609e+307, 1.0542911763881099e+308 };
 
     try testIntrinsic("vst1q_f64", vst1q_f64, expected, .{ result[0..].ptr, vec }, &result);
 }
