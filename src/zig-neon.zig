@@ -574,11 +574,11 @@ fn testIntrinsic(
             use_asm = asm_opt;
             use_builtins = builtin_opt;
 
-            const ptr_snfo = @typeInfo(@TypeOf(result_ptr));
+            const ptr_info = @typeInfo(@TypeOf(result_ptr));
             const result = blk: {
                 const result = @call(.auto, func, args);
-                if (ptr_snfo != .Null) {
-                    assert(ptr_snfo == .Pointer);
+                if (ptr_info != .Null) {
+                    assert(ptr_info == .Pointer);
                     break :blk result_ptr.*;
                 } else {
                     break :blk result;
@@ -593,11 +593,11 @@ fn testIntrinsic(
         use_asm = true;
         use_builtins = true;
     } else {
-        const ptr_snfo = @typeInfo(@TypeOf(result_ptr));
+        const ptr_info = @typeInfo(@TypeOf(result_ptr));
         const result = blk: {
             const result = @call(.auto, func, args);
-            if (ptr_snfo != .Null) {
-                assert(ptr_snfo == .Pointer);
+            if (ptr_info != .Null) {
+                assert(ptr_info == .Pointer);
                 break :blk result_ptr.*;
             } else {
                 break :blk result;
@@ -657,10 +657,10 @@ test numToString {
 
 /// Gets the length of a vector
 inline fn vecLen(comptime T: anytype) usize {
-    const type_snfo = @typeInfo(T);
+    const type_info = @typeInfo(T);
 
-    comptime assert(type_snfo == .Vector);
-    return type_snfo.Vector.len;
+    comptime assert(type_info == .Vector);
+    return type_info.Vector.len;
 }
 
 test vecLen {
@@ -697,16 +697,16 @@ test join {
 
 /// Promotes the Child type of the vector `T`
 inline fn PromoteVector(comptime T: type) type {
-    var type_snfo = @typeInfo(T);
+    var type_info = @typeInfo(T);
 
-    comptime assert(type_snfo == .Vector);
-    var child_snfo = @typeInfo(std.meta.Child(T));
-    switch (child_snfo) {
-        .Int => child_snfo.Int.bits *= 2,
-        else => child_snfo.Float.bits *= 2,
+    comptime assert(type_info == .Vector);
+    var child_info = @typeInfo(std.meta.Child(T));
+    switch (child_info) {
+        .Int => child_info.Int.bits *= 2,
+        else => child_info.Float.bits *= 2,
     }
-    type_snfo.Vector.child = @Type(child_snfo);
-    return @Type(type_snfo);
+    type_info.Vector.child = @Type(child_info);
+    return @Type(type_info);
 }
 
 test PromoteVector {
@@ -741,9 +741,9 @@ test toLarge {
 inline fn abd(a: anytype, b: anytype) @TypeOf(a, b) {
     const T = @TypeOf(a, b);
     const Child = std.meta.Child(T);
-    const type_snfo = @typeInfo(Child);
-    if (type_snfo == .Int) {
-        switch (type_snfo.Int.signedness) {
+    const type_info = @typeInfo(Child);
+    if (type_info == .Int) {
+        switch (type_info.Int.signedness) {
             inline .unsigned => {
                 // Since unsigned numbers cannot be negative, we subtract
                 // the smaller elemant from the larger in order to prevent
