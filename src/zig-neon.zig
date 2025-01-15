@@ -6795,7 +6795,30 @@ test vdupq_n_f64 {
 
 /// Zip vectors
 pub inline fn vzip1_s8(a: i8x8, b: i8x8) i8x8 {
-    return @shuffle(i8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].8b, %[a].8b, %[b].8b"
+                    : [ret] "=w" (-> i8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].8b, %[a].8b
+                    \\ rev64 %[b].8b, %[b].8b
+                    \\ zip1  %[ret].8b, %[a].8b, %[b].8b
+                    \\ rev64 %[ret].8b, %[ret].8b
+                    : [ret] "=w" (-> i8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+    }
 }
 
 test vzip1_s8 {
@@ -6808,7 +6831,30 @@ test vzip1_s8 {
 
 /// Zip vectors
 pub inline fn vzip1_s16(a: i16x4, b: i16x4) i16x4 {
-    return @shuffle(i16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].4h, %[a].4h, %[b].4h"
+                    : [ret] "=w" (-> i16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].4h, %[a].4h
+                    \\ rev64 %[b].4h, %[b].4h
+                    \\ zip1  %[ret].4h, %[a].4h, %[b].4h
+                    \\ rev64 %[ret].4h, %[ret].4h
+                    : [ret] "=w" (-> i16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+    }
 }
 
 test vzip1_s16 {
@@ -6821,7 +6867,30 @@ test vzip1_s16 {
 
 /// Zip vectors
 pub inline fn vzip1_s32(a: i32x2, b: i32x2) i32x2 {
-    return @shuffle(i32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> i32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip1  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> i32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    }
 }
 
 test vzip1_s32 {
@@ -6834,7 +6903,30 @@ test vzip1_s32 {
 
 /// Zip vectors
 pub inline fn vzip1_u8(a: u8x8, b: u8x8) u8x8 {
-    return @shuffle(u8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].8b, %[a].8b, %[b].8b"
+                    : [ret] "=w" (-> u8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].8b, %[a].8b
+                    \\ rev64 %[b].8b, %[b].8b
+                    \\ zip1  %[ret].8b, %[a].8b, %[b].8b
+                    \\ rev64 %[ret].8b, %[ret].8b
+                    : [ret] "=w" (-> u8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+    }
 }
 
 test vzip1_u8 {
@@ -6847,7 +6939,30 @@ test vzip1_u8 {
 
 /// Zip vectors
 pub inline fn vzip1_u16(a: u16x4, b: u16x4) u16x4 {
-    return @shuffle(u16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].4h, %[a].4h, %[b].4h"
+                    : [ret] "=w" (-> u16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].4h, %[a].4h
+                    \\ rev64 %[b].4h, %[b].4h
+                    \\ zip1  %[ret].4h, %[a].4h, %[b].4h
+                    \\ rev64 %[ret].4h, %[ret].4h
+                    : [ret] "=w" (-> u16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+    }
 }
 
 test vzip1_u16 {
@@ -6860,7 +6975,30 @@ test vzip1_u16 {
 
 /// Zip vectors
 pub inline fn vzip1_u32(a: u32x2, b: u32x2) u32x2 {
-    return @shuffle(u32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> u32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip1  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> u32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    }
 }
 
 test vzip1_u32 {
@@ -6873,7 +7011,30 @@ test vzip1_u32 {
 
 /// Zip vectors
 pub inline fn vzip1_f32(a: f32x2, b: f32x2) f32x2 {
-    return @shuffle(f32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> f32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip1  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> f32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(f32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    }
 }
 
 test vzip1_f32 {
@@ -6886,7 +7047,30 @@ test vzip1_f32 {
 
 /// Zip vectors
 pub inline fn vzip2_s8(a: i8x8, b: i8x8) i8x8 {
-    return @shuffle(i8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].8b, %[a].8b, %[b].8b"
+                    : [ret] "=w" (-> i8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].8b, %[a].8b
+                    \\ rev64 %[b].8b, %[b].8b
+                    \\ zip2  %[ret].8b, %[a].8b, %[b].8b
+                    \\ rev64 %[ret].8b, %[ret].8b
+                    : [ret] "=w" (-> i8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    }
 }
 
 test vzip2_s8 {
@@ -6899,7 +7083,30 @@ test vzip2_s8 {
 
 /// Zip vectors
 pub inline fn vzip2_s16(a: i16x4, b: i16x4) i16x4 {
-    return @shuffle(i16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].4h, %[a].4h, %[b].4h"
+                    : [ret] "=w" (-> i16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].4h, %[a].4h
+                    \\ rev64 %[b].4h, %[b].4h
+                    \\ zip2  %[ret].4h, %[a].4h, %[b].4h
+                    \\ rev64 %[ret].4h, %[ret].4h
+                    : [ret] "=w" (-> i16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    }
 }
 
 test vzip2_s16 {
@@ -6912,7 +7119,30 @@ test vzip2_s16 {
 
 /// Zip vectors
 pub inline fn vzip2_s32(a: i32x2, b: i32x2) i32x2 {
-    return @shuffle(i32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> i32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip2  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> i32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    }
 }
 
 test vzip2_s32 {
@@ -6925,7 +7155,30 @@ test vzip2_s32 {
 
 /// Zip vectors
 pub inline fn vzip2_u8(a: u8x8, b: u8x8) u8x8 {
-    return @shuffle(u8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].8b, %[a].8b, %[b].8b"
+                    : [ret] "=w" (-> u8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].8b, %[a].8b
+                    \\ rev64 %[b].8b, %[b].8b
+                    \\ zip2  %[ret].8b, %[a].8b, %[b].8b
+                    \\ rev64 %[ret].8b, %[ret].8b
+                    : [ret] "=w" (-> u8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    }
 }
 
 test vzip2_u8 {
@@ -6938,7 +7191,30 @@ test vzip2_u8 {
 
 /// Zip vectors
 pub inline fn vzip2_u16(a: u16x4, b: u16x4) u16x4 {
-    return @shuffle(u16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].4h, %[a].4h, %[b].4h"
+                    : [ret] "=w" (-> u16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].4h, %[a].4h
+                    \\ rev64 %[b].4h, %[b].4h
+                    \\ zip2  %[ret].4h, %[a].4h, %[b].4h
+                    \\ rev64 %[ret].4h, %[ret].4h
+                    : [ret] "=w" (-> u16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    }
 }
 
 test vzip2_u16 {
@@ -6951,7 +7227,30 @@ test vzip2_u16 {
 
 /// Zip vectors
 pub inline fn vzip2_u32(a: u32x2, b: u32x2) u32x2 {
-    return @shuffle(u32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> u32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip2  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> u32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    }
 }
 
 test vzip2_u32 {
@@ -6964,7 +7263,324 @@ test vzip2_u32 {
 
 /// Zip vectors
 pub inline fn vzip2_f32(a: f32x2, b: f32x2) f32x2 {
-    return @shuffle(f32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> f32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip2  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> f32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(f32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    }
+}
+
+/// Zip vectors
+pub inline fn vzip1q_s8(a: i8x16, b: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i8, a, b, i8x16{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3), 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    }
+}
+
+test vzip1q_s8 {
+    const a: i8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: i8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip1q_s8", vzip1q_s8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_s16(a: i16x8, b: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i16, a, b, i16x8{ 0, ~@as(i16, 0), 1, ~@as(i16, 1), 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    }
+}
+
+test vzip1q_s16 {
+    const a: i16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: i16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: i16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip1q_s16", vzip1q_s16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_s32(a: i32x4, b: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i32, a, b, i32x4{ 0, ~@as(i32, 0), 1, ~@as(i32, 1) });
+    }
+}
+
+test vzip1q_s32 {
+    const a: i32x4 = .{ 0, 2, 4, 6 };
+    const b: i32x4 = .{ 1, 3, 5, 7 };
+    const expected: i32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vzip1q_s32", vzip1q_s32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_u8(a: u8x16, b: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u8, a, b, i8x16{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3), 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    }
+}
+
+test vzip1q_u8 {
+    const a: u8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: u8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip1q_u8", vzip1q_u8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_u16(a: u16x8, b: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u16, a, b, i16x8{ 0, ~@as(i16, 0), 1, ~@as(i16, 1), 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    }
+}
+
+test vzip1q_u16 {
+    const a: u16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: u16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: u16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip1q_u16", vzip1q_u16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_u32(a: u32x4, b: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u32, a, b, i32x4{ 0, ~@as(i32, 0), 1, ~@as(i32, 1) });
+    }
+}
+
+test vzip1q_u32 {
+    const a: u32x4 = .{ 0, 2, 4, 6 };
+    const b: u32x4 = .{ 1, 3, 5, 7 };
+    const expected: u32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vzip1q_u32", vzip1q_u32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_f32(a: f32x4, b: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f32, a, b, i32x4{ 0, ~@as(i32, 0), 1, ~@as(i32, 1) });
+    }
+}
+
+test vzip1q_f32 {
+    const a: f32x4 = .{ 0, 2, 4, 6 };
+    const b: f32x4 = .{ 1, 3, 5, 7 };
+    const expected: f32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vzip1q_f32", vzip1q_f32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_s8(a: i8x16, b: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i8, a, b, i8x16{ 8, ~@as(i8, 8), 9, ~@as(i8, 9), 10, ~@as(i8, 10), 11, ~@as(i8, 11), 12, ~@as(i8, 12), 13, ~@as(i8, 13), 14, ~@as(i8, 14), 15, ~@as(i8, 15) });
+    }
+}
+
+test vzip2q_s8 {
+    const a: i8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: i8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: i8x16 = .{ 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
+
+    try testIntrinsic("vzip2q_s8", vzip2q_s8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_s16(a: i16x8, b: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i16, a, b, i16x8{ 4, ~@as(i16, 4), 5, ~@as(i16, 5), 6, ~@as(i16, 6), 7, ~@as(i16, 7) });
+    }
+}
+
+test vzip2q_s16 {
+    const a: i16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: i16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: i16x8 = .{ 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip2q_s16", vzip2q_s16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_s32(a: i32x4, b: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i32, a, b, i32x4{ 2, ~@as(i32, 2), 3, ~@as(i32, 3) });
+    }
+}
+
+test vzip2q_s32 {
+    const a: i32x4 = .{ 0, 2, 4, 6 };
+    const b: i32x4 = .{ 1, 3, 5, 7 };
+    const expected: i32x4 = .{ 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip2q_s32", vzip2q_s32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_u8(a: u8x16, b: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u8, a, b, i8x16{ 8, ~@as(i8, 8), 9, ~@as(i8, 9), 10, ~@as(i8, 10), 11, ~@as(i8, 11), 12, ~@as(i8, 12), 13, ~@as(i8, 13), 14, ~@as(i8, 14), 15, ~@as(i8, 15) });
+    }
+}
+
+test vzip2q_u8 {
+    const a: u8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: u8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: i8x16 = .{ 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
+
+    try testIntrinsic("vzip2q_s8", vzip2q_s8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_u16(a: u16x8, b: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u16, a, b, i16x8{ 4, ~@as(i16, 4), 5, ~@as(i16, 5), 6, ~@as(i16, 6), 7, ~@as(i16, 7) });
+    }
+}
+
+test vzip2q_u16 {
+    const a: u16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: u16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: u16x8 = .{ 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip2q_u16", vzip2q_u16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_u32(a: u32x4, b: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u32, a, b, i32x4{ 2, ~@as(i32, 2), 3, ~@as(i32, 3) });
+    }
+}
+
+test vzip2q_u32 {
+    const a: u32x4 = .{ 0, 2, 4, 6 };
+    const b: u32x4 = .{ 1, 3, 5, 7 };
+    const expected: u32x4 = .{ 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip2q_u32", vzip2q_u32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_f32(a: f32x4, b: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f32, a, b, i32x4{ 2, ~@as(i32, 2), 3, ~@as(i32, 3) });
+    }
+}
+
+test vzip2q_f32 {
+    const a: f32x4 = .{ 0, 2, 4, 6 };
+    const b: f32x4 = .{ 1, 3, 5, 7 };
+    const expected: f32x4 = .{ 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip2q_f32", vzip2q_f32, expected, .{ a, b }, null);
 }
 
 test vzip2_f32 {
@@ -6974,6 +7590,11 @@ test vzip2_f32 {
 
     try testIntrinsic("vzip2_f32", vzip2_f32, expected, .{ a, b }, null);
 }
+
+/// Zip vectors
+// pub inline fn vzipq_u8(a: u8x16, b: u8x16) u8x16x2 {
+
+// }
 
 /// Transpose vectors
 pub inline fn vtrn1q_s8(a: i8x16, b: i8x16) i8x16 {
