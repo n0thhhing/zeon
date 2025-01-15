@@ -8,7 +8,7 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
 
 ## Status
 
-🚧 This project is under active development(407/2983 implemented). Contributions and feedback are welcome!
+🚧 This project is under active development(502/3803 implemented). Contributions and feedback are welcome!
 
 ## Roadmap
 
@@ -22,6 +22,7 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
  - [ ] For Vector Load intrinsics, dont assume the input length is the exact length of the output vector.
  - [ ] Test against C/C++ implementation.
  - [ ] Add a better way to switch between implementations(like assembly, builtins and the fallback).
+ - [ ] Use the fallback instead of assembly implementation when not in release.
 
 ## Notes
  - When using `vld1*` on non-ARM architectures(or if use_asm and use_builtins is off), it assumes the underlying type fits the size of the vector.
@@ -31,6 +32,7 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
 
 ### Requirements
 To test and simulate ARM/ARM64 environments, `QEMU user mode` is required. Make sure QEMU is properly installed and configured before running tests. You'll also need `Make` for build and test automation.
+For usage examples, see [examples](examples/).
 
 ### Installation and Usage
 1. Clone the repository:
@@ -41,7 +43,12 @@ To test and simulate ARM/ARM64 environments, `QEMU user mode` is required. Make 
 
 3. Run tests:
    ```bash
-   make
+   make test
+   ```
+
+4. Run examples:
+   ```bash
+   make examples
    ```
 
 ## License

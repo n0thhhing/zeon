@@ -61,3 +61,7 @@ pub inline fn byteSwap(vec: anytype) @TypeOf(vec) {
         : [input] "w" (vec),
     );
 }
+
+test {
+    std.testing.refAllDecls(@This());
+}

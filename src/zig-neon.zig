@@ -513,79 +513,146 @@ test fmtFn {
 }
 
 /// Helps test builtins and inline assembly
-fn testIntrinsic(comptime fn_name: []const u8, func: anytype, expected: anytype, args: anytype) !void {
+//
+/// If `result_ptr` is specified as anything other than null,
+/// `testIntrinsic` will not use the return value of the function
+/// being tested. Instead, it will use the provided `result_ptr`.
+/// This is useful for testing functions that store their result
+/// directly in one of the provided arguments (e.g., in-place modifications).
+fn testIntrinsic(
+    comptime fn_name: []const u8,
+    func: anytype,
+    expected: anytype,
+    args: anytype,
+    result_ptr: anytype,
+) !void {
+    const arch_features = blk: {
+        if (is_aarch64) {
+            break :blk .{
+                .neon = comptime aarch64.hasFeatures(&.{.neon}),
+                .aes = comptime aarch64.hasFeatures(&.{.aes}),
+                .rdm = comptime aarch64.hasFeatures(&.{.rdm}),
+                .sha2 = comptime aarch64.hasFeatures(&.{.sha2}),
+                .sha3 = comptime aarch64.hasFeatures(&.{.sha3}),
+                .dotprod = comptime aarch64.hasFeatures(&.{.dotprod}),
+                .i8mm = comptime aarch64.hasFeatures(&.{.i8mm}),
+                .sm4 = comptime aarch64.hasFeatures(&.{.sm4}),
+                .crypto = comptime aarch64.hasFeatures(&.{.crypto}),
+                .sve = comptime aarch64.hasFeatures(&.{.sve}),
+            };
+        } else if (is_arm) {
+            break :blk .{
+                .neon = comptime arm.hasFeatures(&.{.neon}),
+                .aes = comptime arm.hasFeatures(&.{.aes}),
+                .sha2 = comptime arm.hasFeatures(&.{.sha2}),
+                .crc = comptime arm.hasFeatures(&.{.crc}),
+                .dotprod = comptime arm.hasFeatures(&.{.dotprod}),
+                .v7 = comptime arm.hasFeatures(&.{.has_v7}),
+                .v8 = comptime arm.hasFeatures(&.{.has_v8}),
+                .i8mm = comptime arm.hasFeatures(&.{.i8mm}),
+            };
+        } else {
+            break :blk .{};
+        }
+    };
+
     if (is_aarch64 or is_arm) {
-        inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opt| {
-            if (opt[0] and builtin.zig_backend != .stage2_llvm) continue;
-            use_asm = opt[0];
-            use_builtins = opt[1];
-            const result = @call(.auto, func, args);
+        inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opts| {
+            const asm_opt = opts[0];
+            const builtin_opt = opts[1];
+
+            // Skip LLVM-specific tests if not using LLVM as a backend
+            if (opts[1] and builtin.zig_backend != .stage2_llvm) {
+                std.once(struct {
+                    pub fn cb() void {
+                        @compileLog("Skipping LLVM builtin tests: Non-LLVM backend detected.");
+                    }
+                }.cb);
+                continue;
+            }
+
+            use_asm = asm_opt;
+            use_builtins = builtin_opt;
+
+            const ptr_info = @typeInfo(@TypeOf(result_ptr));
+            const result = blk: {
+                const result = @call(.auto, func, args);
+                if (ptr_info != .Null) {
+                    assert(ptr_info == .Pointer);
+                    break :blk result_ptr.*;
+                } else {
+                    break :blk result;
+                }
+            };
             expectEqual(expected, result) catch |err| {
-                const T = @TypeOf(func);
-                const fmt_str =
-                    \\({s})({any}):
-                    \\    Expected: 
-                ++ (if (@typeInfo(@TypeOf(expected, result)) == .Struct) "{any},\n" else "{d},\n") ++
-                    \\    Actual: 
-                ++ (if (@typeInfo(@TypeOf(expected, result)) == .Struct) "{any},\n" else "{d},\n") ++
-                    \\    Arch: {},
-                    \\    Features: {s},
-                    \\    Endianness: {},
-                    \\    Use Asm: {},
-                    \\    Use Builtins: {},
-                    \\
-                    \\
-                ;
-                std.debug.print(fmt_str, .{
-                    fmtFn(fn_name, @typeInfo(T).Fn),
-                    args,
-                    expected,
-                    result,
-                    arch,
-                    blk: {
-                        if (is_aarch64) {
-                            break :blk "{\n" ++
-                                "        has_neon: " ++ (if (comptime aarch64.hasFeatures(&.{.neon})) "true,\n" else "false,\n") ++
-                                "        has_aes: " ++ (if (comptime aarch64.hasFeatures(&.{.aes})) "true,\n" else "false,\n") ++
-                                "        has_rdm: " ++ (if (comptime aarch64.hasFeatures(&.{.rdm})) "true,\n" else "false,\n") ++
-                                "        has_sha2: " ++ (if (comptime aarch64.hasFeatures(&.{.sha2})) "true,\n" else "false,\n") ++
-                                "        has_sha3: " ++ (if (comptime aarch64.hasFeatures(&.{.sha3})) "true,\n" else "false,\n") ++
-                                "        has_dotprod: " ++ (if (comptime aarch64.hasFeatures(&.{.dotprod})) "true,\n" else "false,\n") ++
-                                "        has_i8mm: " ++ (if (comptime aarch64.hasFeatures(&.{.i8mm})) "true,\n" else "false,\n") ++
-                                "        has_sm4: " ++ (if (comptime aarch64.hasFeatures(&.{.sm4})) "true,\n" else "false,\n") ++
-                                "        has_crypto: " ++ (if (comptime aarch64.hasFeatures(&.{.crypto})) "true,\n" else "false,\n") ++
-                                "        has_sve: " ++ (if (comptime aarch64.hasFeatures(&.{.sve})) "true,\n" else "false,\n") ++
-                                "    }";
-                        } else if (is_arm) {
-                            break :blk "{\n" ++
-                                "        has_neon: " ++ (if (comptime arm.hasFeatures(&.{.neon})) "true,\n" else "false,\n") ++
-                                "        has_aes: " ++ (if (comptime arm.hasFeatures(&.{.aes})) "true,\n" else "false,\n") ++
-                                "        has_sha2: " ++ (if (comptime arm.hasFeatures(&.{.sha2})) "true,\n" else "false,\n") ++
-                                "        has_crc: " ++ (if (comptime arm.hasFeatures(&.{.crc})) "true,\n" else "false,\n") ++
-                                "        has_dotprod: " ++ (if (comptime arm.hasFeatures(&.{.dotprod})) "true,\n" else "false,\n") ++
-                                "        has_v7: " ++ (if (comptime arm.hasFeatures(&.{.has_v7})) "true,\n" else "false,\n") ++
-                                "        has_v8: " ++ (if (comptime arm.hasFeatures(&.{.has_v8})) "true,\n" else "false,\n") ++
-                                "        has_i8mm: " ++ (if (comptime arm.hasFeatures(&.{.i8mm})) "true,\n" else "false,\n") ++
-                                "    }";
-                        } else break :blk "Irrelevant";
-                    },
-                    endianness,
-                    use_asm,
-                    use_builtins,
-                });
+                printError(fn_name, func, expected, result, args, arch_features);
                 return err;
             };
         }
+
         use_asm = true;
         use_builtins = true;
     } else {
-        const result = @call(.auto, func, args);
-        try expectEqual(expected, result);
+        const ptr_info = @typeInfo(@TypeOf(result_ptr));
+        const result = blk: {
+            const result = @call(.auto, func, args);
+            if (ptr_info != .Null) {
+                assert(ptr_info == .Pointer);
+                break :blk result_ptr.*;
+            } else {
+                break :blk result;
+            }
+        };
+        expectEqual(expected, result) catch |err| {
+            printError(fn_name, func, expected, result, args, arch_features);
+            return err;
+        };
     }
 }
 
+/// Prints detailed error messages when a test fails
+fn printError(
+    comptime fn_name: []const u8,
+    func: anytype,
+    expected: anytype,
+    result: anytype,
+    args: anytype,
+    arch_features: anytype,
+) void {
+    const T = @TypeOf(func);
+    const fmt_str =
+        \\Function: {s}({any})
+        \\    Expected: {any}
+        \\    Actual: {any}
+        \\    Arch: {s}
+        \\    Features: {s}
+        \\    Endianness: {s}
+        \\    Use Asm: {}
+        \\    Use Builtins: {}
+        \\
+        \\
+    ;
+
+    std.debug.print(fmt_str, .{
+        fmtFn(fn_name, @typeInfo(T).Fn),
+        args,
+        expected,
+        result,
+        @tagName(arch),
+        std.fmt.comptimePrint("{any}", .{arch_features}),
+        @tagName(endianness),
+        use_asm,
+        use_builtins,
+    });
+}
+
+/// Prints the string representation of the input `n` to the result
 inline fn numToString(comptime n: usize) []const u8 {
     return std.fmt.comptimePrint("{d}", .{n});
+}
+
+test numToString {
+    try std.testing.expectEqualStrings("5", numToString(5));
 }
 
 /// Gets the length of a vector
@@ -1137,7 +1204,7 @@ pub inline fn vmovl_s8(a: i8x8) i16x8 {
     // the same if we do use inline assembly), but it still
     // has the same result, therefore we wont need inline
     // assembly here.
-    return @intCast(a);
+    return @as(i16x8, a);
 }
 
 test vmovl_s8 {
@@ -1148,7 +1215,7 @@ test vmovl_s8 {
 
 /// Vector long move
 pub inline fn vmovl_s16(a: i16x4) i32x4 {
-    return @intCast(a);
+    return @as(i32x4, a);
 }
 
 test vmovl_s16 {
@@ -1158,7 +1225,7 @@ test vmovl_s16 {
 
 /// Vector long move
 pub inline fn vmovl_s32(a: i32x2) i64x2 {
-    return @intCast(a);
+    return @as(i64x2, a);
 }
 
 test vmovl_s32 {
@@ -1168,7 +1235,7 @@ test vmovl_s32 {
 
 /// Vector long move
 pub inline fn vmovl_u8(a: u8x8) u16x8 {
-    return @intCast(a);
+    return @as(u16x8, a);
 }
 
 test vmovl_u8 {
@@ -1178,7 +1245,7 @@ test vmovl_u8 {
 
 /// Vector long move
 pub inline fn vmovl_u16(a: u16x4) u32x4 {
-    return @intCast(a);
+    return @as(u32x4, a);
 }
 
 test vmovl_u16 {
@@ -1188,7 +1255,7 @@ test vmovl_u16 {
 
 /// Vector long move
 pub inline fn vmovl_u32(a: u32x2) u64x2 {
-    return @intCast(a);
+    return @as(u64x2, a);
 }
 
 test vmovl_u32 {
@@ -1301,7 +1368,7 @@ pub inline fn vmull_s8(a: i8x8, b: i8x8) i16x8 {
 test vmull_s8 {
     const a: i8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 127 };
     const b: i8x8 = @splat(2);
-    try testIntrinsic("vmull_s8", vmull_s8, i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b });
+    try testIntrinsic("vmull_s8", vmull_s8, i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b }, null);
 }
 
 /// Signed multiply long
@@ -1309,7 +1376,7 @@ pub inline fn vmull_s16(a: i16x4, b: i16x4) i32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm volatile ("smull %[ret].4s, %[a].4h, %[b].4h"
+                return asm ("smull %[ret].4s, %[a].4h, %[b].4h"
                     : [ret] "=w" (-> i32x4),
                     : [a] "w" (a),
                       [b] "w" (b),
@@ -1350,7 +1417,7 @@ test vmull_s16 {
     const a: i16x4 = .{ 0, -1, -2, -3 };
     const b: i16x4 = @splat(5);
 
-    try testIntrinsic("vmull_s16", vmull_s16, i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, .{ a, b });
+    try testIntrinsic("vmull_s16", vmull_s16, i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, .{ a, b }, null);
 }
 
 /// Signed multiply long
@@ -1398,7 +1465,7 @@ test vmull_s32 {
     const a: i32x2 = .{ 0, -1 };
     const b: i32x2 = @splat(5);
 
-    try testIntrinsic("vmull_s32", vmull_s32, i32x2{ 0, -5 }, .{ a, b });
+    try testIntrinsic("vmull_s32", vmull_s32, i32x2{ 0, -5 }, .{ a, b }, null);
 }
 
 /// Unsigned multiply long
@@ -1447,7 +1514,7 @@ test vmull_u8 {
     const a: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
     const b: u8x8 = @splat(5);
 
-    try testIntrinsic("vmull_u8", vmull_u8, u16x8{ 0, 1 * 5, 2 * 5, 3 * 5, 4 * 5, 5 * 5, 6 * 5, 7 * 5 }, .{ a, b });
+    try testIntrinsic("vmull_u8", vmull_u8, u16x8{ 0, 1 * 5, 2 * 5, 3 * 5, 4 * 5, 5 * 5, 6 * 5, 7 * 5 }, .{ a, b }, null);
 }
 
 /// Unsigned multiply long
@@ -1496,7 +1563,7 @@ test vmull_u16 {
     const a: u16x4 = .{ 0, 1, 2, 3 };
     const b: u16x4 = @splat(5);
 
-    try testIntrinsic("vmull_u16", vmull_u16, u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, .{ a, b });
+    try testIntrinsic("vmull_u16", vmull_u16, u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, .{ a, b }, null);
 }
 
 /// Unsigned multiply long
@@ -1544,7 +1611,7 @@ test vmull_u32 {
     const a: u32x2 = .{ 0, 1 };
     const b: u32x2 = @splat(5);
 
-    try testIntrinsic("vmull_u32", vmull_u32, u64x2{ 0, 1 * 5 }, .{ a, b });
+    try testIntrinsic("vmull_u32", vmull_u32, u64x2{ 0, 1 * 5 }, .{ a, b }, null);
 }
 
 /// Signed multiply long
@@ -1556,7 +1623,7 @@ test vmull_high_s8 {
     const a: i8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127 };
     const b: i8x16 = @splat(2);
 
-    try testIntrinsic("vmull_high_s8", vmull_high_s8, i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b });
+    try testIntrinsic("vmull_high_s8", vmull_high_s8, i16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b }, null);
 }
 
 /// Signed multiply long
@@ -1568,7 +1635,7 @@ test vmull_high_s16 {
     const a: i16x8 = .{ 0, 0, 0, 0, 0, -1, -2, -3 };
     const b: i16x8 = @splat(5);
 
-    try testIntrinsic("vmull_high_s16", vmull_high_s16, i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, .{ a, b });
+    try testIntrinsic("vmull_high_s16", vmull_high_s16, i32x4{ 0, -1 * 5, -2 * 5, -3 * 5 }, .{ a, b }, null);
 }
 
 /// Signed multiply long
@@ -1580,7 +1647,7 @@ test vmull_high_s32 {
     const a: i32x4 = .{ 0, -1, -2, -3 };
     const b: i32x4 = @splat(5);
 
-    try testIntrinsic("vmull_high_s32", vmull_high_s32, i64x2{ -2 * 5, -3 * 5 }, .{ a, b });
+    try testIntrinsic("vmull_high_s32", vmull_high_s32, i64x2{ -2 * 5, -3 * 5 }, .{ a, b }, null);
 }
 
 /// Unsigned multiply long
@@ -1592,7 +1659,7 @@ test vmull_high_u8 {
     const a: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 0, 0, 0, 0, 127 };
     const b: u8x16 = @splat(2);
 
-    try testIntrinsic("vmull_high_u8", vmull_high_u8, u16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b });
+    try testIntrinsic("vmull_high_u8", vmull_high_u8, u16x8{ 0, 0, 0, 0, 0, 0, 0, 254 }, .{ a, b }, null);
 }
 
 /// Unsigned multiply long
@@ -1604,7 +1671,7 @@ test vmull_high_u16 {
     const a: u16x8 = .{ 0, 1, 2, 3, 0, 1, 2, 3 };
     const b: u16x8 = @splat(5);
 
-    try testIntrinsic("vmull_high_u16", vmull_high_u16, u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, .{ a, b });
+    try testIntrinsic("vmull_high_u16", vmull_high_u16, u32x4{ 0, 1 * 5, 2 * 5, 3 * 5 }, .{ a, b }, null);
 }
 
 /// Unsigned multiply long
@@ -1652,7 +1719,7 @@ test vabd_s8 {
 
     const expected: i8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
 
-    try testIntrinsic("vabd_s8", vabd_s8, expected, .{ a, b });
+    try testIntrinsic("vabd_s8", vabd_s8, expected, .{ a, b }, null);
 }
 
 /// Absolute difference between two i16x4 vectors
@@ -1688,7 +1755,7 @@ test vabd_s16 {
 
     const expected: i16x4 = .{ 15, 13, 11, 9 };
 
-    try testIntrinsic("vabd_s16", vabd_s16, expected, .{ a, b });
+    try testIntrinsic("vabd_s16", vabd_s16, expected, .{ a, b }, null);
 }
 
 /// Absolute difference between two i32x2 vectors
@@ -1724,7 +1791,7 @@ test vabd_s32 {
 
     const expected: i32x2 = .{ 15, 13 };
 
-    try testIntrinsic("vabd_s32", vabd_s32, expected, .{ a, b });
+    try testIntrinsic("vabd_s32", vabd_s32, expected, .{ a, b }, null);
 }
 
 /// Absolute difference between two u8x8 vectors
@@ -1759,31 +1826,36 @@ test vabd_u8 {
         const a: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
         const b: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
         const expected: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
-        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b }, null);
     }
     {
         const a: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
         const b: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
         const expected: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b }, null);
     }
     {
         const a: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
         const b: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
         const expected: u8x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
-        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b }, null);
     }
     {
         const a: u8x8 = .{ 0, 255, 128, 64, 32, 16, 8, 4 };
         const b: u8x8 = .{ 255, 0, 64, 128, 16, 32, 4, 8 };
         const expected: u8x8 = .{ 255, 255, 64, 64, 16, 16, 4, 4 };
-        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b }, null);
     }
     {
         const a: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const b: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const expected: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabd_u8", vabd_u8, expected, .{ a, b }, null);
     }
 }
 
@@ -1820,7 +1892,7 @@ test vabd_u16 {
 
     const expected: u16x4 = .{ 15, 13, 11, 9 };
 
-    try testIntrinsic("vabd_u16", vabd_u16, expected, .{ a, b });
+    try testIntrinsic("vabd_u16", vabd_u16, expected, .{ a, b }, null);
 }
 
 /// Absolute difference between two u32x2 vectors
@@ -1856,7 +1928,7 @@ test vabd_u32 {
 
     const expected: u32x2 = .{ 15, 13 };
 
-    try testIntrinsic("vabd_u32", vabd_u32, expected, .{ a, b });
+    try testIntrinsic("vabd_u32", vabd_u32, expected, .{ a, b }, null);
 }
 
 /// Absolute difference between two f32x2 vectors
@@ -1892,7 +1964,7 @@ test vabd_f32 {
 
     const expected: f32x2 = .{ @abs(0.00 - 0.19), @abs(0.00 - 0.15) };
 
-    try testIntrinsic("vabd_f32", vabd_f32, expected, .{ a, b });
+    try testIntrinsic("vabd_f32", vabd_f32, expected, .{ a, b }, null);
 }
 
 /// Absolute difference between two f64x1 vectors
@@ -1954,7 +2026,7 @@ test vabdq_s8 {
 
     const expected: i8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 1, 3, 5, 7, 9, 11, 13, 15 };
 
-    try testIntrinsic("vabdq_s8", vabdq_s8, expected, .{ a, b });
+    try testIntrinsic("vabdq_s8", vabdq_s8, expected, .{ a, b }, null);
 }
 
 /// signed absolute difference and accumulate (128-bit)
@@ -1990,7 +2062,7 @@ test vabdq_s16 {
 
     const expected: i16x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
 
-    try testIntrinsic("vabdq_s16", vabdq_s16, expected, .{ a, b });
+    try testIntrinsic("vabdq_s16", vabdq_s16, expected, .{ a, b }, null);
 }
 
 /// signed absolute difference and accumulate (128-bit)
@@ -2026,7 +2098,7 @@ test vabdq_s32 {
 
     const expected: i32x4 = .{ 15, 13, 11, 9 };
 
-    try testIntrinsic("vabdq_s32", vabdq_s32, expected, .{ a, b });
+    try testIntrinsic("vabdq_s32", vabdq_s32, expected, .{ a, b }, null);
 }
 
 /// signed absolute difference and accumulate (128-bit)
@@ -2061,31 +2133,36 @@ test vabdq_u8 {
         const a: u8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8 };
         const b: u8x16 = .{ 16, 15, 14, 13, 12, 11, 10, 9, 16, 15, 14, 13, 12, 11, 10, 9 };
         const expected: u8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1 };
-        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b }, null);
     }
     {
         const a: u8x16 = .{ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
         const b: u8x16 = .{ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
         const expected: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b }, null);
     }
     {
         const a: u8x16 = .{ 16, 15, 14, 13, 12, 11, 10, 9, 16, 15, 14, 13, 12, 11, 10, 9 };
         const b: u8x16 = .{ 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8 };
         const expected: u8x16 = .{ 15, 13, 11, 9, 7, 5, 3, 1, 15, 13, 11, 9, 7, 5, 3, 1 };
-        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b }, null);
     }
     {
         const a: u8x16 = .{ 0, 255, 128, 64, 32, 16, 8, 4, 0, 255, 128, 64, 32, 16, 8, 4 };
         const b: u8x16 = .{ 255, 0, 64, 128, 16, 32, 4, 8, 255, 0, 64, 128, 16, 32, 4, 8 };
         const expected: u8x16 = .{ 255, 255, 64, 64, 16, 16, 4, 4, 255, 255, 64, 64, 16, 16, 4, 4 };
-        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b }, null);
     }
     {
         const a: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         const b: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         const expected: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b });
+
+        try testIntrinsic("vabdq_u8", vabdq_u8, expected, .{ a, b }, null);
     }
 }
 
@@ -2122,7 +2199,7 @@ test vabdq_u16 {
 
     const expected: u16x8 = .{ 15, 13, 11, 9, 15, 13, 11, 9 };
 
-    try testIntrinsic("vabdq_u16", vabdq_u16, expected, .{ a, b });
+    try testIntrinsic("vabdq_u16", vabdq_u16, expected, .{ a, b }, null);
 }
 
 /// signed absolute difference and accumulate (128-bit)
@@ -2158,7 +2235,7 @@ test vabdq_u32 {
 
     const expected: u32x4 = .{ 15, 13, 15, 13 };
 
-    try testIntrinsic("vabdq_u32", vabdq_u32, expected, .{ a, b });
+    try testIntrinsic("vabdq_u32", vabdq_u32, expected, .{ a, b }, null);
 }
 
 /// signed absolute difference and accumulate (128-bit)
@@ -2283,7 +2360,7 @@ test vqdmull_s16 {
         49380, // -12345 * -2 * 2
     };
 
-    try testIntrinsic("vqdmull_s16", vqdmull_s16, expected, .{ a, b });
+    try testIntrinsic("vqdmull_s16", vqdmull_s16, expected, .{ a, b }, null);
 
     const a_sat: i16x4 = .{ std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.minInt(i16) };
     const b_sat: i16x4 = .{ std.math.maxInt(i16), std.math.minInt(i16), std.math.maxInt(i16), std.math.maxInt(i16) };
@@ -2349,7 +2426,7 @@ test vqdmull_s32 {
         -7822828720, // -782282872 * 5 * 2
     };
 
-    try testIntrinsic("vqdmull_s32", vqdmull_s32, expected, .{ a, b });
+    try testIntrinsic("vqdmull_s32", vqdmull_s32, expected, .{ a, b }, null);
 
     const a_sat: i32x2 = .{ std.math.maxInt(i32), std.math.maxInt(i32) };
     const b_sat: i32x2 = .{ std.math.maxInt(i32), std.math.minInt(i32) };
@@ -2359,7 +2436,7 @@ test vqdmull_s32 {
         -9223372032559808512,
     };
 
-    try testIntrinsic("vqdmull_s32", vqdmull_s32, expected_sat, .{ a_sat, b_sat });
+    try testIntrinsic("vqdmull_s32", vqdmull_s32, expected_sat, .{ a_sat, b_sat }, null);
 }
 
 /// Signed saturating doubling multiply long
@@ -2387,9 +2464,9 @@ pub inline fn vqdmullh_s16(a: i16, b: i16) i32 {
 test vqdmullh_s16 {
     const a: i16 = std.math.maxInt(i16);
     const b: i16 = 20;
-
     const expected: i32 = 1310680;
-    try testIntrinsic("vqdmullh_s16", vqdmullh_s16, expected, .{ a, b });
+
+    try testIntrinsic("vqdmullh_s16", vqdmullh_s16, expected, .{ a, b }, null);
 }
 
 /// Signed saturating doubling multiply long
@@ -2417,9 +2494,9 @@ pub inline fn vqdmulls_s32(a: i32, b: i32) i64 {
 test vqdmulls_s32 {
     const a: i32 = std.math.maxInt(i32);
     const b: i32 = 20;
-
     const expected: i64 = 85899345880;
-    try testIntrinsic("vqdmulls_s32", vqdmulls_s32, expected, .{ a, b });
+
+    try testIntrinsic("vqdmulls_s32", vqdmulls_s32, expected, .{ a, b }, null);
 }
 
 /// Saturating subtract
@@ -2530,6 +2607,7 @@ pub inline fn vaddlv_s8(a: i8x8) i16 {
 test vaddlv_s8 {
     const a: i8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i16 = 8;
+
     try expectEqual(expected, vaddlv_s8(a));
 }
 
@@ -2541,6 +2619,7 @@ pub inline fn vaddlv_s16(a: i16x4) i32 {
 test vaddlv_s16 {
     const a: i16x4 = .{ 1, 1, 1, 1 };
     const expected: i32 = 4;
+
     try expectEqual(expected, vaddlv_s16(a));
 }
 
@@ -2552,6 +2631,7 @@ pub inline fn vaddlv_s32(a: i32x2) i64 {
 test vaddlv_s32 {
     const a: i32x2 = .{ 1, 1 };
     const expected: i64 = 2;
+
     try expectEqual(expected, vaddlv_s32(a));
 }
 
@@ -2563,6 +2643,7 @@ pub inline fn vaddlv_u8(a: u8x8) u16 {
 test vaddlv_u8 {
     const a: u8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u16 = 8;
+
     try expectEqual(expected, vaddlv_u8(a));
 }
 
@@ -2574,6 +2655,7 @@ pub inline fn vaddlv_u16(a: u16x4) u32 {
 test vaddlv_u16 {
     const a: u16x4 = .{ 1, 1, 1, 1 };
     const expected: u32 = 4;
+
     try expectEqual(expected, vaddlv_u16(a));
 }
 
@@ -2585,6 +2667,7 @@ pub inline fn vaddlv_u32(a: u32x2) u64 {
 test vaddlv_u32 {
     const a: u32x2 = .{ 1, 1 };
     const expected: u64 = 2;
+
     try expectEqual(expected, vaddlv_u32(a));
 }
 
@@ -2596,6 +2679,7 @@ pub inline fn vaddlvq_s8(a: i8x16) i16 {
 test vaddlvq_s8 {
     const a: i8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i16 = 16;
+
     try expectEqual(expected, vaddlvq_s8(a));
 }
 
@@ -2607,6 +2691,7 @@ pub inline fn vaddlvq_s16(a: i16x8) i32 {
 test vaddlvq_s16 {
     const a: i16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i32 = 8;
+
     try expectEqual(expected, vaddlvq_s16(a));
 }
 
@@ -2618,6 +2703,7 @@ pub inline fn vaddlvq_s32(a: i32x4) i64 {
 test vaddlvq_s32 {
     const a: i32x4 = .{ 1, 1, 1, 1 };
     const expected: i64 = 4;
+
     try expectEqual(expected, vaddlvq_s32(a));
 }
 
@@ -2629,6 +2715,7 @@ pub inline fn vaddlvq_u8(a: u8x16) u16 {
 test vaddlvq_u8 {
     const a: u8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u16 = 16;
+
     try expectEqual(expected, vaddlvq_u8(a));
 }
 
@@ -2640,6 +2727,7 @@ pub inline fn vaddlvq_u16(a: u16x8) u32 {
 test vaddlvq_u16 {
     const a: u16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u32 = 8;
+
     try expectEqual(expected, vaddlvq_u16(a));
 }
 
@@ -2651,6 +2739,7 @@ pub inline fn vaddlvq_u32(a: u32x4) u64 {
 test vaddlvq_u32 {
     const a: u32x4 = .{ 1, 1, 1, 1 };
     const expected: u64 = 4;
+
     try expectEqual(expected, vaddlvq_u32(a));
 }
 
@@ -2662,6 +2751,7 @@ pub inline fn vaddv_s8(a: i8x8) i8 {
 test vaddv_s8 {
     const a: i8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i8 = 8;
+
     try expectEqual(expected, vaddv_s8(a));
 }
 
@@ -2673,6 +2763,7 @@ pub inline fn vaddv_s16(a: i16x4) i16 {
 test vaddv_s16 {
     const a: i16x4 = .{ 1, 1, 1, 1 };
     const expected: i16 = 4;
+
     try expectEqual(expected, vaddv_s16(a));
 }
 
@@ -2684,6 +2775,7 @@ pub inline fn vaddv_s32(a: i32x2) i32 {
 test vaddv_s32 {
     const a: i32x2 = .{ 1, 1 };
     const expected: i32 = 2;
+
     try expectEqual(expected, vaddv_s32(a));
 }
 
@@ -2695,6 +2787,7 @@ pub inline fn vaddv_u8(a: u8x8) u8 {
 test vaddv_u8 {
     const a: u8x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u8 = 8;
+
     try expectEqual(expected, vaddv_u8(a));
 }
 
@@ -2706,6 +2799,7 @@ pub inline fn vaddv_u16(a: u16x4) u16 {
 test vaddv_u16 {
     const a: u16x4 = .{ 1, 1, 1, 1 };
     const expected: u16 = 4;
+
     try expectEqual(expected, vaddv_u16(a));
 }
 
@@ -2717,6 +2811,7 @@ pub inline fn vaddv_u32(a: u32x2) u32 {
 test vaddv_u32 {
     const a: u32x2 = .{ 1, 1 };
     const expected: u32 = 2;
+
     try expectEqual(expected, vaddv_u32(a));
 }
 
@@ -2733,6 +2828,7 @@ pub inline fn vaddvq_s8(a: i8x16) i8 {
 test vaddvq_s8 {
     const a: i8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i8 = 16;
+
     try expectEqual(expected, vaddvq_s8(a));
 }
 
@@ -2744,6 +2840,7 @@ pub inline fn vaddvq_s16(a: i16x8) i16 {
 test vaddvq_s16 {
     const a: i16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i16 = 8;
+
     try expectEqual(expected, vaddvq_s16(a));
 }
 
@@ -2755,6 +2852,7 @@ pub inline fn vaddvq_s32(a: i32x4) i32 {
 test vaddvq_s32 {
     const a: i32x4 = .{ 1, 1, 1, 1 };
     const expected: i32 = 4;
+
     try expectEqual(expected, vaddvq_s32(a));
 }
 
@@ -2766,6 +2864,7 @@ pub inline fn vaddvq_s64(a: i64x2) i64 {
 test vaddvq_s64 {
     const a: i64x2 = .{ 1, 1 };
     const expected: i64 = 2;
+
     try expectEqual(expected, vaddvq_s64(a));
 }
 
@@ -2777,6 +2876,7 @@ pub inline fn vaddvq_u8(a: u8x16) u8 {
 test vaddvq_u8 {
     const a: u8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u8 = 16;
+
     try expectEqual(expected, vaddvq_u8(a));
 }
 
@@ -2788,6 +2888,7 @@ pub inline fn vaddvq_u16(a: u16x8) u16 {
 test vaddvq_u16 {
     const a: u16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: u16 = 8;
+
     try expectEqual(expected, vaddvq_u16(a));
 }
 
@@ -2799,6 +2900,7 @@ pub inline fn vaddvq_u32(a: u32x4) u32 {
 test vaddvq_u32 {
     const a: u32x4 = .{ 1, 1, 1, 1 };
     const expected: u32 = 4;
+
     try expectEqual(expected, vaddvq_u32(a));
 }
 
@@ -2810,6 +2912,7 @@ pub inline fn vaddvq_u64(a: u64x2) u64 {
 test vaddvq_u64 {
     const a: u64x2 = .{ 1, 1 };
     const expected: u64 = 2;
+
     try expectEqual(expected, vaddvq_u64(a));
 }
 
@@ -2831,6 +2934,7 @@ pub inline fn vmaxnmv_f32(a: f32x2) f32 {
 test vmaxnmv_f32 {
     const a: f32x2 = .{ 0.59, 0.5 };
     const expected: f32 = 0.59;
+
     try expectEqual(expected, vmaxnmv_f32(a));
 }
 
@@ -2842,6 +2946,7 @@ pub inline fn vmaxnmvq_f32(a: f32x4) f32 {
 test vmaxnmvq_f32 {
     const a: f32x4 = .{ 0.59, 0.5, 2.5, 50.2 };
     const expected: f32 = 50.2;
+
     try expectEqual(expected, vmaxnmvq_f32(a));
 }
 
@@ -2923,6 +3028,7 @@ pub inline fn vminnmv_f32(a: f32x2) f32 {
 test vminnmv_f32 {
     const a: f32x2 = .{ 0.59, 0.5 };
     const expected: f32 = 0.5;
+
     try expectEqual(expected, vminnmv_f32(a));
 }
 
@@ -2934,6 +3040,7 @@ pub inline fn vminnmvq_f32(a: f32x4) f32 {
 test vminnmvq_f32 {
     const a: f32x4 = .{ 0.59, 0.5, 2.5, 50.2 };
     const expected: f32 = 0.5;
+
     try expectEqual(expected, vminnmvq_f32(a));
 }
 
@@ -3222,30 +3329,35 @@ test vabdl_u8 {
         const a: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
         const b: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
         const expected: u16x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+
         try expectEqual(expected, vabdl_u8(a, b));
     }
     {
         const a: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
         const b: u8x8 = .{ 10, 10, 10, 10, 10, 10, 10, 10 };
         const expected: u16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try expectEqual(expected, vabdl_u8(a, b));
     }
     {
         const a: u8x8 = .{ 16, 15, 14, 13, 12, 11, 10, 9 };
         const b: u8x8 = .{ 1, 2, 3, 4, 5, 6, 7, 8 };
         const expected: u16x8 = .{ 15, 13, 11, 9, 7, 5, 3, 1 };
+
         try expectEqual(expected, vabd_u8(a, b));
     }
     {
         const a: u8x8 = .{ 0, 255, 128, 64, 32, 16, 8, 4 };
         const b: u8x8 = .{ 255, 0, 64, 128, 16, 32, 4, 8 };
         const expected: u16x8 = .{ 255, 255, 64, 64, 16, 16, 4, 4 };
+
         try expectEqual(expected, vabd_u8(a, b));
     }
     {
         const a: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const b: u8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const expected: u16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try expectEqual(expected, vabdl_u8(a, b));
     }
 }
@@ -3533,22 +3645,22 @@ test vaddhn_s16 {
     {
         const a: i16x8 = .{ 256, 512, 1024, 2048, 4096, 8192, 16384, 32767 };
         const b: i16x8 = .{ 128, 256, 512, 1024, 2048, 4096, 8192, 32767 };
-
         const expected: i8x8 = .{ 1, 3, 6, 12, 24, 48, 96, -1 }; // -1 due to wrapping
+
         try expectEqual(expected, vaddhn_s16(a, b));
     }
     {
         const a: i16x8 = .{ -256, -512, -1024, -2048, -4096, -8192, -16384, -32768 };
         const b: i16x8 = .{ -128, -256, -512, -1024, -2048, -4096, -8192, -32768 };
-
         const expected: i8x8 = .{ -2, -3, -6, -12, -24, -48, -96, 0 };
+
         try expectEqual(expected, vaddhn_s16(a, b));
     }
     {
         const a: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
         const b: i16x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
-
         const expected: i8x8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
         try expectEqual(expected, vaddhn_s16(a, b));
     }
 }
@@ -3824,7 +3936,7 @@ test vaesdq_u8 {
     const key: u8x16 = .{ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x97, 0x75, 0x46, 0x10, 0x3b, 0x2f };
     const expected: u8x16 = .{ 246, 29, 84, 53, 246, 192, 12, 119, 143, 181, 119, 63, 36, 162, 74, 236 };
 
-    try testIntrinsic("vaesdq_u8", vaesdq_u8, expected, .{ state, key });
+    try testIntrinsic("vaesdq_u8", vaesdq_u8, expected, .{ state, key }, null);
 }
 
 /// AES single round encryption
@@ -3874,9 +3986,9 @@ fn AESShiftRows(data: u8x16, comptime inverse: bool) u8x16 {
 test vaeseq_u8 {
     const state = u8x16{ 0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34 };
     const key = u8x16{ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0xcf, 0xfb, 0x73, 0x73, 0x73, 0x73 };
-
     const expected = u8x16{ 212, 191, 91, 160, 224, 180, 146, 174, 184, 27, 17, 241, 220, 39, 152, 203 };
-    try testIntrinsic("vaeseq_u8", vaeseq_u8, expected, .{ state, key });
+
+    try testIntrinsic("vaeseq_u8", vaeseq_u8, expected, .{ state, key }, null);
 }
 
 /// AES inverse mix columns
@@ -3899,7 +4011,7 @@ test vaesimcq_u8 {
     const input = u8x16{ 0xdb, 0x13, 0x53, 0x45, 0xf2, 0x0a, 0x22, 0x5c, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef };
     const expected = u8x16{ 50, 164, 29, 85, 174, 195, 105, 130, 78, 228, 10, 160, 198, 108, 130, 40 };
 
-    try testIntrinsic("vaesimcq_u8", vaesimcq_u8, expected, .{input});
+    try testIntrinsic("vaesimcq_u8", vaesimcq_u8, expected, .{input}, null);
 }
 
 /// AES mix columns
@@ -3959,7 +4071,7 @@ test vaesmcq_u8 {
     const input = u8x16{ 0xdb, 0x13, 0x53, 0x45, 0xf2, 0x0a, 0x22, 0x5c, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef };
     const expected = u8x16{ 142, 77, 161, 188, 159, 220, 88, 157, 69, 239, 1, 171, 205, 103, 137, 35 };
 
-    try testIntrinsic("vaesmcq_u8", vaesmcq_u8, expected, .{input});
+    try testIntrinsic("vaesmcq_u8", vaesmcq_u8, expected, .{input}, null);
 }
 
 //// Vector bitwise and
@@ -3986,7 +4098,7 @@ test vand_s8 {
     const b: i8x8 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: i8x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
 
-    try testIntrinsic("vand_s8", vand_s8, expected, .{ a, b });
+    try testIntrinsic("vand_s8", vand_s8, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
@@ -4013,7 +4125,7 @@ test vand_s16 {
     const b: i16x4 = .{ 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: i16x4 = .{ 0x00, 0x01, 0x02, 0x03 };
 
-    try testIntrinsic("vand_s16", vand_s16, expected, .{ a, b });
+    try testIntrinsic("vand_s16", vand_s16, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
@@ -4040,22 +4152,22 @@ test vand_s32 {
     const b: i32x2 = .{ 0x0F, 0x0F };
     const expected: i32x2 = .{ 0x00, 0x01 };
 
-    try testIntrinsic("vand_s32", vand_s32, expected, .{ a, b });
+    try testIntrinsic("vand_s32", vand_s32, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vand_s64(a: i64x1, b: i64x1) i64x1 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> i64x1),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> i64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> i64x1),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4063,26 +4175,26 @@ pub inline fn vand_s64(a: i64x1, b: i64x1) i64x1 {
 }
 
 test vand_s64 {
-    const a: i64x1 = .{0x00};
+    const a: i64x1 = .{0xFF};
     const b: i64x1 = .{0x0F};
-    const expected: i64x1 = .{0x00};
+    const expected: i64x1 = .{0x0F};
 
-    try testIntrinsic("vand_s64", vand_s64, expected, .{ a, b });
+    try testIntrinsic("vand_s64", vand_s64, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vand_u8(a: u8x8, b: u8x8) u8x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> u8x8),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> u8x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> u8x8),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u8x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4094,22 +4206,22 @@ test vand_u8 {
     const b: u8x8 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: u8x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
 
-    try testIntrinsic("vand_u8", vand_u8, expected, .{ a, b });
+    try testIntrinsic("vand_u8", vand_u8, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vand_u16(a: i16x4, b: i16x4) u16x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> u16x4),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> u16x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> u16x4),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u16x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4121,22 +4233,22 @@ test vand_u16 {
     const b: u16x4 = .{ 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: u16x4 = .{ 0x00, 0x01, 0x02, 0x03 };
 
-    try testIntrinsic("vand_u16", vand_u16, expected, .{ a, b });
+    try testIntrinsic("vand_u16", vand_u16, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vand_u32(a: u32x2, b: u32x2) u32x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> u32x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> u32x2),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4148,22 +4260,22 @@ test vand_u32 {
     const b: u32x2 = .{ 0x0F, 0x0F };
     const expected: u32x2 = .{ 0x00, 0x01 };
 
-    try testIntrinsic("vand_u32", vand_u32, expected, .{ a, b });
+    try testIntrinsic("vand_u32", vand_u32, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vand_u64(a: u64x1, b: u64x1) u64x1 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.8b, v1.8b, v2.8b"
-            : [ret] "={v0}" (-> u64x1),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].8b, %[a].8b, %[b].8b"
+            : [ret] "=w" (-> u64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand d0, d1, d2"
-            : [ret] "={d0}" (-> u64x1),
-            : [a] "{d1}" (a),
-              [b] "{d2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4175,22 +4287,22 @@ test vand_u64 {
     const b: u64x1 = .{0x0F};
     const expected: u64x1 = .{0x00};
 
-    try testIntrinsic("vand_u64", vand_u64, expected, .{ a, b });
+    try testIntrinsic("vand_u64", vand_u64, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vandq_s8(a: i8x16, b: i8x16) i8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> i8x16),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> i8x16),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4202,22 +4314,22 @@ test vandq_s8 {
     const b: i8x16 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: i8x16 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x00, 0x01, 0x02, 0x03 };
 
-    try testIntrinsic("vandq_s8", vandq_s8, expected, .{ a, b });
+    try testIntrinsic("vandq_s8", vandq_s8, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vandq_s16(a: i16x8, b: i16x8) i16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> i16x8),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> i16x8),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4229,22 +4341,22 @@ test vandq_s16 {
     const b: i16x8 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: i16x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03 };
 
-    try testIntrinsic("vandq_s16", vandq_s16, expected, .{ a, b });
+    try testIntrinsic("vandq_s16", vandq_s16, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vandq_s32(a: i32x4, b: i32x4) i32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> i32x4),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> i32x4),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4256,22 +4368,22 @@ test vandq_s32 {
     const b: i32x4 = .{ 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: i32x4 = .{ 0x00, 0x01, 0x00, 0x01 };
 
-    try testIntrinsic("vandq_s32", vandq_s32, expected, .{ a, b });
+    try testIntrinsic("vandq_s32", vandq_s32, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vandq_s64(a: i64x2, b: i64x2) i64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> i64x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> i64x2),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4283,22 +4395,22 @@ test vandq_s64 {
     const b: i64x2 = .{ 0x0F, 0x0F };
     const expected: i64x2 = .{ 0x00, 0x00 };
 
-    try testIntrinsic("vandq_s64", vandq_s64, expected, .{ a, b });
+    try testIntrinsic("vandq_s64", vandq_s64, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vandq_u8(a: u8x16, b: u8x16) u8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> u8x16),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> u8x16),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4310,22 +4422,22 @@ test vandq_u8 {
     const b: u8x16 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: u8x16 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x00, 0x01, 0x02, 0x03 };
 
-    try testIntrinsic("vandq_u8", vandq_u8, expected, .{ a, b });
+    try testIntrinsic("vandq_u8", vandq_u8, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vandq_u16(a: i16x8, b: i16x8) u16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> u16x8),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> u16x8),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4337,22 +4449,22 @@ test vandq_u16 {
     const b: u16x8 = .{ 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: u16x8 = .{ 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03 };
 
-    try testIntrinsic("vandq_u16", vandq_u16, expected, .{ a, b });
+    try testIntrinsic("vandq_u16", vandq_u16, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vandq_u32(a: u32x4, b: u32x4) u32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> u32x4),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> u32x4),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4364,22 +4476,22 @@ test vandq_u32 {
     const b: u32x4 = .{ 0x0F, 0x0F, 0x0F, 0x0F };
     const expected: u32x4 = .{ 0x00, 0x01, 0x00, 0x01 };
 
-    try testIntrinsic("vandq_u32", vandq_u32, expected, .{ a, b });
+    try testIntrinsic("vandq_u32", vandq_u32, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise and
 pub inline fn vandq_u64(a: u64x2, b: u64x2) u64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("and v0.16b, v1.16b, v2.16b"
-            : [ret] "={v0}" (-> u64x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("and %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vand q0, q1, q2"
-            : [ret] "={q0}" (-> u64x2),
-            : [a] "{q1}" (a),
-              [b] "{q2}" (b),
+        return asm ("vand %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else {
         return a & b;
@@ -4391,7 +4503,7 @@ test vandq_u64 {
     const b: u64x2 = .{ 0x0F, 0x0F };
     const expected: u64x2 = .{ 0x00, 0x00 };
 
-    try testIntrinsic("vandq_u64", vandq_u64, expected, .{ a, b });
+    try testIntrinsic("vandq_u64", vandq_u64, expected, .{ a, b }, null);
 }
 
 /// Vector bitwise bit clear
@@ -4495,7 +4607,7 @@ test vbsl_s8 {
     const c: i8x8 = .{ std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8) };
     const expected: i8x8 = .{ std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8), std.math.minInt(i8) };
 
-    try testIntrinsic("vbsl_s8", vbsl_s8, expected, .{ a, b, c });
+    try testIntrinsic("vbsl_s8", vbsl_s8, expected, .{ a, b, c }, null);
 }
 
 /// Bitwise Select
@@ -4534,7 +4646,7 @@ test vbsl_u8 {
     const c: u8x8 = .{ std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8), std.math.minInt(u8) };
     const expected: u8x8 = .{ std.math.maxInt(u8), 0, std.math.maxInt(u8), 2, std.math.maxInt(u8), std.math.minInt(u8), std.math.maxInt(u8), std.math.minInt(u8) };
 
-    try testIntrinsic("vbsl_u8", vbsl_u8, expected, .{ a, b, c });
+    try testIntrinsic("vbsl_u8", vbsl_u8, expected, .{ a, b, c }, null);
 }
 
 /// Bitwise Select
@@ -4562,12 +4674,64 @@ pub inline fn vbsl_u64(a: i64x1, b: i64x1, c: i64x1) i64x1 {
 }
 
 /// Bitwise Select
+/// TODO: Once zig implements bitwise operations on vector
+///       of floats, we can just do c ^ ((c ^ b) & a).
 pub inline fn vbsl_f32(a: f32x2, b: f32x2, c: f32x2) f32x2 {
-    return c ^ ((c ^ b) & a);
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result = a;
+        asm ("bsl %[ret].8b, %[b].8b, %[c].8b"
+            : [ret] "+w" (result),
+            : [b] "w" (b),
+              [c] "w" (c),
+        );
+        return result;
+    } else {
+        return @bitCast(@as(u32x2, @bitCast(c)) ^ ((@as(u32x2, @bitCast(c)) ^ @as(u32x2, @bitCast(b))) & @as(u32x2, @bitCast(a))));
+    }
+}
+
+test vbsl_f32 {
+    const a: f32x2 = .{ std.math.floatMax(f32), 0 };
+    const b: f32x2 = .{ 5, 5 };
+    const c: f32x2 = .{ std.math.floatMin(f32), std.math.floatMin(f32) };
+    const expected: f32x2 = .{ 5, std.math.floatMin(f32) };
+
+    try testIntrinsic("vbsl_f32", vbsl_f32, expected, .{ a, b, c }, null);
+}
+
+/// Bitwise Select
+/// TODO: Once zig implements bitwise operations on vector
+///       of floats, we can just do c ^ ((c ^ b) & a).
+pub inline fn vbsl_f64(a: f64x1, b: f64x1, c: f64x1) f64x1 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result = a;
+        asm ("bsl %[ret].8b, %[b].8b, %[c].8b"
+            : [ret] "+w" (result),
+            : [b] "w" (b),
+              [c] "w" (c),
+        );
+        return result;
+    } else {
+        return @bitCast(@as(u64x1, @bitCast(c)) ^ ((@as(u64x1, @bitCast(c)) ^ @as(u64x1, @bitCast(b))) & @as(u64x1, @bitCast(a))));
+    }
+}
+
+test vbsl_f64 {
+    const a: f64x1 = .{std.math.floatMax(f64)};
+    const b: f64x1 = .{5};
+    const c: f64x1 = .{std.math.floatMin(f64)};
+    const expected: f64x1 = .{5};
+
+    try expectEqual(expected, vbsl_f64(a, b, c));
 }
 
 /// Bitwise Select
 pub inline fn vbsl_p8(a: p8x8, b: p8x8, c: p8x8) p8x8 {
+    return c ^ ((c ^ b) & a);
+}
+
+/// Bitwise Select
+pub inline fn vbsl_p64(a: p64x1, b: p64x1, c: p64x1) p64x1 {
     return c ^ ((c ^ b) & a);
 }
 
@@ -4636,6 +4800,11 @@ pub inline fn vbslq_p16(a: p16x8, b: p16x8, c: p16x8) p16x8 {
     return c ^ ((c ^ b) & a);
 }
 
+/// Bitwise Select
+pub inline fn vbslq_p64(a: p64x2, b: p64x2, c: p64x2) p64x2 {
+    return c ^ ((c ^ b) & a);
+}
+
 /// Bit clear and exclusive OR
 pub inline fn vbcaxq_s8(a: i8x16, b: i8x16, c: i8x16) i8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{ .neon, .sha3 })) {
@@ -4660,7 +4829,7 @@ test vbcaxq_s8 {
     const c: i8x16 = .{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i8x16 = .{ 1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12, 15, 14 };
 
-    try testIntrinsic("vbcaxq_s8", vbcaxq_s8, expected, .{ a, b, c });
+    try testIntrinsic("vbcaxq_s8", vbcaxq_s8, expected, .{ a, b, c }, null);
 }
 
 /// Bit clear and exclusive OR
@@ -4687,7 +4856,7 @@ test vbcaxq_s16 {
     const c: i16x8 = .{ 1, 1, 1, 1, 1, 1, 1, 1 };
     const expected: i16x8 = .{ 1, 0, 3, 2, 5, 4, 7, 6 };
 
-    try testIntrinsic("vbcaxq_s16", vbcaxq_s16, expected, .{ a, b, c });
+    try testIntrinsic("vbcaxq_s16", vbcaxq_s16, expected, .{ a, b, c }, null);
 }
 
 /// Bit clear and exclusive OR
@@ -4714,7 +4883,7 @@ test vbcaxq_s32 {
     const c: i32x4 = .{ 1, 1, 1, 1 };
     const expected: i32x4 = .{ 1, 0, 3, 2 };
 
-    try testIntrinsic("vbcaxq_s32", vbcaxq_s32, expected, .{ a, b, c });
+    try testIntrinsic("vbcaxq_s32", vbcaxq_s32, expected, .{ a, b, c }, null);
 }
 
 /// Bit clear and exclusive OR
@@ -4741,22 +4910,22 @@ test vbcaxq_s64 {
     const c: i64x2 = .{ 1, 1 };
     const expected: i64x2 = .{ 1, 0 };
 
-    try testIntrinsic("vbcaxq_s64", vbcaxq_s64, expected, .{ a, b, c });
+    try testIntrinsic("vbcaxq_s64", vbcaxq_s64, expected, .{ a, b, c }, null);
 }
 
 /// Floating-point absolute compare greater than or equal
 pub inline fn vcage_f32(a: f32x2, b: f32x2) u32x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("facge v0.2s, v1.2s, v2.2s"
-            : [ret] "={v0}" (-> u32x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("facge %[ret].2s, %[a].2s, %[b].2s"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vacge.f32 d0, d0, d1"
-            : [ret] "={d0}" (-> u32x2),
-            : [a] "{d0}" (a),
-              [b] "{d1}" (b),
+        return asm ("vacge.f32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
         return struct {
@@ -4779,26 +4948,24 @@ pub inline fn vcage_f32(a: f32x2, b: f32x2) u32x2 {
 test vcage_f32 {
     const a = f32x2{ 1.0, -2.0 };
     const b = f32x2{ 1.5, 2.0 };
-
-    // Expected: absolute(1.0) >= absolute(1.5) -> false -> 0x00000000
-    //           absolute(-2.0) >= absolute(2.0) -> true -> 0xffffffff
     const expected = u32x2{ 0x00000000, 0xffffffff };
-    try testIntrinsic("vcage_f32", vcage_f32, expected, .{ a, b });
+
+    try testIntrinsic("vcage_f32", vcage_f32, expected, .{ a, b }, null);
 }
 
 /// Floating-point absolute compare greater than or equal
 pub inline fn vcageq_f32(a: f32x4, b: f32x4) u32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("facge v0.4s, v1.4s, v2.4s"
-            : [ret] "={v0}" (-> u32x4),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("facge %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vacge.f32 q0, q0, q1"
-            : [ret] "={q0}" (-> u32x4),
-            : [a] "{q0}" (a),
-              [b] "{q1}" (b),
+        return asm ("vacge.f32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
         return struct {
@@ -4821,22 +4988,18 @@ pub inline fn vcageq_f32(a: f32x4, b: f32x4) u32x4 {
 test vcageq_f32 {
     const a = f32x4{ 1.0, -2.0, 3.0, -4.0 };
     const b = f32x4{ 1.5, 2.0, -2.5, 4.0 };
-
-    // Expected: absolute(1.0) >= absolute(1.5) -> false -> 0x00000000
-    //           absolute(-2.0) >= absolute(2.0) -> true -> 0xffffffff
-    //           absolute(3.0) >= absolute(-2.5) -> true -> 0xffffffff
-    //           absolute(-4.0) >= absolute(4.0) -> true -> 0xffffffff
     const expected = u32x4{ 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff };
-    try testIntrinsic("vcageq_f32", vcageq_f32, expected, .{ a, b });
+
+    try testIntrinsic("vcageq_f32", vcageq_f32, expected, .{ a, b }, null);
 }
 
 /// Floating-point absolute compare greater than or equal
 pub inline fn vcageq_f64(a: f64x2, b: f64x2) u64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("facge v0.2d, v1.2d, v2.2d"
-            : [ret] "={v0}" (-> u64x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("facge %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
         return struct {
@@ -4857,26 +5020,24 @@ pub inline fn vcageq_f64(a: f64x2, b: f64x2) u64x2 {
 test vcageq_f64 {
     const a = f64x2{ 1.0, -4.0 };
     const b = f64x2{ 1.5, 3.0 };
-
-    // Expected: absolute(1.0) >= absolute(1.5) -> false -> 0x0000000000000000
-    //           absolute(-4.0) >= absolute(3.0) -> true -> 0xffffffffffffffff
     const expected = u64x2{ 0x0000000000000000, 0xffffffffffffffff };
-    try testIntrinsic("vcageq_f64", vcageq_f64, expected, .{ a, b });
+
+    try testIntrinsic("vcageq_f64", vcageq_f64, expected, .{ a, b }, null);
 }
 
 /// Floating-point absolute compare greater than
 pub inline fn vcagt_f32(a: f32x2, b: f32x2) u32x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("facgt v0.2s, v1.2s, v2.2s"
-            : [ret] "={v0}" (-> u32x2),
-            : [a] "{v1}" (a),
-              [b] "{v2}" (b),
+        return asm ("facgt %[ret].2s, %[a].2s, %[b].2s"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm ("vacgt.f32 d0, d0, d1"
-            : [ret] "={d0}" (-> u32x2),
-            : [a] "{d0}" (a),
-              [b] "{d1}" (b),
+        return asm ("vacgt.f32 %[ret], %[a], %[b]"
+            : [ret] "=w" (-> u32x2),
+            : [a] "w" (a),
+              [b] "w" (b),
         );
     } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
         return struct {
@@ -4899,9 +5060,9 @@ pub inline fn vcagt_f32(a: f32x2, b: f32x2) u32x2 {
 test vcagt_f32 {
     const a = f32x2{ -1.2, 0.0 };
     const b = f32x2{ -1.1, 0.0 };
-
     const expected = u32x2{ 0xffffffff, 0x00000000 };
-    try testIntrinsic("vcagt_f32", vcagt_f32, expected, .{ a, b });
+
+    try testIntrinsic("vcagt_f32", vcagt_f32, expected, .{ a, b }, null);
 }
 
 /// Shift right
@@ -4950,8 +5111,8 @@ pub inline fn vget_lane_p8(vec: p8x8, comptime lane: usize) p8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].b[%[lane]]"
-                    : [ret] "={w0}" (-> u8),
+                return asm ("umov %[ret:w], %[vec].b[%[lane]]"
+                    : [ret] "=r" (-> u8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -4959,8 +5120,8 @@ pub inline fn vget_lane_p8(vec: p8x8, comptime lane: usize) p8 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].8b, %[vec].8b
-                    \\ umov  w0, %[vec].b[%[lane]]
-                    : [ret] "={w0}" (-> p8),
+                    \\ umov  %[ret:w], %[vec].b[%[lane]]
+                    : [ret] "=r" (-> p8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -4981,7 +5142,7 @@ test vget_lane_p8 {
     const lane: usize = 6;
     const expected: p8 = 6;
 
-    try testIntrinsic("vget_lane_p8", vget_lane_p8, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_p8", vget_lane_p8, expected, .{ v, lane }, null);
 }
 
 /// Unsigned Move vector element to general-purpose register
@@ -4990,8 +5151,8 @@ pub inline fn vget_lane_p16(vec: p16x4, comptime lane: usize) p16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].h[%[lane]]"
-                    : [ret] "={w0}" (-> p16),
+                return asm ("umov %[ret:w], %[vec].h[%[lane]]"
+                    : [ret] "=r" (-> p16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -4999,8 +5160,8 @@ pub inline fn vget_lane_p16(vec: p16x4, comptime lane: usize) p16 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].4h, %[vec].4h
-                    \\ umov  w0, %[vec].h[%[lane]]
-                    : [ret] "={w0}" (-> p16),
+                    \\ umov  %[ret:w], %[vec].h[%[lane]]
+                    : [ret] "=r" (-> p16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5021,7 +5182,7 @@ test vget_lane_p16 {
     const lane: usize = 2;
     const expected: p16 = 2;
 
-    try testIntrinsic("vget_lane_p16", vget_lane_p16, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_p16", vget_lane_p16, expected, .{ v, lane }, null);
 }
 
 /// Unsigned Move vector element to general-purpose register
@@ -5051,7 +5212,7 @@ test vget_lane_p64 {
     const lane: usize = 0;
     const expected: p64 = std.math.maxInt(p64);
 
-    try testIntrinsic("vget_lane_p64", vget_lane_p64, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_p64", vget_lane_p64, expected, .{ v, lane }, null);
 }
 
 /// Signed Move vector element to general-purpose register
@@ -5060,8 +5221,8 @@ pub inline fn vget_lane_s8(vec: i8x8, comptime lane: usize) i8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("smov w0, %[vec].b[%[lane]]"
-                    : [ret] "={w0}" (-> i8),
+                return asm ("smov %[ret:w], %[vec].b[%[lane]]"
+                    : [ret] "=r" (-> i8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5069,8 +5230,8 @@ pub inline fn vget_lane_s8(vec: i8x8, comptime lane: usize) i8 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].8b, %[vec].8b
-                    \\ umov w0, %[vec].b[%[lane]]
-                    : [ret] "={w0}" (-> i8),
+                    \\ umov %[ret:w], %[vec].b[%[lane]]
+                    : [ret] "=r" (-> i8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5091,7 +5252,7 @@ test vget_lane_s8 {
     const lane: usize = 5;
     const expected: i8 = 5;
 
-    try testIntrinsic("vget_lane_s8", vget_lane_s8, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_s8", vget_lane_s8, expected, .{ v, lane }, null);
 }
 
 /// Signed Move vector element to general-purpose register
@@ -5100,8 +5261,8 @@ pub inline fn vget_lane_s16(vec: i16x4, comptime lane: usize) i16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("smov w0, %[vec].h[%[lane]]"
-                    : [ret] "={w0}" (-> i16),
+                return asm ("smov %[ret:w], %[vec].h[%[lane]]"
+                    : [ret] "=r" (-> i16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5109,8 +5270,8 @@ pub inline fn vget_lane_s16(vec: i16x4, comptime lane: usize) i16 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].4h, %[vec].4h
-                    \\ umov w0, %[vec].h[%[lane]]
-                    : [ret] "={w0}" (-> i16),
+                    \\ umov %[ret:w], %[vec].h[%[lane]]
+                    : [ret] "=r" (-> i16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5131,7 +5292,7 @@ test vget_lane_s16 {
     const lane: usize = 2;
     const expected: i16 = 2;
 
-    try testIntrinsic("vget_lane_s16", vget_lane_s16, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_s16", vget_lane_s16, expected, .{ v, lane }, null);
 }
 
 /// Signed Move vector element to general-purpose register
@@ -5140,8 +5301,8 @@ pub inline fn vget_lane_s32(vec: i32x2, comptime lane: usize) i32 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("mov w0, %[vec].s[%[lane]]"
-                    : [ret] "={w0}" (-> i32),
+                return asm ("mov %[ret:w], %[vec].s[%[lane]]"
+                    : [ret] "=r" (-> i32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5149,8 +5310,8 @@ pub inline fn vget_lane_s32(vec: i32x2, comptime lane: usize) i32 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].2s, %[vec].2s
-                    \\ mov w0, %[vec].s[%[lane]]
-                    : [ret] "={w0}" (-> i32),
+                    \\ mov %[ret:w], %[vec].s[%[lane]]
+                    : [ret] "=r" (-> i32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5171,16 +5332,16 @@ test vget_lane_s32 {
     const lane: usize = 0;
     const expected: i32 = 0;
 
-    try testIntrinsic("vget_lane_s32", vget_lane_s32, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_s32", vget_lane_s32, expected, .{ v, lane }, null);
 }
 
 /// Signed Move vector element to general-purpose register
 pub inline fn vget_lane_s64(vec: i64x1, comptime lane: usize) i64 {
     comptime assert(lane < 1);
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("fmov %[ret], d0"
+        return asm ("fmov %[ret], %[vec:d]"
             : [ret] "=r" (-> i64),
-            : [vec] "{d0}" (vec),
+            : [vec] "w" (vec),
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
         return asm (
@@ -5200,7 +5361,7 @@ test vget_lane_s64 {
     const lane: usize = 0;
     const expected: i64 = std.math.maxInt(i64);
 
-    try testIntrinsic("vget_lane_s64", vget_lane_s64, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_s64", vget_lane_s64, expected, .{ v, lane }, null);
 }
 
 /// Unigned Move vector element to general-purpose register
@@ -5209,8 +5370,8 @@ pub inline fn vget_lane_u8(vec: u8x8, comptime lane: usize) u8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].b[%[lane]]"
-                    : [ret] "={w0}" (-> u8),
+                return asm ("umov %[ret:w], %[vec].b[%[lane]]"
+                    : [ret] "=r" (-> u8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5218,8 +5379,8 @@ pub inline fn vget_lane_u8(vec: u8x8, comptime lane: usize) u8 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].8b, %[vec].8b
-                    \\ umov w0, %[vec].b[%[lane]]
-                    : [ret] "={w0}" (-> u8),
+                    \\ umov %[ret:w], %[vec].b[%[lane]]
+                    : [ret] "=r" (-> u8),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5240,7 +5401,7 @@ test vget_lane_u8 {
     const lane: usize = 5;
     const expected: u8 = 5;
 
-    try testIntrinsic("vget_lane_u8", vget_lane_u8, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_u8", vget_lane_u8, expected, .{ v, lane }, null);
 }
 
 /// Unigned Move vector element to general-purpose register
@@ -5249,8 +5410,8 @@ pub inline fn vget_lane_u16(vec: u16x4, comptime lane: usize) u16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].h[%[lane]]"
-                    : [ret] "={w0}" (-> u16),
+                return asm ("umov %[ret:w], %[vec].h[%[lane]]"
+                    : [ret] "=r" (-> u16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5258,8 +5419,8 @@ pub inline fn vget_lane_u16(vec: u16x4, comptime lane: usize) u16 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].4h, %[vec].4h
-                    \\ umov w0, %[vec].h[%[lane]]
-                    : [ret] "={w0}" (-> u16),
+                    \\ umov %[ret:w], %[vec].h[%[lane]]
+                    : [ret] "=r" (-> u16),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5280,7 +5441,7 @@ test vget_lane_u16 {
     const lane: usize = 2;
     const expected: u16 = 2;
 
-    try testIntrinsic("vget_lane_u16", vget_lane_u16, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_u16", vget_lane_u16, expected, .{ v, lane }, null);
 }
 
 /// Unigned Move vector element to general-purpose register
@@ -5289,8 +5450,8 @@ pub inline fn vget_lane_u32(vec: u32x2, comptime lane: usize) u32 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                return asm ("umov w0, %[vec].s[%[lane]]"
-                    : [ret] "={w0}" (-> u32),
+                return asm ("umov %[ret:w], %[vec].s[%[lane]]"
+                    : [ret] "=r" (-> u32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5298,8 +5459,8 @@ pub inline fn vget_lane_u32(vec: u32x2, comptime lane: usize) u32 {
             inline .big => {
                 return asm (
                     \\ rev64 %[vec].2s, %[vec].2s
-                    \\ umov w0, %[vec].s[%[lane]]
-                    : [ret] "={w0}" (-> u32),
+                    \\ umov %[ret:w], %[vec].s[%[lane]]
+                    : [ret] "=r" (-> u32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
@@ -5320,7 +5481,7 @@ test vget_lane_u32 {
     const lane: usize = 0;
     const expected: u32 = 0;
 
-    try testIntrinsic("vget_lane_u32", vget_lane_u32, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_u32", vget_lane_u32, expected, .{ v, lane }, null);
 }
 
 /// Unigned Move vector element to general-purpose register
@@ -5350,7 +5511,7 @@ test vget_lane_u64 {
     const lane: usize = 0;
     const expected: u64 = std.math.maxInt(u64);
 
-    try testIntrinsic("vget_lane_u64", vget_lane_u64, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_u64", vget_lane_u64, expected, .{ v, lane }, null);
 }
 
 /// Duplicate vector element to vector or scalar (for floating-point)
@@ -5358,33 +5519,24 @@ pub inline fn vget_lane_f32(vec: f32x2, comptime lane: usize) f32 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
-                // switch (lane) {
-                //     0 => return asm (""
-                //         : [ret] "={s0}" (-> f32),
-                //         : [vec] "w" (vec),
-                //           [lane] "i" (0),
-                //     ),
-                //     else =>
-                return asm ("mov s0, %[vec].s[%[lane]]"
-                    : [ret] "={s0}" (-> f32),
+                return asm ("mov %[ret:s], %[vec].s[%[lane]]"
+                    : [ret] "=w" (-> f32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
-                //     ),
-                // }
             },
             inline .big => {
                 return asm (
-                    \\ rev64   %[vec].2s, %[vec].2s
-                    \\ mov s0, %[vec].s[%[lane]]
-                    : [ret] "={s0}" (-> f32),
+                    \\ rev64 %[vec].2s, %[vec].2s
+                    \\ mov   %[ret:s], %[vec].s[%[lane]]
+                    : [ret] "=w" (-> f32),
                     : [vec] "w" (vec),
                       [lane] "i" (lane),
                 );
             },
         }
     } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
-        return asm volatile ("vmov.f32 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
+        return asm ("vmov.f32 %[ret], %[vec][ " ++ numToString(lane) ++ "]"
             : [ret] "=r" (-> f32),
             : [vec] "w" (vec),
         );
@@ -5399,15 +5551,15 @@ test vget_lane_f32 {
     const lane: usize = 0;
     const expected: f32 = 5;
 
-    try testIntrinsic("vget_lane_f32", vget_lane_f32, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_f32", vget_lane_f32, expected, .{ v, lane }, null);
 }
 
 /// Floating-point Move vector element to general-purpose register
 pub inline fn vget_lane_f64(vec: f64x1, comptime lane: usize) f64 {
     comptime assert(lane < 1);
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
-        return asm ("mov d0, %[vec].d[0]"
-            : [ret] "={d0}" (-> f64),
+        return asm ("mov %[ret:d], %[vec].d[0]"
+            : [ret] "=w" (-> f64),
             : [vec] "w" (vec),
         );
     } else {
@@ -5420,7 +5572,7 @@ test vget_lane_f64 {
     const lane: usize = 0;
     const expected: f64 = std.math.floatMax(f64);
 
-    try testIntrinsic("vget_lane_f64", vget_lane_f64, expected, .{ v, lane });
+    try testIntrinsic("vget_lane_f64", vget_lane_f64, expected, .{ v, lane }, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
@@ -5429,11 +5581,13 @@ pub inline fn vld1q_u8(mem_addr: [*]const u8) u8x16 {
         return asm ("ld1 {%[ret].16b}, [%[addr]]"
             : [ret] "=w" (-> u8x16),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return asm ("vld1.8 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> u8x16),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5448,7 +5602,7 @@ test vld1q_u8 {
     const addr = ([16]u8{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(u8) })[0..].ptr;
     const expected: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(u8) };
 
-    try testIntrinsic("vld1q_u8", vld1q_u8, expected, .{addr});
+    try testIntrinsic("vld1q_u8", vld1q_u8, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
@@ -5459,6 +5613,7 @@ pub inline fn vld1q_u16(mem_addr: [*]const u16) u16x8 {
                 return asm ("ld1 {%[ret].8h}, [%[addr]]"
                     : [ret] "=w" (-> u16x8),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
             inline .big => {
@@ -5467,6 +5622,7 @@ pub inline fn vld1q_u16(mem_addr: [*]const u16) u16x8 {
                     \\ rev16 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> u16x8),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
         }
@@ -5474,6 +5630,7 @@ pub inline fn vld1q_u16(mem_addr: [*]const u16) u16x8 {
         return asm ("vld1.16 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> u16x8),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5488,7 +5645,7 @@ test vld1q_u16 {
     const addr = ([8]u16{ 0, 1, 2, 3, 4, 5, 6, std.math.maxInt(u16) })[0..].ptr;
     const expected: u16x8 = .{ 0, 1, 2, 3, 4, 5, 6, std.math.maxInt(u16) };
 
-    try testIntrinsic("vld1q_u16", vld1q_u16, expected, .{addr});
+    try testIntrinsic("vld1q_u16", vld1q_u16, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
@@ -5499,6 +5656,7 @@ pub inline fn vld1q_u32(mem_addr: [*]const u32) u32x4 {
                 return asm ("ld1 {%[ret].4s}, [%[addr]]"
                     : [ret] "=w" (-> u32x4),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
             inline .big => {
@@ -5507,6 +5665,7 @@ pub inline fn vld1q_u32(mem_addr: [*]const u32) u32x4 {
                     \\ rev32 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> u32x4),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
         }
@@ -5514,6 +5673,7 @@ pub inline fn vld1q_u32(mem_addr: [*]const u32) u32x4 {
         return asm ("vld1.32 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> u32x4),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5528,7 +5688,7 @@ test vld1q_u32 {
     const addr = ([4]u32{ 0, 1, 2, std.math.maxInt(u32) })[0..].ptr;
     const expected: u32x4 = .{ 0, 1, 2, std.math.maxInt(u32) };
 
-    try testIntrinsic("vld1q_u32", vld1q_u32, expected, .{addr});
+    try testIntrinsic("vld1q_u32", vld1q_u32, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
@@ -5539,6 +5699,7 @@ pub inline fn vld1q_u64(mem_addr: [*]const u64) u64x2 {
                 return asm ("ld1 {%[ret].2d}, [%[addr]]"
                     : [ret] "=w" (-> u64x2),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
             inline .big => {
@@ -5547,6 +5708,7 @@ pub inline fn vld1q_u64(mem_addr: [*]const u64) u64x2 {
                     \\ rev64 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> u64x2),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
         }
@@ -5554,6 +5716,7 @@ pub inline fn vld1q_u64(mem_addr: [*]const u64) u64x2 {
         return asm ("vld1.64 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> u64x2),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5568,20 +5731,22 @@ test vld1q_u64 {
     const addr = ([2]u64{ 0, std.math.maxInt(u64) })[0..].ptr;
     const expected: u64x2 = .{ 0, std.math.maxInt(u64) };
 
-    try testIntrinsic("vld1q_u64", vld1q_u64, expected, .{addr});
+    try testIntrinsic("vld1q_u64", vld1q_u64, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-pub inline fn vld1q_i8(mem_addr: [*]const i8) i8x16 {
+pub inline fn vld1q_s8(mem_addr: [*]const i8) i8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("ld1 {%[ret].16b}, [%[addr]]"
             : [ret] "=w" (-> i8x16),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return asm ("vld1.8 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> i8x16),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5592,21 +5757,22 @@ pub inline fn vld1q_i8(mem_addr: [*]const i8) i8x16 {
     }
 }
 
-test vld1q_i8 {
+test vld1q_s8 {
     const addr = ([16]i8{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(i8) })[0..].ptr;
     const expected: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(i8) };
 
-    try testIntrinsic("vld1q_i8", vld1q_i8, expected, .{addr});
+    try testIntrinsic("vld1q_s8", vld1q_s8, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-pub inline fn vld1q_i16(mem_addr: [*]const i16) i16x8 {
+pub inline fn vld1q_s16(mem_addr: [*]const i16) i16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
                 return asm ("ld1 {%[ret].8h}, [%[addr]]"
                     : [ret] "=w" (-> i16x8),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
             inline .big => {
@@ -5615,6 +5781,7 @@ pub inline fn vld1q_i16(mem_addr: [*]const i16) i16x8 {
                     \\ rev16 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> i16x8),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
         }
@@ -5622,6 +5789,7 @@ pub inline fn vld1q_i16(mem_addr: [*]const i16) i16x8 {
         return asm ("vld1.16 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> i16x8),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5632,21 +5800,22 @@ pub inline fn vld1q_i16(mem_addr: [*]const i16) i16x8 {
     }
 }
 
-test vld1q_i16 {
+test vld1q_s16 {
     const addr = ([8]i16{ 0, 1, 2, 3, 4, 5, 6, std.math.maxInt(i16) })[0..].ptr;
     const expected: i16x8 = .{ 0, 1, 2, 3, 4, 5, 6, std.math.maxInt(i16) };
 
-    try testIntrinsic("vld1q_i16", vld1q_i16, expected, .{addr});
+    try testIntrinsic("vld1q_s16", vld1q_s16, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-pub inline fn vld1q_i32(mem_addr: [*]const i32) i32x4 {
+pub inline fn vld1q_s32(mem_addr: [*]const i32) i32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
                 return asm ("ld1 {%[ret].4s}, [%[addr]]"
                     : [ret] "=w" (-> i32x4),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
             inline .big => {
@@ -5655,6 +5824,7 @@ pub inline fn vld1q_i32(mem_addr: [*]const i32) i32x4 {
                     \\ rev32 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> i32x4),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
         }
@@ -5662,6 +5832,7 @@ pub inline fn vld1q_i32(mem_addr: [*]const i32) i32x4 {
         return asm ("vld1.32 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> i32x4),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5672,21 +5843,22 @@ pub inline fn vld1q_i32(mem_addr: [*]const i32) i32x4 {
     }
 }
 
-test vld1q_i32 {
+test vld1q_s32 {
     const addr = ([4]i32{ 0, 1, 2, std.math.maxInt(i32) })[0..].ptr;
     const expected: i32x4 = .{ 0, 1, 2, std.math.maxInt(i32) };
 
-    try testIntrinsic("vld1q_i32", vld1q_i32, expected, .{addr});
+    try testIntrinsic("vld1q_s32", vld1q_s32, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-pub inline fn vld1q_i64(mem_addr: [*]const i64) i64x2 {
+pub inline fn vld1q_s64(mem_addr: [*]const i64) i64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
                 return asm ("ld1 {%[ret].2d}, [%[addr]]"
                     : [ret] "=w" (-> i64x2),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
             inline .big => {
@@ -5695,6 +5867,7 @@ pub inline fn vld1q_i64(mem_addr: [*]const i64) i64x2 {
                     \\ rev64 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> i64x2),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
         }
@@ -5702,6 +5875,7 @@ pub inline fn vld1q_i64(mem_addr: [*]const i64) i64x2 {
         return asm ("vld1.64 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> i64x2),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5712,11 +5886,11 @@ pub inline fn vld1q_i64(mem_addr: [*]const i64) i64x2 {
     }
 }
 
-test vld1q_i64 {
+test vld1q_s64 {
     const addr = ([2]i64{ 0, std.math.maxInt(i64) })[0..].ptr;
     const expected: i64x2 = .{ 0, std.math.maxInt(i64) };
 
-    try testIntrinsic("vld1q_i64", vld1q_i64, expected, .{addr});
+    try testIntrinsic("vld1q_s64", vld1q_s64, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
@@ -5727,6 +5901,7 @@ pub inline fn vld1q_f32(mem_addr: [*]const f32) f32x4 {
                 return asm ("ld1 {%[ret].4s}, [%[addr]]"
                     : [ret] "=w" (-> f32x4),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
             inline .big => {
@@ -5735,6 +5910,7 @@ pub inline fn vld1q_f32(mem_addr: [*]const f32) f32x4 {
                     \\ rev32 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> f32x4),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
         }
@@ -5742,6 +5918,7 @@ pub inline fn vld1q_f32(mem_addr: [*]const f32) f32x4 {
         return asm ("vld1.32 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> f32x4),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5756,7 +5933,7 @@ test vld1q_f32 {
     const addr = ([4]f32{ 0, 1, 2, std.math.floatMax(f32) })[0..].ptr;
     const expected: f32x4 = .{ 0, 1, 2, std.math.floatMax(f32) };
 
-    try testIntrinsic("vld1q_f32", vld1q_f32, expected, .{addr});
+    try testIntrinsic("vld1q_f32", vld1q_f32, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
@@ -5767,6 +5944,7 @@ pub inline fn vld1q_f64(mem_addr: [*]const f64) f64x2 {
                 return asm ("ld1 {%[ret].2d}, [%[addr]]"
                     : [ret] "=w" (-> f64x2),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
             inline .big => {
@@ -5775,6 +5953,7 @@ pub inline fn vld1q_f64(mem_addr: [*]const f64) f64x2 {
                     \\ rev64 %[ret].16b, %[ret].16b
                     : [ret] "=w" (-> f64x2),
                     : [addr] "r" (mem_addr),
+                    : "memory"
                 );
             },
         }
@@ -5782,6 +5961,7 @@ pub inline fn vld1q_f64(mem_addr: [*]const f64) f64x2 {
         return asm ("vld1.64 {%[ret]}, [%[addr]]"
             : [ret] "=w" (-> f64x2),
             : [addr] "r" (mem_addr),
+            : "memory"
         );
     } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
         return struct {
@@ -5796,7 +5976,7 @@ test vld1q_f64 {
     const addr = ([2]f64{ 0, std.math.floatMax(f64) })[0..].ptr;
     const expected: f64x2 = .{ 0, std.math.floatMax(f64) };
 
-    try testIntrinsic("vld1q_f64", vld1q_f64, expected, .{addr});
+    try testIntrinsic("vld1q_f64", vld1q_f64, expected, .{addr}, null);
 }
 
 /// Multiply-add to accumulator
@@ -5829,7 +6009,7 @@ test vmlaq_s8 {
         const c: i8x16 = .{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
         const expected: i8x16 = .{ 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
 
-        try testIntrinsic("vmlaq_s8", vmlaq_s8, expected, .{ a, b, c });
+        try testIntrinsic("vmlaq_s8", vmlaq_s8, expected, .{ a, b, c }, null);
     }
     {
         const a: i8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127 };
@@ -5837,7 +6017,7 @@ test vmlaq_s8 {
         const c: i8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2 };
         const expected: i8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -127 };
 
-        try testIntrinsic("vmlaq_s8", vmlaq_s8, expected, .{ a, b, c });
+        try testIntrinsic("vmlaq_s8", vmlaq_s8, expected, .{ a, b, c }, null);
     }
 }
 
@@ -5886,7 +6066,7 @@ test vmlaq_s16 {
     const c: i16x8 = .{ 3, 3, 3, 3, 3, 3, 3, 3 };
     const expected: i16x8 = .{ 6, 7, 8, 9, 10, 11, 12, 13 };
 
-    try testIntrinsic("vmlaq_s16", vmlaq_s16, expected, .{ a, b, c });
+    try testIntrinsic("vmlaq_s16", vmlaq_s16, expected, .{ a, b, c }, null);
 }
 
 /// Multiply-add to accumulator
@@ -5934,7 +6114,7 @@ test vmlaq_s32 {
     const c: i32x4 = .{ 3, 3, 3, 3 };
     const expected: i32x4 = .{ 6, 7, 8, 9 };
 
-    try testIntrinsic("vmlaq_s32", vmlaq_s32, expected, .{ a, b, c });
+    try testIntrinsic("vmlaq_s32", vmlaq_s32, expected, .{ a, b, c }, null);
 }
 
 /// Multiply-add to accumulator
@@ -5967,7 +6147,7 @@ test vmlaq_u8 {
         const c: u8x16 = .{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
         const expected: u8x16 = .{ 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
 
-        try testIntrinsic("vmlaq_u8", vmlaq_u8, expected, .{ a, b, c });
+        try testIntrinsic("vmlaq_u8", vmlaq_u8, expected, .{ a, b, c }, null);
     }
     {
         const a: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255 };
@@ -5975,7 +6155,7 @@ test vmlaq_u8 {
         const c: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2 };
         const expected: u8x16 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 
-        try testIntrinsic("vmlaq_u8", vmlaq_u8, expected, .{ a, b, c });
+        try testIntrinsic("vmlaq_u8", vmlaq_u8, expected, .{ a, b, c }, null);
     }
 }
 
@@ -6024,7 +6204,7 @@ test vmlaq_u16 {
     const c: u16x8 = .{ 3, 3, 3, 3, 3, 3, 3, 3 };
     const expected: u16x8 = .{ 6, 7, 8, 9, 10, 11, 12, 13 };
 
-    try testIntrinsic("vmlaq_u16", vmlaq_u16, expected, .{ a, b, c });
+    try testIntrinsic("vmlaq_u16", vmlaq_u16, expected, .{ a, b, c }, null);
 }
 
 /// Multiply-add to accumulator
@@ -6072,7 +6252,7 @@ test vmlaq_u32 {
     const c: u32x4 = .{ 3, 3, 3, 3 };
     const expected: u32x4 = .{ 6, 7, 8, 9 };
 
-    try testIntrinsic("vmlaq_u32", vmlaq_u32, expected, .{ a, b, c });
+    try testIntrinsic("vmlaq_u32", vmlaq_u32, expected, .{ a, b, c }, null);
 }
 
 /// Multiply-add to accumulator
@@ -6122,7 +6302,7 @@ test vmlaq_f32 {
     const c: f32x4 = .{ 3, 3, 3, 3 };
     const expected: f32x4 = .{ 6, 7, 8, 9 };
 
-    try testIntrinsic("vmlaq_f32", vmlaq_f32, expected, .{ a, b, c });
+    try testIntrinsic("vmlaq_f32", vmlaq_f32, expected, .{ a, b, c }, null);
 }
 
 /// Multiply-add to accumulator
@@ -6163,7 +6343,7 @@ test vmlaq_f64 {
     const c: f64x2 = .{ 3, 3 };
     const expected: f64x2 = .{ 6, 7 };
 
-    try testIntrinsic("vmlaq_f64", vmlaq_f64, expected, .{ a, b, c });
+    try testIntrinsic("vmlaq_f64", vmlaq_f64, expected, .{ a, b, c }, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6184,9 +6364,9 @@ pub inline fn vdupq_n_u8(scalar: u8) u8x16 {
 }
 
 test vdupq_n_u8 {
-    try testIntrinsic("vdupq_n_u8", vdupq_n_u8, u8x16{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_u8", vdupq_n_u8, u8x16{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_u8", vdupq_n_u8, u8x16{ std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8) }, .{std.math.maxInt(u8)});
+    try testIntrinsic("vdupq_n_u8", vdupq_n_u8, u8x16{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_u8", vdupq_n_u8, u8x16{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_u8", vdupq_n_u8, u8x16{ std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8), std.math.maxInt(u8) }, .{std.math.maxInt(u8)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6219,9 +6399,9 @@ pub inline fn vdupq_n_u16(scalar: u16) u16x8 {
 }
 
 test vdupq_n_u16 {
-    try testIntrinsic("vdupq_n_u16", vdupq_n_u16, u16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_u16", vdupq_n_u16, u16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_u16", vdupq_n_u16, u16x8{ std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16) }, .{std.math.maxInt(u16)});
+    try testIntrinsic("vdupq_n_u16", vdupq_n_u16, u16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_u16", vdupq_n_u16, u16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_u16", vdupq_n_u16, u16x8{ std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16), std.math.maxInt(u16) }, .{std.math.maxInt(u16)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6254,9 +6434,39 @@ pub inline fn vdupq_n_u32(scalar: u32) u32x4 {
 }
 
 test vdupq_n_u32 {
-    try testIntrinsic("vdupq_n_u32", vdupq_n_u32, u32x4{ 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_u32", vdupq_n_u32, u32x4{ 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_u32", vdupq_n_u32, u32x4{ std.math.maxInt(u32), std.math.maxInt(u32), std.math.maxInt(u32), std.math.maxInt(u32) }, .{std.math.maxInt(u32)});
+    try testIntrinsic("vdupq_n_u32", vdupq_n_u32, u32x4{ 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_u32", vdupq_n_u32, u32x4{ 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_u32", vdupq_n_u32, u32x4{ std.math.maxInt(u32), std.math.maxInt(u32), std.math.maxInt(u32), std.math.maxInt(u32) }, .{std.math.maxInt(u32)}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vdupq_n_u64(scalar: u64) u64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].2d, %[scalar]"
+                    : [ret] "=w" (-> u64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].2d, %[scalar]
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> u64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_u64 {
+    try testIntrinsic("vdupq_n_u64", vdupq_n_u64, u64x2{ 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_u64", vdupq_n_u64, u64x2{ 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_u64", vdupq_n_u64, u64x2{ std.math.maxInt(u64), std.math.maxInt(u64) }, .{std.math.maxInt(u64)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6277,9 +6487,9 @@ pub inline fn vdupq_n_s8(scalar: i8) i8x16 {
 }
 
 test vdupq_n_s8 {
-    try testIntrinsic("vdupq_n_s8", vdupq_n_s8, i8x16{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_s8", vdupq_n_s8, i8x16{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_s8", vdupq_n_s8, i8x16{ std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8) }, .{std.math.maxInt(i8)});
+    try testIntrinsic("vdupq_n_s8", vdupq_n_s8, i8x16{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_s8", vdupq_n_s8, i8x16{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_s8", vdupq_n_s8, i8x16{ std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8), std.math.maxInt(i8) }, .{std.math.maxInt(i8)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6312,9 +6522,9 @@ pub inline fn vdupq_n_s16(scalar: i16) i16x8 {
 }
 
 test vdupq_n_s16 {
-    try testIntrinsic("vdupq_n_s16", vdupq_n_s16, i16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_s16", vdupq_n_s16, i16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_s16", vdupq_n_s16, i16x8{ std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16) }, .{std.math.maxInt(i16)});
+    try testIntrinsic("vdupq_n_s16", vdupq_n_s16, i16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_s16", vdupq_n_s16, i16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_s16", vdupq_n_s16, i16x8{ std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16), std.math.maxInt(i16) }, .{std.math.maxInt(i16)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6347,9 +6557,52 @@ pub inline fn vdupq_n_s32(scalar: i32) i32x4 {
 }
 
 test vdupq_n_s32 {
-    try testIntrinsic("vdupq_n_s32", vdupq_n_s32, i32x4{ 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_s32", vdupq_n_s32, i32x4{ 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_s32", vdupq_n_s32, i32x4{ std.math.maxInt(i32), std.math.maxInt(i32), std.math.maxInt(i32), std.math.maxInt(i32) }, .{std.math.maxInt(i32)});
+    try testIntrinsic("vdupq_n_s32", vdupq_n_s32, i32x4{ 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_s32", vdupq_n_s32, i32x4{ 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_s32", vdupq_n_s32, i32x4{ std.math.maxInt(i32), std.math.maxInt(i32), std.math.maxInt(i32), std.math.maxInt(i32) }, .{std.math.maxInt(i32)}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vdupq_n_s64(scalar: i64) i64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].2d, %[scalar]"
+                    : [ret] "=w" (-> i64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].2d, %[scalar]
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> i64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    }
+    // TODO: Implement
+    // } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+    //     return asm (
+    //         \\ vmov.32 d0[0], r0
+    //         \\ vmov.32 d0[1], r1
+    //         \\ vorr    d1, d0, d0
+    //         : [ret] "=w" (-> i64x2),
+    //         : [low] "r" (scalar),
+    //           [high] "r" (scalar >> 32),
+    //         : "d0"
+    //     );
+    // }
+    else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_s64 {
+    try testIntrinsic("vdupq_n_s64", vdupq_n_s64, i64x2{ 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_s64", vdupq_n_s64, i64x2{ 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_s64", vdupq_n_s64, i64x2{ std.math.maxInt(i64), std.math.maxInt(i64) }, .{std.math.maxInt(i64)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6370,9 +6623,9 @@ pub inline fn vdupq_n_p8(scalar: p8) p8x16 {
 }
 
 test vdupq_n_p8 {
-    try testIntrinsic("vdupq_n_p8", vdupq_n_p8, p8x16{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_p8", vdupq_n_p8, p8x16{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_p8", vdupq_n_p8, p8x16{ std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8) }, .{std.math.maxInt(p8)});
+    try testIntrinsic("vdupq_n_p8", vdupq_n_p8, p8x16{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_p8", vdupq_n_p8, p8x16{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_p8", vdupq_n_p8, p8x16{ std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8), std.math.maxInt(p8) }, .{std.math.maxInt(p8)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6404,10 +6657,40 @@ pub inline fn vdupq_n_p16(scalar: p16) p16x8 {
     }
 }
 
+/// Duplicate vector element to vector or scalar
+pub inline fn vdupq_n_p64(scalar: p64) p64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].2d, %[scalar]"
+                    : [ret] "=w" (-> p64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].2d, %[scalar]
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> p64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_p64 {
+    try testIntrinsic("vdupq_n_p64", vdupq_n_p64, p64x2{ 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_p64", vdupq_n_p64, p64x2{ 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_p64", vdupq_n_p64, p64x2{ std.math.maxInt(u64), std.math.maxInt(u64) }, .{std.math.maxInt(u64)}, null);
+}
+
 test vdupq_n_p16 {
-    try testIntrinsic("vdupq_n_p16", vdupq_n_p16, p16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_p16", vdupq_n_p16, p16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_p16", vdupq_n_p16, p16x8{ std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16) }, .{std.math.maxInt(p16)});
+    try testIntrinsic("vdupq_n_p16", vdupq_n_p16, p16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_p16", vdupq_n_p16, p16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_p16", vdupq_n_p16, p16x8{ std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16), std.math.maxInt(p16) }, .{std.math.maxInt(p16)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6440,9 +6723,9 @@ pub inline fn vdupq_n_f16(scalar: f16) f16x8 {
 }
 
 test vdupq_n_f16 {
-    try testIntrinsic("vdupq_n_f16", vdupq_n_f16, f16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_f16", vdupq_n_f16, f16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_f16", vdupq_n_f16, f16x8{ std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16) }, .{std.math.floatMax(f16)});
+    try testIntrinsic("vdupq_n_f16", vdupq_n_f16, f16x8{ 5, 5, 5, 5, 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_f16", vdupq_n_f16, f16x8{ 0, 0, 0, 0, 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_f16", vdupq_n_f16, f16x8{ std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16), std.math.floatMax(f16) }, .{std.math.floatMax(f16)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6475,9 +6758,9 @@ pub inline fn vdupq_n_f32(scalar: f32) f32x4 {
 }
 
 test vdupq_n_f32 {
-    try testIntrinsic("vdupq_n_f32", vdupq_n_f32, f32x4{ 5, 5, 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_f32", vdupq_n_f32, f32x4{ 0, 0, 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_f32", vdupq_n_f32, f32x4{ std.math.floatMax(f32), std.math.floatMax(f32), std.math.floatMax(f32), std.math.floatMax(f32) }, .{std.math.floatMax(f32)});
+    try testIntrinsic("vdupq_n_f32", vdupq_n_f32, f32x4{ 5, 5, 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_f32", vdupq_n_f32, f32x4{ 0, 0, 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_f32", vdupq_n_f32, f32x4{ std.math.floatMax(f32), std.math.floatMax(f32), std.math.floatMax(f32), std.math.floatMax(f32) }, .{std.math.floatMax(f32)}, null);
 }
 
 /// Duplicate vector element to vector or scalar
@@ -6505,14 +6788,37 @@ pub inline fn vdupq_n_f64(scalar: f64) f64x2 {
 }
 
 test vdupq_n_f64 {
-    try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ 5, 5 }, .{5});
-    try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ 0, 0 }, .{0});
-    try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ std.math.floatMax(f64), std.math.floatMax(f64) }, .{std.math.floatMax(f64)});
+    try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_f64", vdupq_n_f64, f64x2{ std.math.floatMax(f64), std.math.floatMax(f64) }, .{std.math.floatMax(f64)}, null);
 }
 
 /// Zip vectors
 pub inline fn vzip1_s8(a: i8x8, b: i8x8) i8x8 {
-    return @shuffle(i8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].8b, %[a].8b, %[b].8b"
+                    : [ret] "=w" (-> i8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].8b, %[a].8b
+                    \\ rev64 %[b].8b, %[b].8b
+                    \\ zip1  %[ret].8b, %[a].8b, %[b].8b
+                    \\ rev64 %[ret].8b, %[ret].8b
+                    : [ret] "=w" (-> i8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+    }
 }
 
 test vzip1_s8 {
@@ -6520,12 +6826,35 @@ test vzip1_s8 {
     const b: i8x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
     const expected: i8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
 
-    try testIntrinsic("vzip1_s8", vzip1_s8, expected, .{ a, b });
+    try testIntrinsic("vzip1_s8", vzip1_s8, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip1_s16(a: i16x4, b: i16x4) i16x4 {
-    return @shuffle(i16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].4h, %[a].4h, %[b].4h"
+                    : [ret] "=w" (-> i16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].4h, %[a].4h
+                    \\ rev64 %[b].4h, %[b].4h
+                    \\ zip1  %[ret].4h, %[a].4h, %[b].4h
+                    \\ rev64 %[ret].4h, %[ret].4h
+                    : [ret] "=w" (-> i16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+    }
 }
 
 test vzip1_s16 {
@@ -6533,12 +6862,35 @@ test vzip1_s16 {
     const b: i16x4 = .{ 1, 3, 5, 7 };
     const expected: i16x4 = .{ 0, 1, 2, 3 };
 
-    try testIntrinsic("vzip1_s16", vzip1_s16, expected, .{ a, b });
+    try testIntrinsic("vzip1_s16", vzip1_s16, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip1_s32(a: i32x2, b: i32x2) i32x2 {
-    return @shuffle(i32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> i32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip1  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> i32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    }
 }
 
 test vzip1_s32 {
@@ -6546,12 +6898,35 @@ test vzip1_s32 {
     const b: i32x2 = .{ 1, 3 };
     const expected: i32x2 = .{ 0, 1 };
 
-    try testIntrinsic("vzip1_s32", vzip1_s32, expected, .{ a, b });
+    try testIntrinsic("vzip1_s32", vzip1_s32, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip1_u8(a: u8x8, b: u8x8) u8x8 {
-    return @shuffle(u8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].8b, %[a].8b, %[b].8b"
+                    : [ret] "=w" (-> u8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].8b, %[a].8b
+                    \\ rev64 %[b].8b, %[b].8b
+                    \\ zip1  %[ret].8b, %[a].8b, %[b].8b
+                    \\ rev64 %[ret].8b, %[ret].8b
+                    : [ret] "=w" (-> u8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u8, a, b, i8x8{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3) });
+    }
 }
 
 test vzip1_u8 {
@@ -6559,12 +6934,35 @@ test vzip1_u8 {
     const b: u8x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
     const expected: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
 
-    try testIntrinsic("vzip1_u8", vzip1_u8, expected, .{ a, b });
+    try testIntrinsic("vzip1_u8", vzip1_u8, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip1_u16(a: u16x4, b: u16x4) u16x4 {
-    return @shuffle(u16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].4h, %[a].4h, %[b].4h"
+                    : [ret] "=w" (-> u16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].4h, %[a].4h
+                    \\ rev64 %[b].4h, %[b].4h
+                    \\ zip1  %[ret].4h, %[a].4h, %[b].4h
+                    \\ rev64 %[ret].4h, %[ret].4h
+                    : [ret] "=w" (-> u16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u16, a, b, i16x4{ 0, ~@as(i16, 0), 1, ~@as(i16, 1) });
+    }
 }
 
 test vzip1_u16 {
@@ -6572,12 +6970,35 @@ test vzip1_u16 {
     const b: u16x4 = .{ 1, 3, 5, 7 };
     const expected: u16x4 = .{ 0, 1, 2, 3 };
 
-    try testIntrinsic("vzip1_u16", vzip1_u16, expected, .{ a, b });
+    try testIntrinsic("vzip1_u16", vzip1_u16, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip1_u32(a: u32x2, b: u32x2) u32x2 {
-    return @shuffle(u32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> u32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip1  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> u32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    }
 }
 
 test vzip1_u32 {
@@ -6585,12 +7006,35 @@ test vzip1_u32 {
     const b: u32x2 = .{ 1, 3 };
     const expected: u32x2 = .{ 0, 1 };
 
-    try testIntrinsic("vzip1_u32", vzip1_u32, expected, .{ a, b });
+    try testIntrinsic("vzip1_u32", vzip1_u32, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip1_f32(a: f32x2, b: f32x2) f32x2 {
-    return @shuffle(f32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip1 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> f32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip1  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> f32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(f32, a, b, i32x2{ 0, ~@as(i32, 0) });
+    }
 }
 
 test vzip1_f32 {
@@ -6598,12 +7042,35 @@ test vzip1_f32 {
     const b: f32x2 = .{ 1, 3 };
     const expected: f32x2 = .{ 0, 1 };
 
-    try testIntrinsic("vzip1_f32", vzip1_f32, expected, .{ a, b });
+    try testIntrinsic("vzip1_f32", vzip1_f32, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip2_s8(a: i8x8, b: i8x8) i8x8 {
-    return @shuffle(i8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].8b, %[a].8b, %[b].8b"
+                    : [ret] "=w" (-> i8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].8b, %[a].8b
+                    \\ rev64 %[b].8b, %[b].8b
+                    \\ zip2  %[ret].8b, %[a].8b, %[b].8b
+                    \\ rev64 %[ret].8b, %[ret].8b
+                    : [ret] "=w" (-> i8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    }
 }
 
 test vzip2_s8 {
@@ -6611,12 +7078,35 @@ test vzip2_s8 {
     const b: i8x8 = .{ 1, 17, 17, 19, 17, 19, 21, 23 };
     const expected: i8x8 = .{ 16, 17, 18, 19, 20, 21, 22, 23 };
 
-    try testIntrinsic("vzip2_s8", vzip2_s8, expected, .{ a, b });
+    try testIntrinsic("vzip2_s8", vzip2_s8, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip2_s16(a: i16x4, b: i16x4) i16x4 {
-    return @shuffle(i16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].4h, %[a].4h, %[b].4h"
+                    : [ret] "=w" (-> i16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].4h, %[a].4h
+                    \\ rev64 %[b].4h, %[b].4h
+                    \\ zip2  %[ret].4h, %[a].4h, %[b].4h
+                    \\ rev64 %[ret].4h, %[ret].4h
+                    : [ret] "=w" (-> i16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    }
 }
 
 test vzip2_s16 {
@@ -6624,12 +7114,35 @@ test vzip2_s16 {
     const b: i16x4 = .{ 1, 17, 17, 19 };
     const expected: i16x4 = .{ 16, 17, 18, 19 };
 
-    try testIntrinsic("vzip2_s16", vzip2_s16, expected, .{ a, b });
+    try testIntrinsic("vzip2_s16", vzip2_s16, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip2_s32(a: i32x2, b: i32x2) i32x2 {
-    return @shuffle(i32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> i32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip2  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> i32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(i32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    }
 }
 
 test vzip2_s32 {
@@ -6637,12 +7150,35 @@ test vzip2_s32 {
     const b: i32x2 = .{ 1, 17 };
     const expected: i32x2 = .{ 16, 17 };
 
-    try testIntrinsic("vzip2_s32", vzip2_s32, expected, .{ a, b });
+    try testIntrinsic("vzip2_s32", vzip2_s32, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip2_u8(a: u8x8, b: u8x8) u8x8 {
-    return @shuffle(u8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].8b, %[a].8b, %[b].8b"
+                    : [ret] "=w" (-> u8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].8b, %[a].8b
+                    \\ rev64 %[b].8b, %[b].8b
+                    \\ zip2  %[ret].8b, %[a].8b, %[b].8b
+                    \\ rev64 %[ret].8b, %[ret].8b
+                    : [ret] "=w" (-> u8x8),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u8, a, b, i8x8{ 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    }
 }
 
 test vzip2_u8 {
@@ -6650,12 +7186,35 @@ test vzip2_u8 {
     const b: u8x8 = .{ 1, 17, 17, 19, 17, 19, 21, 23 };
     const expected: u8x8 = .{ 16, 17, 18, 19, 20, 21, 22, 23 };
 
-    try testIntrinsic("vzip2_u8", vzip2_u8, expected, .{ a, b });
+    try testIntrinsic("vzip2_u8", vzip2_u8, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip2_u16(a: u16x4, b: u16x4) u16x4 {
-    return @shuffle(u16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].4h, %[a].4h, %[b].4h"
+                    : [ret] "=w" (-> u16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].4h, %[a].4h
+                    \\ rev64 %[b].4h, %[b].4h
+                    \\ zip2  %[ret].4h, %[a].4h, %[b].4h
+                    \\ rev64 %[ret].4h, %[ret].4h
+                    : [ret] "=w" (-> u16x4),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u16, a, b, i16x4{ 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    }
 }
 
 test vzip2_u16 {
@@ -6663,12 +7222,35 @@ test vzip2_u16 {
     const b: u16x4 = .{ 1, 17, 17, 19 };
     const expected: u16x4 = .{ 16, 17, 18, 19 };
 
-    try testIntrinsic("vzip2_u16", vzip2_u16, expected, .{ a, b });
+    try testIntrinsic("vzip2_u16", vzip2_u16, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip2_u32(a: u32x2, b: u32x2) u32x2 {
-    return @shuffle(u32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> u32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip2  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> u32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(u32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    }
 }
 
 test vzip2_u32 {
@@ -6676,12 +7258,329 @@ test vzip2_u32 {
     const b: u32x2 = .{ 1, 17 };
     const expected: u32x2 = .{ 16, 17 };
 
-    try testIntrinsic("vzip2_u32", vzip2_u32, expected, .{ a, b });
+    try testIntrinsic("vzip2_u32", vzip2_u32, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
 pub inline fn vzip2_f32(a: f32x2, b: f32x2) f32x2 {
-    return @shuffle(f32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                return asm ("zip2 %[ret].2s, %[a].2s, %[b].2s"
+                    : [ret] "=w" (-> f32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+            inline .big => {
+                return asm (
+                    \\ rev64 %[a].2s, %[a].2s
+                    \\ rev64 %[b].2s, %[b].2s
+                    \\ zip2  %[ret].2s, %[a].2s, %[b].2s
+                    \\ rev64 %[ret].2s, %[ret].2s
+                    : [ret] "=w" (-> f32x2),
+                    : [a] "w" (a),
+                      [b] "w" (b),
+                );
+            },
+        }
+    } else {
+        return @shuffle(f32, a, b, i32x2{ 1, ~@as(i32, 1) });
+    }
+}
+
+/// Zip vectors
+pub inline fn vzip1q_s8(a: i8x16, b: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i8, a, b, i8x16{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3), 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    }
+}
+
+test vzip1q_s8 {
+    const a: i8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: i8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip1q_s8", vzip1q_s8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_s16(a: i16x8, b: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i16, a, b, i16x8{ 0, ~@as(i16, 0), 1, ~@as(i16, 1), 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    }
+}
+
+test vzip1q_s16 {
+    const a: i16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: i16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: i16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip1q_s16", vzip1q_s16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_s32(a: i32x4, b: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i32, a, b, i32x4{ 0, ~@as(i32, 0), 1, ~@as(i32, 1) });
+    }
+}
+
+test vzip1q_s32 {
+    const a: i32x4 = .{ 0, 2, 4, 6 };
+    const b: i32x4 = .{ 1, 3, 5, 7 };
+    const expected: i32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vzip1q_s32", vzip1q_s32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_u8(a: u8x16, b: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u8, a, b, i8x16{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3), 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    }
+}
+
+test vzip1q_u8 {
+    const a: u8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: u8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip1q_u8", vzip1q_u8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_u16(a: u16x8, b: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u16, a, b, i16x8{ 0, ~@as(i16, 0), 1, ~@as(i16, 1), 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    }
+}
+
+test vzip1q_u16 {
+    const a: u16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: u16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: u16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip1q_u16", vzip1q_u16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_u32(a: u32x4, b: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u32, a, b, i32x4{ 0, ~@as(i32, 0), 1, ~@as(i32, 1) });
+    }
+}
+
+test vzip1q_u32 {
+    const a: u32x4 = .{ 0, 2, 4, 6 };
+    const b: u32x4 = .{ 1, 3, 5, 7 };
+    const expected: u32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vzip1q_u32", vzip1q_u32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_f32(a: f32x4, b: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f32, a, b, i32x4{ 0, ~@as(i32, 0), 1, ~@as(i32, 1) });
+    }
+}
+
+test vzip1q_f32 {
+    const a: f32x4 = .{ 0, 2, 4, 6 };
+    const b: f32x4 = .{ 1, 3, 5, 7 };
+    const expected: f32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vzip1q_f32", vzip1q_f32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_s8(a: i8x16, b: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i8, a, b, i8x16{ 8, ~@as(i8, 8), 9, ~@as(i8, 9), 10, ~@as(i8, 10), 11, ~@as(i8, 11), 12, ~@as(i8, 12), 13, ~@as(i8, 13), 14, ~@as(i8, 14), 15, ~@as(i8, 15) });
+    }
+}
+
+test vzip2q_s8 {
+    const a: i8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: i8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: i8x16 = .{ 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
+
+    try testIntrinsic("vzip2q_s8", vzip2q_s8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_s16(a: i16x8, b: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i16, a, b, i16x8{ 4, ~@as(i16, 4), 5, ~@as(i16, 5), 6, ~@as(i16, 6), 7, ~@as(i16, 7) });
+    }
+}
+
+test vzip2q_s16 {
+    const a: i16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: i16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: i16x8 = .{ 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip2q_s16", vzip2q_s16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_s32(a: i32x4, b: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i32, a, b, i32x4{ 2, ~@as(i32, 2), 3, ~@as(i32, 3) });
+    }
+}
+
+test vzip2q_s32 {
+    const a: i32x4 = .{ 0, 2, 4, 6 };
+    const b: i32x4 = .{ 1, 3, 5, 7 };
+    const expected: i32x4 = .{ 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip2q_s32", vzip2q_s32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_u8(a: u8x16, b: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u8, a, b, i8x16{ 8, ~@as(i8, 8), 9, ~@as(i8, 9), 10, ~@as(i8, 10), 11, ~@as(i8, 11), 12, ~@as(i8, 12), 13, ~@as(i8, 13), 14, ~@as(i8, 14), 15, ~@as(i8, 15) });
+    }
+}
+
+test vzip2q_u8 {
+    const a: u8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: u8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: i8x16 = .{ 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
+
+    try testIntrinsic("vzip2q_s8", vzip2q_s8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_u16(a: u16x8, b: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u16, a, b, i16x8{ 4, ~@as(i16, 4), 5, ~@as(i16, 5), 6, ~@as(i16, 6), 7, ~@as(i16, 7) });
+    }
+}
+
+test vzip2q_u16 {
+    const a: u16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: u16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: u16x8 = .{ 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip2q_u16", vzip2q_u16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_u32(a: u32x4, b: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u32, a, b, i32x4{ 2, ~@as(i32, 2), 3, ~@as(i32, 3) });
+    }
+}
+
+test vzip2q_u32 {
+    const a: u32x4 = .{ 0, 2, 4, 6 };
+    const b: u32x4 = .{ 1, 3, 5, 7 };
+    const expected: u32x4 = .{ 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip2q_u32", vzip2q_u32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_f32(a: f32x4, b: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f32, a, b, i32x4{ 2, ~@as(i32, 2), 3, ~@as(i32, 3) });
+    }
+}
+
+test vzip2q_f32 {
+    const a: f32x4 = .{ 0, 2, 4, 6 };
+    const b: f32x4 = .{ 1, 3, 5, 7 };
+    const expected: f32x4 = .{ 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip2q_f32", vzip2q_f32, expected, .{ a, b }, null);
 }
 
 test vzip2_f32 {
@@ -6689,13 +7588,438 @@ test vzip2_f32 {
     const b: f32x2 = .{ 1, 17 };
     const expected: f32x2 = .{ 16, 17 };
 
-    try testIntrinsic("vzip2_f32", vzip2_f32, expected, .{ a, b });
+    try testIntrinsic("vzip2_f32", vzip2_f32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+// pub inline fn vzipq_u8(a: u8x16, b: u8x16) u8x16x2 {
+
+// }
+
+/// Transpose vectors
+pub inline fn vtrn1q_s8(a: i8x16, b: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
+    }
+}
+
+test vtrn1q_s8 {
+    const a: i8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: i8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: i8x16 = .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 };
+
+    try testIntrinsic("vtrn1q_s8", vtrn1q_s8, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_s16(a: i16x8, b: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
+    }
+}
+
+test vtrn1q_s16 {
+    const a: i16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: i16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: i16x8 = .{ 0, 1, 2, 3, 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn1q_s16", vtrn1q_s16, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_s32(a: i32x4, b: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
+    }
+}
+
+test vtrn1q_s32 {
+    const a: i32x4 = .{ 0, 2, 2, 6 };
+    const b: i32x4 = .{ 1, 3, 3, 7 };
+    const expected: i32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vtrn1q_s32", vtrn1q_s32, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_s64(a: i64x2, b: i64x2) i64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vtrn1q_s64 {
+    const a: i64x2 = .{ 0, 2 };
+    const b: i64x2 = .{ 1, 3 };
+    const expected: i64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vtrn1q_s64", vtrn1q_s64, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_u8(a: u8x16, b: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
+    }
+}
+
+test vtrn1q_u8 {
+    const a: u8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: u8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: u8x16 = .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 };
+
+    try testIntrinsic("vtrn1q_u8", vtrn1q_u8, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_u16(a: u16x8, b: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
+    }
+}
+
+test vtrn1q_u16 {
+    const a: u16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: u16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: u16x8 = .{ 0, 1, 2, 3, 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn1q_u16", vtrn1q_u16, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_u32(a: u32x4, b: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
+    }
+}
+
+test vtrn1q_u32 {
+    const a: u32x4 = .{ 0, 2, 2, 6 };
+    const b: u32x4 = .{ 1, 3, 3, 7 };
+    const expected: u32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vtrn1q_u32", vtrn1q_u32, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_u64(a: u64x2, b: u64x2) u64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vtrn1q_u64 {
+    const a: u64x2 = .{ 0, 2 };
+    const b: u64x2 = .{ 1, 3 };
+    const expected: u64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vtrn1q_u64", vtrn1q_u64, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_f32(a: f32x4, b: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
+    }
+}
+
+test vtrn1q_f32 {
+    const a: f32x4 = .{ 0, 2, 2, 6 };
+    const b: f32x4 = .{ 1, 3, 3, 7 };
+    const expected: f32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vtrn1q_f32", vtrn1q_f32, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn1q_f64(a: f64x2, b: f64x2) f64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> f64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vtrn1q_f64 {
+    const a: f64x2 = .{ 0, 2 };
+    const b: f64x2 = .{ 1, 3 };
+    const expected: f64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vtrn1q_f64", vtrn1q_f64, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_s8(a: i8x16, b: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    }
+}
+
+test vtrn2q_s8 {
+    const a: i8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: i8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: i8x16 = .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 };
+
+    try testIntrinsic("vtrn2q_s8", vtrn2q_s8, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_s16(a: i16x8, b: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    }
+}
+
+test vtrn2q_s16 {
+    const a: i16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: i16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: i16x8 = .{ 2, 3, 6, 7, 10, 1, 14, 15 };
+
+    try testIntrinsic("vtrn2q_s16", vtrn2q_s16, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_s32(a: i32x4, b: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    }
+}
+
+test vtrn2q_s32 {
+    const a: i32x4 = .{ 0, 2, 2, 6 };
+    const b: i32x4 = .{ 1, 3, 3, 7 };
+    const expected: i32x4 = .{ 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn2q_s32", vtrn2q_s32, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_s64(a: i64x2, b: i64x2) i64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
+
+test vtrn2q_s64 {
+    const a: i64x2 = .{ 0, 2 };
+    const b: i64x2 = .{ 1, 3 };
+    const expected: i64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vtrn2q_s64", vtrn2q_s64, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_u8(a: u8x16, b: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    }
+}
+
+test vtrn2q_u8 {
+    const a: u8x16 = .{ 0, 2, 2, 6, 2, 10, 6, 14, 2, 18, 6, 22, 10, 26, 14, 30 };
+    const b: u8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
+    const expected: u8x16 = .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 };
+
+    try testIntrinsic("vtrn2q_u8", vtrn2q_u8, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_u16(a: u16x8, b: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    }
+}
+
+test vtrn2q_u16 {
+    const a: u16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: u16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: u16x8 = .{ 2, 3, 6, 7, 10, 1, 14, 15 };
+
+    try testIntrinsic("vtrn2q_u16", vtrn2q_u16, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_u32(a: u32x4, b: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    }
+}
+
+test vtrn2q_u32 {
+    const a: u32x4 = .{ 0, 2, 2, 6 };
+    const b: u32x4 = .{ 1, 3, 3, 7 };
+    const expected: u32x4 = .{ 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn2q_u32", vtrn2q_u32, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_u64(a: u64x2, b: u64x2) u64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
+
+test vtrn2q_u64 {
+    const a: u64x2 = .{ 0, 2 };
+    const b: u64x2 = .{ 1, 3 };
+    const expected: u64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vtrn2q_u64", vtrn2q_u64, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_f32(a: f32x4, b: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].4s, %[a].4s, %[b].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    }
+}
+
+test vtrn2q_f32 {
+    const a: f32x4 = .{ 0, 2, 2, 6 };
+    const b: f32x4 = .{ 1, 3, 3, 7 };
+    const expected: f32x4 = .{ 2, 3, 6, 7 };
+
+    try testIntrinsic("vtrn2q_f32", vtrn2q_f32, expected, .{ a, b }, null);
+}
+
+/// Transpose vectors
+pub inline fn vtrn2q_f64(a: f64x2, b: f64x2) f64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("trn2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> f64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
+
+test vtrn2q_f64 {
+    const a: f64x2 = .{ 0, 2 };
+    const b: f64x2 = .{ 1, 3 };
+    const expected: f64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vtrn2q_f64", vtrn2q_f64, expected, .{ a, b }, null);
 }
 
 /// Transpose elements
 pub inline fn vtrnq_s8(a: i8x16, b: i8x16) i8x16x2 {
-    const a1: i8x16 = @shuffle(i8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
-    const b1: i8x16 = @shuffle(i8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    const a1: i8x16 = vtrn1q_s8(a, b);
+    const b1: i8x16 = vtrn2q_s8(a, b);
     return .{ a1, b1 };
 }
 
@@ -6704,13 +8028,13 @@ test vtrnq_s8 {
     const b: i8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
     const expected: i8x16x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 }, .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 } };
 
-    try testIntrinsic("vtrnq_s8", vtrnq_s8, expected, .{ a, b });
+    try testIntrinsic("vtrnq_s8", vtrnq_s8, expected, .{ a, b }, null);
 }
 
 /// Transpose elements
 pub inline fn vtrnq_s16(a: i16x8, b: i16x8) i16x8x2 {
-    const a1: i16x8 = @shuffle(i16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
-    const b1: i16x8 = @shuffle(i16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    const a1: i16x8 = vtrn1q_s16(a, b);
+    const b1: i16x8 = vtrn2q_s16(a, b);
     return .{ a1, b1 };
 }
 
@@ -6719,14 +8043,13 @@ test vtrnq_s16 {
     const b: i16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
     const expected: i16x8x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7 }, .{ 2, 3, 6, 7, 10, 1, 14, 15 } };
 
-    try testIntrinsic("vtrnq_s16", vtrnq_s16, expected, .{ a, b });
+    try testIntrinsic("vtrnq_s16", vtrnq_s16, expected, .{ a, b }, null);
 }
-
 
 /// Transpose elements
 pub inline fn vtrnq_s32(a: i32x4, b: i32x4) i32x4x2 {
-    const a1: i32x4 = @shuffle(i32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
-    const b1: i32x4 = @shuffle(i32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    const a1: i32x4 = vtrn1q_s32(a, b);
+    const b1: i32x4 = vtrn2q_s32(a, b);
     return .{ a1, b1 };
 }
 
@@ -6735,14 +8058,13 @@ test vtrnq_s32 {
     const b: i32x4 = .{ 1, 3, 3, 7 };
     const expected: i32x4x2 = .{ .{ 0, 1, 2, 3 }, .{ 2, 3, 6, 7 } };
 
-    try testIntrinsic("vtrnq_s32", vtrnq_s32, expected, .{ a, b });
+    try testIntrinsic("vtrnq_s32", vtrnq_s32, expected, .{ a, b }, null);
 }
-
 
 /// Transpose elements
 pub inline fn vtrnq_u8(a: u8x16, b: u8x16) u8x16x2 {
-    const a1: u8x16 = @shuffle(u8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
-    const b1: u8x16 = @shuffle(u8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    const a1: u8x16 = vtrn1q_u8(a, b);
+    const b1: u8x16 = vtrn2q_u8(a, b);
     return .{ a1, b1 };
 }
 
@@ -6751,13 +8073,13 @@ test vtrnq_u8 {
     const b: u8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
     const expected: u8x16x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 }, .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 } };
 
-    try testIntrinsic("vtrnq_u8", vtrnq_u8, expected, .{ a, b });
+    try testIntrinsic("vtrnq_u8", vtrnq_u8, expected, .{ a, b }, null);
 }
 
 /// Transpose elements
 pub inline fn vtrnq_u16(a: u16x8, b: u16x8) u16x8x2 {
-    const a1: u16x8 = @shuffle(u16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
-    const b1: u16x8 = @shuffle(u16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    const a1: u16x8 = vtrn1q_u16(a, b);
+    const b1: u16x8 = vtrn2q_u16(a, b);
     return .{ a1, b1 };
 }
 
@@ -6766,14 +8088,13 @@ test vtrnq_u16 {
     const b: u16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
     const expected: u16x8x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7 }, .{ 2, 3, 6, 7, 10, 1, 14, 15 } };
 
-    try testIntrinsic("vtrnq_u16", vtrnq_u16, expected, .{ a, b });
+    try testIntrinsic("vtrnq_u16", vtrnq_u16, expected, .{ a, b }, null);
 }
-
 
 /// Transpose elements
 pub inline fn vtrnq_u32(a: u32x4, b: u32x4) u32x4x2 {
-    const a1: u32x4 = @shuffle(u32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
-    const b1: u32x4 = @shuffle(u32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    const a1: u32x4 = vtrn1q_u32(a, b);
+    const b1: u32x4 = vtrn2q_u32(a, b);
     return .{ a1, b1 };
 }
 
@@ -6782,13 +8103,13 @@ test vtrnq_u32 {
     const b: u32x4 = .{ 1, 3, 3, 7 };
     const expected: u32x4x2 = .{ .{ 0, 1, 2, 3 }, .{ 2, 3, 6, 7 } };
 
-    try testIntrinsic("vtrnq_u32", vtrnq_u32, expected, .{ a, b });
+    try testIntrinsic("vtrnq_u32", vtrnq_u32, expected, .{ a, b }, null);
 }
 
 /// Transpose elements
 pub inline fn vtrnq_f32(a: f32x4, b: f32x4) f32x4x2 {
-    const a1: f32x4 = @shuffle(f32, a, b, i32x4{ 0, ~@as(i32, 0), 2, ~@as(i32, 2) });
-    const b1: f32x4 = @shuffle(f32, a, b, i32x4{ 1, ~@as(i32, 1), 3, ~@as(i32, 3) });
+    const a1: f32x4 = vtrn1q_f32(a, b);
+    const b1: f32x4 = vtrn2q_f32(a, b);
     return .{ a1, b1 };
 }
 
@@ -6797,12 +8118,13 @@ test vtrnq_f32 {
     const b: f32x4 = .{ 1, 3, 3, 7 };
     const expected: f32x4x2 = .{ .{ 0, 1, 2, 3 }, .{ 2, 3, 6, 7 } };
 
-    try testIntrinsic("vtrnq_f32", vtrnq_f32, expected, .{ a, b });
+    try testIntrinsic("vtrnq_f32", vtrnq_f32, expected, .{ a, b }, null);
 }
+
 /// Transpose elements
 pub inline fn vtrnq_p8(a: p8x16, b: p8x16) p8x16x2 {
-    const a1: p8x16 = @shuffle(p8, a, b, i8x16{ 0, ~@as(i8, 0), 2, ~@as(i8, 2), 4, ~@as(i8, 4), 6, ~@as(i8, 6), 8, ~@as(i8, 8), 10, ~@as(i8, 10), 12, ~@as(i8, 12), 14, ~@as(i8, 14) });
-    const b1: p8x16 = @shuffle(p8, a, b, i8x16{ 1, ~@as(i8, 1), 3, ~@as(i8, 3), 5, ~@as(i8, 5), 7, ~@as(i8, 7), 9, ~@as(i8, 9), 11, ~@as(i8, 11), 13, ~@as(i8, 13), 15, ~@as(i8, 15) });
+    const a1: p8x16 = vtrn1q_u8(a, b);
+    const b1: p8x16 = vtrn2q_u8(a, b);
     return .{ a1, b1 };
 }
 
@@ -6811,12 +8133,1406 @@ test vtrnq_p8 {
     const b: p8x16 = .{ 1, 3, 3, 7, 3, 1, 7, 15, 3, 19, 7, 23, 1, 27, 15, 31 };
     const expected: p8x16x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7, 2, 3, 6, 7, 10, 1, 14, 15 }, .{ 2, 3, 6, 7, 10, 1, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31 } };
 
-    try testIntrinsic("vtrnq_p8", vtrnq_p8, expected, .{ a, b });
+    try testIntrinsic("vtrnq_p8", vtrnq_p8, expected, .{ a, b }, null);
 }
 
 /// Transpose elements
 pub inline fn vtrnq_p16(a: p16x8, b: p16x8) p16x8x2 {
-    const a1: p16x8 = @shuffle(p16, a, b, i16x8{ 0, ~@as(i16, 0), 2, ~@as(i16, 2), 4, ~@as(i16, 4), 6, ~@as(i16, 6) });
-    const b1: p16x8 = @shuffle(p16, a, b, i16x8{ 1, ~@as(i16, 1), 3, ~@as(i16, 3), 5, ~@as(i16, 5), 7, ~@as(i16, 7) });
+    const a1: p16x8 = vtrn1q_u16(a, b);
+    const b1: p16x8 = vtrn2q_u16(a, b);
     return .{ a1, b1 };
+}
+
+test vtrnq_p16 {
+    const a: p16x8 = .{ 0, 2, 2, 6, 2, 10, 6, 14 };
+    const b: p16x8 = .{ 1, 3, 3, 7, 3, 1, 7, 15 };
+    const expected: p16x8x2 = .{ .{ 0, 1, 2, 3, 2, 3, 6, 7 }, .{ 2, 3, 6, 7, 10, 1, 14, 15 } };
+
+    try testIntrinsic("vtrnq_p16", vtrnq_p16, expected, .{ a, b }, null);
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_s8(a: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].16b, %[a].16b"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.8 %[ret], %[a]"
+            : [ret] "=w" (-> i8x16),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(i8, a, undefined, i8x16{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 });
+    }
+}
+
+test vrev64q_s8 {
+    const a: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    const expected: i8x16 = .{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 };
+
+    try testIntrinsic("vrev64q_s8", vrev64q_s8, expected, .{a}, null);
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_s16(a: i16x8) i16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].8h, %[a].8h"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.16 %[ret], %[a]"
+            : [ret] "=w" (-> i16x8),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(i16, a, undefined, i16x8{ 3, 2, 1, 0, 7, 6, 5, 4 });
+    }
+}
+
+test vrev64q_s16 {
+    const a: i16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const expected: i16x8 = .{ 3, 2, 1, 0, 7, 6, 5, 4 };
+
+    try testIntrinsic("vrev64q_s16", vrev64q_s16, expected, .{a}, null);
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_s32(a: i32x4) i32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].4s, %[a].4s"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.32 %[ret], %[a]"
+            : [ret] "=w" (-> i32x4),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(i32, a, undefined, i32x4{ 1, 0, 3, 2 });
+    }
+}
+
+test vrev64q_s32 {
+    const a: i32x4 = .{ 0, 1, 2, 3 };
+    const expected: i32x4 = .{ 1, 0, 3, 2 };
+
+    try testIntrinsic("vrev64q_s32", vrev64q_s32, expected, .{a}, null);
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_u8(a: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].16b, %[a].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.8 %[ret], %[a]"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(u8, a, undefined, u8x16{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 });
+    }
+}
+
+test vrev64q_u8 {
+    const a: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    const expected: u8x16 = .{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 };
+
+    try testIntrinsic("vrev64q_u8", vrev64q_u8, expected, .{a}, null);
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_u16(a: u16x8) u16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].8h, %[a].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.16 %[ret], %[a]"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(u16, a, undefined, u16x8{ 3, 2, 1, 0, 7, 6, 5, 4 });
+    }
+}
+
+test vrev64q_u16 {
+    const a: u16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const expected: u16x8 = .{ 3, 2, 1, 0, 7, 6, 5, 4 };
+
+    try testIntrinsic("vrev64q_u16", vrev64q_u16, expected, .{a}, null);
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_u32(a: u32x4) u32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].4s, %[a].4s"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.32 %[ret], %[a]"
+            : [ret] "=w" (-> u32x4),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(u32, a, undefined, u32x4{ 1, 0, 3, 2 });
+    }
+}
+
+test vrev64q_u32 {
+    const a: u32x4 = .{ 0, 1, 2, 3 };
+    const expected: u32x4 = .{ 1, 0, 3, 2 };
+
+    try testIntrinsic("vrev64q_u32", vrev64q_u32, expected, .{a}, null);
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_p8(a: p8x16) p8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].16b, %[a].16b"
+            : [ret] "=w" (-> p8x16),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.8 %[ret], %[a]"
+            : [ret] "=w" (-> p8x16),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(p8, a, undefined, p8x16{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 });
+    }
+}
+
+test vrev64q_p8 {
+    const a: p8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    const expected: p8x16 = .{ 7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8 };
+
+    try testIntrinsic("vrev64q_p8", vrev64q_p8, expected, .{a}, null);
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_p16(a: p16x8) p16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].8h, %[a].8h"
+            : [ret] "=w" (-> p16x8),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.16 %[ret], %[a]"
+            : [ret] "=w" (-> p16x8),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(p16, a, undefined, p16x8{ 3, 2, 1, 0, 7, 6, 5, 4 });
+    }
+}
+
+test vrev64q_p16 {
+    const a: p16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const expected: p16x8 = .{ 3, 2, 1, 0, 7, 6, 5, 4 };
+
+    try testIntrinsic("vrev64q_p16", vrev64q_p16, expected, .{a}, null);
+}
+
+/// Reversing vector elements (swap endianness)
+pub inline fn vrev64q_f32(a: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("rev64 %[ret].4s, %[a].4s"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        return asm ("vrev64.32 %[ret], %[a]"
+            : [ret] "=w" (-> f32x4),
+            : [a] "w" (a),
+        );
+    } else {
+        return @shuffle(f32, a, undefined, f32x4{ 1, 0, 3, 2 });
+    }
+}
+
+test vrev64q_f32 {
+    const a: f32x4 = .{ 0, 1, 2, 3 };
+    const expected: f32x4 = .{ 1, 0, 3, 2 };
+
+    try testIntrinsic("vrev64q_f32", vrev64q_f32, expected, .{a}, null);
+}
+
+/// Floating-point fused multiply-add to accumulator
+pub inline fn vfmaq_f16(a: f16x8, b: f16x8, c: f16x8) f16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{ .neon, .fullfp16 })) {
+        var result: f16x8 = a;
+        switch (endianness) {
+            .little => {
+                result = a;
+                asm ("fmla %[ret].8h, %[b].8h, %[c].8h"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    \\ rev16 %[b].16b, %[b].16b
+                    \\ rev16 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].8h, %[b].8h, %[c].8h
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return a + (b * c);
+    }
+}
+
+test vfmaq_f16 {
+    const a: f16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const b: f16x8 = .{ 2, 2, 2, 2, 2, 2, 2, 2 };
+    const c: f16x8 = .{ 3, 3, 3, 3, 3, 3, 3, 3 };
+    const expected: f16x8 = .{ 6, 7, 8, 9, 10, 11, 12, 13 };
+
+    try testIntrinsic("vfmaq_f16", vfmaq_f16, expected, .{ a, b, c }, null);
+}
+
+/// Floating-point fused multiply-add to accumulator
+pub inline fn vfmaq_f32(a: f32x4, b: f32x4, c: f32x4) f32x4 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result: f32x4 = a;
+        switch (endianness) {
+            .little => {
+                result = a;
+                asm ("fmla %[ret].4s, %[b].4s, %[c].4s"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    \\ rev32 %[b].16b, %[b].16b
+                    \\ rev32 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].4s, %[b].4s, %[c].4s
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+        }
+
+        return result;
+    } else if (use_asm and comptime arm.hasFeatures(&.{.neon})) {
+        var result = a;
+        asm ("vmla.f32 %[ret], %[b], %[c]"
+            : [ret] "+w" (result),
+            : [b] "w" (b),
+              [c] "w" (c),
+        );
+        return result;
+    } else {
+        return a + (b * c);
+    }
+}
+
+test vfmaq_f32 {
+    const a: f32x4 = .{ 0, 1, 2, 3 };
+    const b: f32x4 = .{ 2, 2, 2, 2 };
+    const c: f32x4 = .{ 3, 3, 3, 3 };
+    const expected: f32x4 = .{ 6, 7, 8, 9 };
+
+    try testIntrinsic("vfmaq_f32", vfmaq_f32, expected, .{ a, b, c }, null);
+}
+
+/// Floating-point fused multiply-add to accumulator
+pub inline fn vfmaq_f64(a: f64x2, b: f64x2, c: f64x2) f64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result: f64x2 = a;
+        switch (endianness) {
+            .little => {
+                asm ("fmla %[ret].2d, %[b].2d, %[c].2d"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    \\ rev64 %[b].16b, %[b].16b
+                    \\ rev64 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].2d, %[b].2d, %[c].2d
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return a + (b * c);
+    }
+}
+
+test vfmaq_f64 {
+    const a: f64x2 = .{ 0, 1 };
+    const b: f64x2 = .{ 2, 2 };
+    const c: f64x2 = .{ 3, 3 };
+    const expected: f64x2 = .{ 6, 7 };
+
+    try testIntrinsic("vfmaq_f64", vfmaq_f64, expected, .{ a, b, c }, null);
+}
+
+/// Floating-point fused multiply-add to accumulator
+pub inline fn vfmaq_laneq_f16(a: f16x8, b: f16x8, c: f16x8, comptime lane: usize) f16x8 {
+    comptime assert(lane < 8);
+    if (use_asm and comptime aarch64.hasFeatures(&.{ .neon, .fullfp16 })) {
+        var result: f16x8 = a;
+        switch (endianness) {
+            .little => {
+                result = a;
+                asm ("fmla %[ret].8h, %[b].8h, %[c].h[%[lane]]"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    \\ rev16 %[b].16b, %[b].16b
+                    \\ rev16 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].8h, %[b].8h, %[c].h[%[lane]]
+                    \\ rev16 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return vfmaq_f16(a, b, vdupq_n_f16(c[lane]));
+    }
+}
+
+test vfmaq_laneq_f16 {
+    const a: f16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const b: f16x8 = .{ 2, 2, 2, 2, 2, 2, 2, 2 };
+    const c: f16x8 = .{ 3, 0, 0, 0, 0, 0, 0, 0 };
+    const lane: usize = 0;
+    const expected: f16x8 = .{ 6, 7, 8, 9, 10, 11, 12, 13 };
+
+    try testIntrinsic("vfmaq_laneq_f16", vfmaq_laneq_f16, expected, .{ a, b, c, lane }, null);
+}
+
+/// Floating-point fused multiply-add to accumulator
+pub inline fn vfmaq_laneq_f32(a: f32x4, b: f32x4, c: f32x4, comptime lane: usize) f32x4 {
+    comptime assert(lane < 4);
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result: f32x4 = a;
+        switch (endianness) {
+            .little => {
+                result = a;
+                asm ("fmla %[ret].4s, %[b].4s, %[c].s[%[lane]]"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    \\ rev32 %[b].16b, %[b].16b
+                    \\ rev32 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].4s, %[b].4s, %[c].s[%[lane]]
+                    \\ rev32 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return vfmaq_f32(a, b, vdupq_n_f32(c[lane]));
+    }
+}
+
+test vfmaq_laneq_f32 {
+    const a: f32x4 = .{ 0, 1, 2, 3 };
+    const b: f32x4 = .{ 2, 2, 2, 2 };
+    const c: f32x4 = .{ 3, 0, 0, 0 };
+    const lane: usize = 0;
+    const expected: f32x4 = .{ 6, 7, 8, 9 };
+
+    try testIntrinsic("vfmaq_laneq_f32", vfmaq_laneq_f32, expected, .{ a, b, c, lane }, null);
+}
+
+/// Floating-point fused multiply-add to accumulator
+pub inline fn vfmaq_laneq_f64(a: f64x2, b: f64x2, c: f64x2, comptime lane: usize) f64x2 {
+    comptime assert(lane < 2);
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        var result: f64x2 = a;
+        switch (endianness) {
+            .little => {
+                asm ("fmla %[ret].2d, %[b].2d, %[c].d[%[lane]]"
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+            .big => {
+                asm (
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    \\ rev64 %[b].16b, %[b].16b
+                    \\ rev64 %[c].16b, %[c].16b
+                    \\ fmla  %[ret].2d, %[b].2d, %[c].d[%[lane]]
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "+w" (result),
+                    : [b] "w" (b),
+                      [c] "w" (c),
+                      [lane] "i" (lane),
+                );
+            },
+        }
+
+        return result;
+    } else {
+        return vfmaq_f64(a, b, vdupq_n_f64(c[lane]));
+    }
+}
+
+test vfmaq_laneq_f64 {
+    const a: f64x2 = .{ 0, 1 };
+    const b: f64x2 = .{ 2, 2 };
+    const c: f64x2 = .{ 3, 0 };
+    const lane: usize = 0;
+    const expected: f64x2 = .{ 6, 7 };
+
+    try testIntrinsic("vfmaq_laneq_f64", vfmaq_laneq_f64, expected, .{ a, b, c, lane }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_s8(a: i8x8, b: i8x8) i8x16 {
+    return join(a, b);
+}
+
+test vcombine_s8 {
+    const a: i8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const b: i8x8 = .{ 8, 9, 10, 11, 12, 13, 14, 15 };
+    const expected: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vcombine_s8", vcombine_s8, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_s16(a: i16x4, b: i16x4) i16x8 {
+    return join(a, b);
+}
+
+test vcombine_s16 {
+    const a: i16x4 = .{ 0, 1, 2, 3 };
+    const b: i16x4 = .{ 4, 5, 6, 7 };
+    const expected: i16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vcombine_s16", vcombine_s16, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_s32(a: i32x2, b: i32x2) i32x4 {
+    return join(a, b);
+}
+
+test vcombine_s32 {
+    const a: i32x2 = .{ 0, 1 };
+    const b: i32x2 = .{ 2, 3 };
+    const expected: i32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vcombine_s32", vcombine_s32, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_s64(a: i64x1, b: i64x1) i64x2 {
+    return join(a, b);
+}
+
+test vcombine_s64 {
+    const a: i64x1 = .{0};
+    const b: i64x1 = .{1};
+    const expected: i64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vcombine_s64", vcombine_s64, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_u8(a: u8x8, b: u8x8) u8x16 {
+    return join(a, b);
+}
+
+test vcombine_u8 {
+    const a: u8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const b: u8x8 = .{ 8, 9, 10, 11, 12, 13, 14, 15 };
+    const expected: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vcombine_u8", vcombine_u8, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_u16(a: u16x4, b: u16x4) u16x8 {
+    return join(a, b);
+}
+
+test vcombine_u16 {
+    const a: u16x4 = .{ 0, 1, 2, 3 };
+    const b: u16x4 = .{ 4, 5, 6, 7 };
+    const expected: u16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vcombine_u16", vcombine_u16, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_u32(a: u32x2, b: u32x2) u32x4 {
+    return join(a, b);
+}
+
+test vcombine_u32 {
+    const a: u32x2 = .{ 0, 1 };
+    const b: u32x2 = .{ 2, 3 };
+    const expected: u32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vcombine_u32", vcombine_u32, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_u64(a: u64x1, b: u64x1) u64x2 {
+    return join(a, b);
+}
+
+test vcombine_u64 {
+    const a: u64x1 = .{0};
+    const b: u64x1 = .{1};
+    const expected: u64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vcombine_u64", vcombine_u64, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_p8(a: p8x8, b: p8x8) p8x16 {
+    return join(a, b);
+}
+
+test vcombine_p8 {
+    const a: p8x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const b: p8x8 = .{ 8, 9, 10, 11, 12, 13, 14, 15 };
+    const expected: p8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vcombine_p8", vcombine_p8, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_p16(a: p16x4, b: p16x4) p16x8 {
+    return join(a, b);
+}
+
+test vcombine_p16 {
+    const a: p16x4 = .{ 0, 1, 2, 3 };
+    const b: p16x4 = .{ 4, 5, 6, 7 };
+    const expected: p16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vcombine_p16", vcombine_p16, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_f16(a: f16x4, b: f16x4) f16x8 {
+    return join(a, b);
+}
+
+test vcombine_f16 {
+    const a: f16x4 = .{ 0, 1, 2, 3 };
+    const b: f16x4 = .{ 4, 5, 6, 7 };
+    const expected: f16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vcombine_f16", vcombine_f16, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_f32(a: f32x2, b: f32x2) f32x4 {
+    return join(a, b);
+}
+
+test vcombine_f32 {
+    const a: f32x2 = .{ 0, 1 };
+    const b: f32x2 = .{ 2, 3 };
+    const expected: f32x4 = .{ 0, 1, 2, 3 };
+
+    try testIntrinsic("vcombine_f32", vcombine_f32, expected, .{ a, b }, null);
+}
+
+/// Vector combine
+pub inline fn vcombine_f64(a: f64x1, b: f64x1) f64x2 {
+    return join(a, b);
+}
+
+test vcombine_f64 {
+    const a: f64x1 = .{0};
+    const b: f64x1 = .{1};
+    const expected: f64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vcombine_f64", vcombine_f64, expected, .{ a, b }, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_u8(scalar: u8) u8x16 {
+    return vdupq_n_u8(scalar);
+}
+
+test vmovq_n_u8 {
+    const scalar: u8 = 66;
+    const expected: u8x16 = .{ 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66 };
+
+    try testIntrinsic("vmovq_n_u8", vmovq_n_u8, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_u16(scalar: u16) u16x8 {
+    return vdupq_n_u16(scalar);
+}
+
+test vmovq_n_u16 {
+    const scalar: u16 = 2701;
+    const expected: u16x8 = .{ 2701, 2701, 2701, 2701, 2701, 2701, 2701, 2701 };
+
+    try testIntrinsic("vmovq_n_u16", vmovq_n_u16, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_u32(scalar: u32) u32x4 {
+    return vdupq_n_u32(scalar);
+}
+
+test vmovq_n_u32 {
+    const scalar: u32 = 717371659;
+    const expected: u32x4 = .{ 717371659, 717371659, 717371659, 717371659 };
+
+    try testIntrinsic("vmovq_n_u32", vmovq_n_u32, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_u64(scalar: u64) u64x2 {
+    return vdupq_n_u64(scalar);
+}
+
+test vmovq_n_u64 {
+    const scalar: u64 = 13609191869422731000;
+    const expected: u64x2 = .{ 13609191869422731000, 13609191869422731000 };
+
+    try testIntrinsic("vmovq_n_u64", vmovq_n_u64, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_s8(scalar: i8) i8x16 {
+    return vdupq_n_s8(scalar);
+}
+
+test vmovq_n_s8 {
+    const scalar: i8 = 14;
+    const expected: i8x16 = .{ 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14 };
+
+    try testIntrinsic("vmovq_n_s8", vmovq_n_s8, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_s16(scalar: i16) i16x8 {
+    return vdupq_n_s16(scalar);
+}
+
+test vmovq_n_s16 {
+    const scalar: i16 = 27570;
+    const expected: i16x8 = .{ 27570, 27570, 27570, 27570, 27570, 27570, 27570, 27570 };
+
+    try testIntrinsic("vmovq_n_s16", vmovq_n_s16, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_s32(scalar: i32) i32x4 {
+    return vdupq_n_s32(scalar);
+}
+
+test vmovq_n_s32 {
+    const scalar: i32 = 964454829;
+    const expected: i32x4 = .{ 964454829, 964454829, 964454829, 964454829 };
+
+    try testIntrinsic("vmovq_n_s32", vmovq_n_s32, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_s64(scalar: i64) i64x2 {
+    return vdupq_n_s64(scalar);
+}
+
+test vmovq_n_s64 {
+    const scalar: i64 = 4555543976599521300;
+    const expected: i64x2 = .{ 4555543976599521300, 4555543976599521300 };
+
+    try testIntrinsic("vmovq_n_s64", vmovq_n_s64, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_p8(scalar: p8) p8x16 {
+    return vdupq_n_p8(scalar);
+}
+
+test vmovq_n_p8 {
+    const scalar: p8 = 187;
+    const expected: p8x16 = .{ 187, 187, 187, 187, 187, 187, 187, 187, 187, 187, 187, 187, 187, 187, 187, 187 };
+
+    try testIntrinsic("vmovq_n_p8", vmovq_n_p8, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_p16(scalar: p16) p16x8 {
+    return vdupq_n_p16(scalar);
+}
+
+test vmovq_n_p16 {
+    const scalar: p16 = 54032;
+    const expected: p16x8 = .{ 54032, 54032, 54032, 54032, 54032, 54032, 54032, 54032 };
+
+    try testIntrinsic("vmovq_n_p16", vmovq_n_p16, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_p64(scalar: p64) p64x2 {
+    return vdupq_n_p64(scalar);
+}
+
+test vmovq_n_p64 {
+    const scalar: p64 = 13609191869422731000;
+    const expected: p64x2 = .{ 13609191869422731000, 13609191869422731000 };
+
+    try testIntrinsic("vmovq_n_p64", vmovq_n_p64, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_f32(scalar: f32) f32x4 {
+    return vdupq_n_f32(scalar);
+}
+
+test vmovq_n_f32 {
+    const scalar: f32 = 3.559321397026124e+37;
+    const expected: f32x4 = .{ 3.559321397026124e+37, 3.559321397026124e+37, 3.559321397026124e+37, 3.559321397026124e+37 };
+
+    try testIntrinsic("vmovq_n_f32", vmovq_n_f32, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_f64(scalar: f64) f64x2 {
+    return vdupq_n_f64(scalar);
+}
+
+test vmovq_n_f64 {
+    const scalar: f64 = 8.935392104998695e+306;
+    const expected: f64x2 = .{ 8.935392104998695e+306, 8.935392104998695e+306 };
+
+    try testIntrinsic("vmovq_n_f64", vmovq_n_f64, expected, .{scalar}, null);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_u8(mem_addr: [*]u8, vec: u8x16) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        asm volatile ("st1 {%[vec].16b}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.8 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v16i8"([*]u8, u8x16, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v16i8"(mem_addr, vec, @alignOf(u8));
+    } else {
+        const a: [16]u8 = vec;
+        mem_addr[0..16].* = a;
+    }
+}
+
+test vst1q_u8 {
+    const vec: u8x16 = .{ 87, 7, 66, 94, 76, 60, 92, 164, 117, 14, 58, 249, 14, 224, 177, 97 };
+    var result: [16]u8 = undefined;
+    const expected: [16]u8 = .{ 87, 7, 66, 94, 76, 60, 92, 164, 117, 14, 58, 249, 14, 224, 177, 97 };
+
+    try testIntrinsic("vst1q_u8", vst1q_u8, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_u16(mem_addr: [*]u16, vec: u16x8) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].8h}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev16 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].8h}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.16 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v8i16"([*]u16, u16x8, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v8i16"(mem_addr, vec, @alignOf(u16));
+    } else {
+        const a: [8]u16 = vec;
+        mem_addr[0..8].* = a;
+    }
+}
+
+test vst1q_u16 {
+    const vec: u16x8 = .{ 29455, 5763, 22951, 12746, 53163, 34315, 47952, 42506 };
+    var result: [8]u16 = undefined;
+    const expected: [8]u16 = .{ 29455, 5763, 22951, 12746, 53163, 34315, 47952, 42506 };
+
+    try testIntrinsic("vst1q_u16", vst1q_u16, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_u32(mem_addr: [*]u32, vec: u32x4) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].4s}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev32 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].4s}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.32 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v4i32"([*]u32, u32x4, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v4i32"(mem_addr, vec, @alignOf(u32));
+    } else {
+        const a: [4]u32 = vec;
+        mem_addr[0..4].* = a;
+    }
+}
+
+test vst1q_u32 {
+    const vec: u32x4 = .{ 3180044669, 3392582875, 1914261745, 906567832 };
+    var result: [4]u32 = undefined;
+    const expected: [4]u32 = .{ 3180044669, 3392582875, 1914261745, 906567832 };
+
+    try testIntrinsic("vst1q_u32", vst1q_u32, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_u64(mem_addr: [*]u64, vec: u64x2) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].2d}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev64 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].2d}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.64 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v2i64"([*]u64, u64x2, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v2i64"(mem_addr, vec, @alignOf(u64));
+    } else {
+        const a: [2]u64 = vec;
+        mem_addr[0..2].* = a;
+    }
+}
+
+test vst1q_u64 {
+    const vec: u64x2 = .{ 3829217874799001600, 2533292073724029000 };
+    var result: [2]u64 = undefined;
+    const expected: [2]u64 = .{ 3829217874799001600, 2533292073724029000 };
+
+    try testIntrinsic("vst1q_u64", vst1q_u64, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_s8(mem_addr: [*]i8, vec: i8x16) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        asm volatile ("st1 {%[vec].16b}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.8 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v16i8"([*]i8, i8x16, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v16i8"(mem_addr, vec, @alignOf(i8));
+    } else {
+        const a: [16]i8 = vec;
+        mem_addr[0..16].* = a;
+    }
+}
+
+test vst1q_s8 {
+    const vec: i8x16 = .{ 75, 36, 6, 85, 22, 75, 44, 100, 116, 47, 61, 71, 119, 72, 64, 11 };
+    var result: [16]i8 = undefined;
+    const expected: [16]i8 = .{ 75, 36, 6, 85, 22, 75, 44, 100, 116, 47, 61, 71, 119, 72, 64, 11 };
+
+    try testIntrinsic("vst1q_s8", vst1q_s8, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_s16(mem_addr: [*]i16, vec: i16x8) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].8h}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev16 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].8h}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.16 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v8i16"([*]i16, i16x8, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v8i16"(mem_addr, vec, @alignOf(i16));
+    } else {
+        const a: [8]i16 = vec;
+        mem_addr[0..8].* = a;
+    }
+}
+
+test vst1q_s16 {
+    const vec: i16x8 = .{ 6747, 3471, 19603, 32482, 30815, 18526, 26523, 13944 };
+    var result: [8]i16 = undefined;
+    const expected: [8]i16 = .{ 6747, 3471, 19603, 32482, 30815, 18526, 26523, 13944 };
+
+    try testIntrinsic("vst1q_s16", vst1q_s16, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_s32(mem_addr: [*]i32, vec: i32x4) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].4s}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev32 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].4s}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.32 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v4i32"([*]i32, i32x4, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v4i32"(mem_addr, vec, @alignOf(i32));
+    } else {
+        const a: [4]i32 = vec;
+        mem_addr[0..4].* = a;
+    }
+}
+
+test vst1q_s32 {
+    const vec: i32x4 = .{ 145830768, 1580484351, 1402177468, 1969206225 };
+    var result: [4]i32 = undefined;
+    const expected: [4]i32 = .{ 145830768, 1580484351, 1402177468, 1969206225 };
+
+    try testIntrinsic("vst1q_s32", vst1q_s32, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_s64(mem_addr: [*]i64, vec: i64x2) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].2d}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev64 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].2d}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.64 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v2i64"([*]i64, i64x2, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v2i64"(mem_addr, vec, @alignOf(i64));
+    } else {
+        const a: [2]i64 = vec;
+        mem_addr[0..2].* = a;
+    }
+}
+
+test vst1q_s64 {
+    const vec: i64x2 = .{ 4686198271250203000, 6004792972826735000 };
+    var result: [2]i64 = undefined;
+    const expected: [2]i64 = .{ 4686198271250203000, 6004792972826735000 };
+
+    try testIntrinsic("vst1q_s64", vst1q_s64, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_p8(mem_addr: [*]p8, vec: p8x16) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        asm volatile ("st1 {%[vec].16b}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.8 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v16i8"([*]p8, p8x16, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v16i8"(mem_addr, vec, @alignOf(p8));
+    } else {
+        const a: [16]p8 = vec;
+        mem_addr[0..16].* = a;
+    }
+}
+
+test vst1q_p8 {
+    const vec: p8x16 = .{ 143, 78, 26, 229, 142, 239, 26, 113, 27, 52, 212, 81, 86, 171, 140, 40 };
+    var result: [16]p8 = undefined;
+    const expected: [16]p8 = .{ 143, 78, 26, 229, 142, 239, 26, 113, 27, 52, 212, 81, 86, 171, 140, 40 };
+
+    try testIntrinsic("vst1q_p8", vst1q_p8, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_p16(mem_addr: [*]p16, vec: p16x8) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].8h}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev16 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].8h}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.16 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v8i16"([*]p16, p16x8, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v8i16"(mem_addr, vec, @alignOf(p16));
+    } else {
+        const a: [8]p16 = vec;
+        mem_addr[0..8].* = a;
+    }
+}
+
+test vst1q_p16 {
+    const vec: p16x8 = .{ 63916, 47385, 18732, 19304, 846, 25686, 17032, 5781 };
+    var result: [8]p16 = undefined;
+    const expected: [8]p16 = .{ 63916, 47385, 18732, 19304, 846, 25686, 17032, 5781 };
+
+    try testIntrinsic("vst1q_p16", vst1q_p16, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_p46(mem_addr: [*]p64, vec: p64x2) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].2d}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev64 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].2d}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.64 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v2i64"([*]p64, p64x2, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v2i64"(mem_addr, vec, @alignOf(p64));
+    } else {
+        const a: [2]p64 = vec;
+        mem_addr[0..2].* = a;
+    }
+}
+
+test vst1q_p46 {
+    const vec: p64x2 = .{ 15170803338505576000, 1743042069843003400 };
+    var result: [2]p64 = undefined;
+    const expected: [2]p64 = .{ 15170803338505576000, 1743042069843003400 };
+
+    try testIntrinsic("vst1q_p46", vst1q_p46, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_f32(mem_addr: [*]f32, vec: f32x4) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].4s}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev32 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].4s}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else if (use_asm and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        asm volatile ("vst1.32 {%[vec]}, [%[mem_addr]]"
+            :
+            : [mem_addr] "r" (mem_addr),
+              [vec] "w" (vec),
+            : "memory"
+        );
+    } else if (use_builtins and comptime arm.hasFeatures(&.{ .neon, .has_v7 })) {
+        struct {
+            extern fn @"llvm.arm.neon.vst1.p0.v4f32"([*]f32, f32x4, i32) void;
+        }.@"llvm.arm.neon.vst1.p0.v4f32"(mem_addr, vec, @alignOf(f32));
+    } else {
+        const a: [4]f32 = vec;
+        mem_addr[0..4].* = a;
+    }
+}
+
+test vst1q_f32 {
+    const vec: f32x4 = .{ 1.9548056513544903e+38, 2.332183452987896e+38, 1.6590733076880947e+38, 7.974587841002587e+37 };
+    var result: [4]f32 = undefined;
+    const expected: [4]f32 = .{ 1.9548056513544903e+38, 2.332183452987896e+38, 1.6590733076880947e+38, 7.974587841002587e+37 };
+
+    try testIntrinsic("vst1q_f32", vst1q_f32, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Store multiple single-element structures from one, two, three, or four registers
+pub inline fn vst1q_f64(mem_addr: [*]f64, vec: f64x2) void {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            inline .little => {
+                asm volatile ("st1 {%[vec].2d}, [%[mem_addr]]"
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+            inline .big => {
+                asm volatile (
+                    \\ rev64 %[vec].16b, %[vec].16b
+                    \\ st1   {%[vec].2d}, [%[mem_addr]]
+                    :
+                    : [mem_addr] "r" (mem_addr),
+                      [vec] "w" (vec),
+                    : "memory"
+                );
+            },
+        }
+    } else {
+        const a: [2]f64 = vec;
+        mem_addr[0..2].* = a;
+    }
+}
+
+test vst1q_f64 {
+    const vec: f64x2 = .{ 8.485324487224609e+307, 1.0542911763881099e+308 };
+    var result: [2]f64 = undefined;
+    const expected: [2]f64 = .{ 8.485324487224609e+307, 1.0542911763881099e+308 };
+
+    try testIntrinsic("vst1q_f64", vst1q_f64, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }

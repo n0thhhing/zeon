@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const arch = builtin.target.cpu.arch;
 const features = builtin.cpu.features;
 
-pub const is_arm = arch == .arm or arch == .armeb;
+pub const is_arm = arch == .arm or arch == .armeb or arch == .thumb;
 
 /// Checks if the current CPU is arm and has the input features
 pub inline fn hasFeatures(comptime arm_features: []const std.Target.arm.Feature) bool {
@@ -13,4 +13,8 @@ pub inline fn hasFeatures(comptime arm_features: []const std.Target.arm.Feature)
         if (!has_feature) return false;
     }
     return true;
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }
