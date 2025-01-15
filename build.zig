@@ -83,6 +83,7 @@ pub fn build(b: *std.Build) void {
         "Specify a target filter, e.g. -Dtarget_filter=arm,aarch64",
     ) orelse "none";
 
+    const run_step = b.step("run", "Run all examples");
     const test_step = b.step("test", "Run unit tests");
     if (!std.mem.eql(u8, target_filter, "none")) {
         var filters = std.mem.splitScalar(u8, target_filter, ',');
@@ -129,7 +130,9 @@ pub fn build(b: *std.Build) void {
         }
     }
 
-    addExample(b, target, optimize, test_step, "matrixMultiply/main.zig", "rotate_multiply");
+    addExample(b, target, optimize, run_step, test_step, "matrixMultiply/main.zig", "matrix-multiply");
+    addExample(b, target, optimize, run_step, test_step, "matrixRotate/main.zig", "matrix-rotate");
+    addExample(b, target, optimize, run_step, test_step, "matrixVerticalFlip/main.zig", "matrix-vertical-flip");
 }
 
 // TODO: Apply target-filter to this
@@ -137,6 +140,7 @@ fn addExample(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    run_step: *std.Build.Step,
     test_step: *std.Build.Step,
     comptime path: []const u8,
     comptime name: []const u8,
@@ -165,7 +169,8 @@ fn addExample(
         run_cmd.addArgs(args);
     }
 
-    const run_step = b.step("run-" ++ name, "Run the `" ++ name ++ "` example");
+    const example_run_step = b.step("run-" ++ name, "Run the `" ++ name ++ "` example");
+    example_run_step.dependOn(&run_cmd.step);
     run_step.dependOn(&run_cmd.step);
 
     const example_test_step = b.step("test-" ++ name, "Run unit tests for " ++ name);

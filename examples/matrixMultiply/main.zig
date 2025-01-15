@@ -27,6 +27,7 @@ fn printMatrix(matrix: [*]const f32, w: usize, h: usize) void {
             std.debug.print("\n", .{});
         }
     }
+    std.debug.print("\n", .{});
 }
 
 /// see https://developer.arm.com/documentation/102467/0201/Example---matrix-multiplication
@@ -109,6 +110,7 @@ test matmul4x4 {
 }
 
 pub fn main() void {
+    std.debug.print("Matrix Multiply:\n", .{});
     const a: [16]f32 = .{
         1.0,  2.0,  3.0,  4.0,
         5.0,  6.0,  7.0,  8.0,

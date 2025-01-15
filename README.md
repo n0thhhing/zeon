@@ -8,7 +8,7 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
 
 ## Status
 
-🚧 This project is under active development(430/2983 implemented). Contributions and feedback are welcome!
+🚧 This project is under active development(487/2983 implemented). Contributions and feedback are welcome!
 
 ## Roadmap
 
@@ -32,6 +32,7 @@ Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64
 
 ### Requirements
 To test and simulate ARM/ARM64 environments, `QEMU user mode` is required. Make sure QEMU is properly installed and configured before running tests. You'll also need `Make` for build and test automation.
+For usage examples, see [examples](examples/).
 
 ### Installation and Usage
 1. Clone the repository:
@@ -42,7 +43,12 @@ To test and simulate ARM/ARM64 environments, `QEMU user mode` is required. Make 
 
 3. Run tests:
    ```bash
-   make
+   make test
+   ```
+
+4. Run examples:
+   ```bash
+   make examples
    ```
 
 ## License

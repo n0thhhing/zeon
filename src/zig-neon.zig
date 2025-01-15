@@ -574,11 +574,11 @@ fn testIntrinsic(
             use_asm = asm_opt;
             use_builtins = builtin_opt;
 
-            const ptr_info = @typeInfo(@TypeOf(result_ptr));
+            const ptr_snfo = @typeInfo(@TypeOf(result_ptr));
             const result = blk: {
                 const result = @call(.auto, func, args);
-                if (ptr_info != .Null) {
-                    assert(ptr_info == .Pointer);
+                if (ptr_snfo != .Null) {
+                    assert(ptr_snfo == .Pointer);
                     break :blk result_ptr.*;
                 } else {
                     break :blk result;
@@ -593,11 +593,11 @@ fn testIntrinsic(
         use_asm = true;
         use_builtins = true;
     } else {
-        const ptr_info = @typeInfo(@TypeOf(result_ptr));
+        const ptr_snfo = @typeInfo(@TypeOf(result_ptr));
         const result = blk: {
             const result = @call(.auto, func, args);
-            if (ptr_info != .Null) {
-                assert(ptr_info == .Pointer);
+            if (ptr_snfo != .Null) {
+                assert(ptr_snfo == .Pointer);
                 break :blk result_ptr.*;
             } else {
                 break :blk result;
@@ -657,10 +657,10 @@ test numToString {
 
 /// Gets the length of a vector
 inline fn vecLen(comptime T: anytype) usize {
-    const type_info = @typeInfo(T);
+    const type_snfo = @typeInfo(T);
 
-    comptime assert(type_info == .Vector);
-    return type_info.Vector.len;
+    comptime assert(type_snfo == .Vector);
+    return type_snfo.Vector.len;
 }
 
 test vecLen {
@@ -697,16 +697,16 @@ test join {
 
 /// Promotes the Child type of the vector `T`
 inline fn PromoteVector(comptime T: type) type {
-    var type_info = @typeInfo(T);
+    var type_snfo = @typeInfo(T);
 
-    comptime assert(type_info == .Vector);
-    var child_info = @typeInfo(std.meta.Child(T));
-    switch (child_info) {
-        .Int => child_info.Int.bits *= 2,
-        else => child_info.Float.bits *= 2,
+    comptime assert(type_snfo == .Vector);
+    var child_snfo = @typeInfo(std.meta.Child(T));
+    switch (child_snfo) {
+        .Int => child_snfo.Int.bits *= 2,
+        else => child_snfo.Float.bits *= 2,
     }
-    type_info.Vector.child = @Type(child_info);
-    return @Type(type_info);
+    type_snfo.Vector.child = @Type(child_snfo);
+    return @Type(type_snfo);
 }
 
 test PromoteVector {
@@ -741,9 +741,9 @@ test toLarge {
 inline fn abd(a: anytype, b: anytype) @TypeOf(a, b) {
     const T = @TypeOf(a, b);
     const Child = std.meta.Child(T);
-    const type_info = @typeInfo(Child);
-    if (type_info == .Int) {
-        switch (type_info.Int.signedness) {
+    const type_snfo = @typeInfo(Child);
+    if (type_snfo == .Int) {
+        switch (type_snfo.Int.signedness) {
             inline .unsigned => {
                 // Since unsigned numbers cannot be negative, we subtract
                 // the smaller elemant from the larger in order to prevent
@@ -5735,7 +5735,7 @@ test vld1q_u64 {
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-pub inline fn vld1q_i8(mem_addr: [*]const i8) i8x16 {
+pub inline fn vld1q_s8(mem_addr: [*]const i8) i8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("ld1 {%[ret].16b}, [%[addr]]"
             : [ret] "=w" (-> i8x16),
@@ -5757,15 +5757,15 @@ pub inline fn vld1q_i8(mem_addr: [*]const i8) i8x16 {
     }
 }
 
-test vld1q_i8 {
+test vld1q_s8 {
     const addr = ([16]i8{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(i8) })[0..].ptr;
     const expected: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, std.math.maxInt(i8) };
 
-    try testIntrinsic("vld1q_i8", vld1q_i8, expected, .{addr}, null);
+    try testIntrinsic("vld1q_s8", vld1q_s8, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-pub inline fn vld1q_i16(mem_addr: [*]const i16) i16x8 {
+pub inline fn vld1q_s16(mem_addr: [*]const i16) i16x8 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
@@ -5800,15 +5800,15 @@ pub inline fn vld1q_i16(mem_addr: [*]const i16) i16x8 {
     }
 }
 
-test vld1q_i16 {
+test vld1q_s16 {
     const addr = ([8]i16{ 0, 1, 2, 3, 4, 5, 6, std.math.maxInt(i16) })[0..].ptr;
     const expected: i16x8 = .{ 0, 1, 2, 3, 4, 5, 6, std.math.maxInt(i16) };
 
-    try testIntrinsic("vld1q_i16", vld1q_i16, expected, .{addr}, null);
+    try testIntrinsic("vld1q_s16", vld1q_s16, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-pub inline fn vld1q_i32(mem_addr: [*]const i32) i32x4 {
+pub inline fn vld1q_s32(mem_addr: [*]const i32) i32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
@@ -5843,15 +5843,15 @@ pub inline fn vld1q_i32(mem_addr: [*]const i32) i32x4 {
     }
 }
 
-test vld1q_i32 {
+test vld1q_s32 {
     const addr = ([4]i32{ 0, 1, 2, std.math.maxInt(i32) })[0..].ptr;
     const expected: i32x4 = .{ 0, 1, 2, std.math.maxInt(i32) };
 
-    try testIntrinsic("vld1q_i32", vld1q_i32, expected, .{addr}, null);
+    try testIntrinsic("vld1q_s32", vld1q_s32, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
-pub inline fn vld1q_i64(mem_addr: [*]const i64) i64x2 {
+pub inline fn vld1q_s64(mem_addr: [*]const i64) i64x2 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         switch (endianness) {
             inline .little => {
@@ -5886,11 +5886,11 @@ pub inline fn vld1q_i64(mem_addr: [*]const i64) i64x2 {
     }
 }
 
-test vld1q_i64 {
+test vld1q_s64 {
     const addr = ([2]i64{ 0, std.math.maxInt(i64) })[0..].ptr;
     const expected: i64x2 = .{ 0, std.math.maxInt(i64) };
 
-    try testIntrinsic("vld1q_i64", vld1q_i64, expected, .{addr}, null);
+    try testIntrinsic("vld1q_s64", vld1q_s64, expected, .{addr}, null);
 }
 
 /// Load multiple single-element structures to one, two, three, or four registers
@@ -6655,6 +6655,36 @@ pub inline fn vdupq_n_p16(scalar: p16) p16x8 {
     } else {
         return @splat(scalar);
     }
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vdupq_n_p64(scalar: p64) p64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        switch (endianness) {
+            .little => {
+                return asm ("dup %[ret].2d, %[scalar]"
+                    : [ret] "=w" (-> p64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+            .big => {
+                return asm (
+                    \\ dup   %[ret].2d, %[scalar]
+                    \\ rev64 %[ret].16b, %[ret].16b
+                    : [ret] "=w" (-> p64x2),
+                    : [scalar] "r" (scalar),
+                );
+            },
+        }
+    } else {
+        return @splat(scalar);
+    }
+}
+
+test vdupq_n_p64 {
+    try testIntrinsic("vdupq_n_p64", vdupq_n_p64, p64x2{ 5, 5 }, .{5}, null);
+    try testIntrinsic("vdupq_n_p64", vdupq_n_p64, p64x2{ 0, 0 }, .{0}, null);
+    try testIntrinsic("vdupq_n_p64", vdupq_n_p64, p64x2{ std.math.maxInt(u64), std.math.maxInt(u64) }, .{std.math.maxInt(u64)}, null);
 }
 
 test vdupq_n_p16 {
@@ -8273,6 +8303,18 @@ test vmovq_n_p16 {
     const expected: p16x8 = .{ 54032, 54032, 54032, 54032, 54032, 54032, 54032, 54032 };
 
     try testIntrinsic("vmovq_n_p16", vmovq_n_p16, expected, .{scalar}, null);
+}
+
+/// Duplicate vector element to vector or scalar
+pub inline fn vmovq_n_p64(scalar: p64) p64x2 {
+    return vdupq_n_p64(scalar);
+}
+
+test vmovq_n_p64 {
+    const scalar: p64 = 13609191869422731000;
+    const expected: p64x2 = .{ 13609191869422731000, 13609191869422731000 };
+
+    try testIntrinsic("vmovq_n_p64", vmovq_n_p64, expected, .{scalar}, null);
 }
 
 /// Duplicate vector element to vector or scalar
