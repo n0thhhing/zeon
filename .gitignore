@@ -3,5 +3,4 @@ zig-out/
 tests/
 aarch64_simd.h
 impl
-examples
 .DS_Store
