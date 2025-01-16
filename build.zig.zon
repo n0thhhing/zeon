@@ -1,5 +1,5 @@
 .{
-    .name = "zig-neon",
+    .name = "zeon",
     .version = "0.13.0",
     .dependencies = .{},
     .paths = .{

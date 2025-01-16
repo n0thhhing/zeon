@@ -27,40 +27,40 @@ const examples: []const Example = &.{
 
 const test_targets = [_]std.Target.Query{
     .{},
-    std.Target.Query{
+    .{
         .cpu_arch = .arm,
         .os_tag = .linux,
         .cpu_features_add = arm_target_features,
     },
     // TODO: When 0.14.0 officially releases, we need to cover armeb
-    // std.Target.Query{
+    // .{
     //     .cpu_arch = .armeb,
     //     .os_tag = .linux,
     //     .cpu_features_add = arm_target_features,
     // },
     // TODO: Figure out how to test thumb/thumbeb
-    // std.Target.Query{
+    // .{
     //     .cpu_arch = .thumb,
     //     .os_tag = .linux,
     //     .cpu_features_add = arm_target_features,
     // },
-    // std.Target.Query{
+    // .{
     //     .cpu_arch = .thumbeb,
     //     .os_tag = .linux,
     //     .cpu_features_add = arm_target_features,
     // },
-    std.Target.Query{
+    .{
         .cpu_arch = .aarch64,
         .os_tag = .linux,
         .cpu_features_add = aarch64_target_features,
     },
-    std.Target.Query{
+    .{
         .cpu_arch = .aarch64_be,
         .os_tag = .linux,
         .cpu_features_add = aarch64_target_features,
     },
     // Not needed until we add x86 assembly fallbacks
-    // std.Target.Query{
+    // .{
     //     .cpu_arch = .x86,
     //     .os_tag = .linux,
     // },
@@ -96,9 +96,8 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseFast });
 
-    const path = "src/zig-neon.zig";
-
-    const mod = b.addModule("neon", .{
+    const path = "src/zeon.zig";
+    const module = b.addModule("zeon", .{
         .root_source_file = b.path(path),
         .target = target,
         .optimize = optimize,
@@ -107,7 +106,7 @@ pub fn build(b: *std.Build) void {
     const target_filter = b.option(
         []const u8,
         "target-filter",
-        "Specify a target filter, e.g. -Dtarget_filter=arm,aarch64",
+        "Specify a target filter, e.g., -Dtarget_filter=arm,aarch64",
     ) orelse "none";
 
     const run_step = b.step("run", "Run all examples");
@@ -115,38 +114,38 @@ pub fn build(b: *std.Build) void {
 
     addTest(
         b,
-        path,
+        module.root_source_file.?,
         &.{},
-        &.{test_step},
         optimize,
+        &.{test_step},
         target_filter,
     );
 
     inline for (examples) |example| {
         addExample(
             b,
+            example.name,
+            example.path,
             target,
             optimize,
-            mod,
+            module,
             run_step,
             test_step,
             target_filter,
-            example.path,
-            example.name,
         );
     }
 }
 
 fn addExample(
     b: *std.Build,
+    comptime name: []const u8,
+    comptime path: []const u8,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     module: *std.Build.Module,
     run_step: *std.Build.Step,
     test_step: *std.Build.Step,
     target_filter: []const u8,
-    comptime path: []const u8,
-    comptime name: []const u8,
 ) void {
     const example = b.addExecutable(.{
         .name = name,
@@ -156,11 +155,9 @@ fn addExample(
     });
 
     b.installArtifact(example);
-
-    example.root_module.addImport("neon", module);
+    example.root_module.addImport("zeon", module);
 
     const run_cmd = b.addRunArtifact(example);
-
     run_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
@@ -168,79 +165,84 @@ fn addExample(
     }
 
     const example_run_step = b.step("run-" ++ name, "Run the `" ++ name ++ "` example");
-    example_run_step.dependOn(&run_cmd.step);
-    run_step.dependOn(&run_cmd.step);
-
     const example_test_step = b.step("test-" ++ name, "Run unit tests for " ++ name);
 
-    const modules: []const Import = &.{.{
-        .name = "neon",
-        .module = module,
-    }};
+    addTest(
+        b,
+        b.path("examples/" ++ path),
+        &.{.{ .name = "zeon", .module = module }},
+        optimize,
+        &.{ example_test_step, test_step },
+        target_filter,
+    );
 
-    addTest(b, "examples/" ++ path, modules, &.{ example_test_step, test_step }, optimize, target_filter);
+    example_run_step.dependOn(&run_cmd.step);
+    run_step.dependOn(&run_cmd.step);
 }
 
 fn addTest(
     b: *std.Build,
-    path: []const u8,
+    path: std.Build.LazyPath,
     modules: []const Import,
-    test_steps: []const *std.Build.Step,
     optimize: std.builtin.OptimizeMode,
+    test_steps: []const *std.Build.Step,
     target_filter: []const u8,
 ) void {
-    if (!std.mem.eql(u8, target_filter, "none")) {
+    if (std.mem.eql(u8, target_filter, "none")) {
+        for (test_targets) |t| {
+            addUnitTest(b, path, modules, optimize, test_steps, t);
+        }
+    } else {
         var filters = std.mem.splitScalar(u8, target_filter, ',');
         while (filters.next()) |unprocessed_filter| {
             const filter = std.mem.trim(u8, unprocessed_filter, " ");
-            const fl: []const std.Target.Query = blk: {
-                if (std.mem.eql(u8, filter, "native")) {
-                    break :blk &.{test_targets[0]};
-                } else if (std.mem.eql(u8, filter, "arm")) {
-                    break :blk &.{test_targets[1]};
-                } else if (std.mem.eql(u8, filter, "aarch64")) {
-                    break :blk &.{test_targets[2]};
-                } else if (std.mem.eql(u8, filter, "aarch64_be")) {
-                    break :blk &.{test_targets[3]};
-                } else {
-                    std.debug.print(
-                        \\Invalid filter: {s}\n
-                        \\Filters include native, arm, aarch64, and aarch64_be
-                    , .{filter});
-                    std.process.exit(1);
-                }
-            };
-            for (fl) |filter_target| {
-                const unit_tests = b.addTest(.{
-                    .root_source_file = b.path(path),
-                    .target = b.resolveTargetQuery(filter_target),
-                    .optimize = optimize,
-                });
-                for (modules) |mod| {
-                    unit_tests.root_module.addImport(mod.name, mod.module);
-                }
-                const run_unit_tests = b.addRunArtifact(unit_tests);
+            const target_group = findTargetGroup(filter);
 
-                for (test_steps) |step| {
-                    step.dependOn(&run_unit_tests.step);
-                }
+            if (target_group == null) {
+                const fmt =
+                    \\Invalid filter: {s}
+                    \\Valid filters: native, arm, aarch64, and aarch64_be
+                ;
+                std.debug.print(fmt, .{filter});
+                std.process.exit(1);
+            }
+            for (target_group.?) |t| {
+                addUnitTest(b, path, modules, optimize, test_steps, t);
             }
         }
-    } else {
-        for (test_targets) |t| {
-            const unit_tests = b.addTest(.{
-                .root_source_file = b.path(path),
-                .target = b.resolveTargetQuery(t),
-                .optimize = optimize,
-            });
-            for (modules) |mod| {
-                unit_tests.root_module.addImport(mod.name, mod.module);
-            }
-            const run_unit_tests = b.addRunArtifact(unit_tests);
+    }
+}
 
-            for (test_steps) |step| {
-                step.dependOn(&run_unit_tests.step);
-            }
-        }
+fn findTargetGroup(
+    filter: []const u8,
+) ?[]const std.Target.Query {
+    if (std.mem.eql(u8, filter, "native")) return &.{test_targets[0]};
+    if (std.mem.eql(u8, filter, "arm")) return &.{test_targets[1]};
+    if (std.mem.eql(u8, filter, "aarch64")) return &.{test_targets[2]};
+    if (std.mem.eql(u8, filter, "aarch64_be")) return &.{test_targets[3]};
+    return null;
+}
+
+fn addUnitTest(
+    b: *std.Build,
+    path: std.Build.LazyPath,
+    modules: []const Import,
+    optimize: std.builtin.OptimizeMode,
+    test_steps: []const *std.Build.Step,
+    target: std.Target.Query,
+) void {
+    const unit_tests = b.addTest(.{
+        .root_source_file = path,
+        .target = b.resolveTargetQuery(target),
+        .optimize = optimize,
+    });
+
+    for (modules) |mod| {
+        unit_tests.root_module.addImport(mod.name, mod.module);
+    }
+
+    const run_tests = b.addRunArtifact(unit_tests);
+    for (test_steps) |step| {
+        step.dependOn(&run_tests.step);
     }
 }

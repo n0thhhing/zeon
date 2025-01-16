@@ -1,10 +1,10 @@
-# Zig-Neon
+# Zeon
 
 ARM/ARM64 Neon intrinsics implemented in pure zig as well as in assembly!
 
 ## Overview
 
-Zig-Neon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64` architectures, implemented in both pure Zig and inline assembly. This project prioritizes portability, performance, and flexibility, ensuring compatibility across various environments.
+Zeon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64` architectures, implemented in both pure Zig and inline assembly. This project prioritizes portability, performance, and flexibility, ensuring compatibility across various environments.
 
 ## Status
 
@@ -37,8 +37,8 @@ For usage examples, see [examples](examples/).
 ### Installation and Usage
 1. Clone the repository:
    ```bash
-   git clone https://github.com/n0thhhing/zig-neon
-   cd zig-neon
+   git clone https://github.com/n0thhhing/zeon
+   cd zeon
    ```
 
 3. Run tests:

@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const arch = builtin.target.cpu.arch;
 const features = builtin.cpu.features;
-const neon = @import("./zig-neon.zig");
+const neon = @import("./zeon.zig");
 
 pub const is_aarch64 = arch == .aarch64 or arch == .aarch64_be;
 
