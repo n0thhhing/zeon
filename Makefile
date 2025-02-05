@@ -1,5 +1,11 @@
-TEST_FLAGS := -fqemu -freference-trace --summary all # --release=fast
+TEST_FLAGS := -fqemu -freference-trace --summary all
+RUN_FLAGS :=
 TEST_TARGET_FILTER ?= none
+
+ifndef DEBUG
+    TEST_FLAGS += --release=fast
+    RUN_FLAGS += --release=fast
+endif
 
 .PHONY: test
 test:
@@ -7,5 +13,4 @@ test:
 
 .PHONY: examples
 examples:
-	zig build run --release=fast
-
+	zig build run $(RUN_FLAGS)

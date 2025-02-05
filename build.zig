@@ -23,6 +23,10 @@ const examples: []const Example = &.{
         .path = "matrixVerticalFlip/main.zig",
         .name = "matrix-vertical-flip",
     },
+    .{
+        .path = "bufferToHex/main.zig",
+        .name = "buffer-to-hex",
+    },
 };
 
 const test_targets = [_]std.Target.Query{
@@ -32,7 +36,7 @@ const test_targets = [_]std.Target.Query{
         .os_tag = .linux,
         .cpu_features_add = arm_target_features,
     },
-    // TODO: When 0.14.0 officially releases, we need to cover armeb
+    // TODO: Figure out how to test armeb
     // .{
     //     .cpu_arch = .armeb,
     //     .os_tag = .linux,
@@ -57,6 +61,12 @@ const test_targets = [_]std.Target.Query{
     .{
         .cpu_arch = .aarch64_be,
         .os_tag = .linux,
+        .cpu_features_add = aarch64_target_features,
+    },
+    // For personal use(macos doesnt have qemu userspace)
+    .{
+        .cpu_arch = .aarch64,
+        .os_tag = .macos,
         .cpu_features_add = aarch64_target_features,
     },
     // Not needed until we add x86 assembly fallbacks
@@ -96,9 +106,8 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseFast });
 
-    const path = "src/zeon.zig";
     const module = b.addModule("zeon", .{
-        .root_source_file = b.path(path),
+        .root_source_file = b.path("src/zeon.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -176,6 +185,7 @@ fn addExample(
         target_filter,
     );
 
+    run_step.dependOn(&run_cmd.step);
     example_run_step.dependOn(&run_cmd.step);
     run_step.dependOn(&run_cmd.step);
 }
@@ -198,15 +208,7 @@ fn addTest(
             const filter = std.mem.trim(u8, unprocessed_filter, " ");
             const target_group = findTargetGroup(filter);
 
-            if (target_group == null) {
-                const fmt =
-                    \\Invalid filter: {s}
-                    \\Valid filters: native, arm, aarch64, and aarch64_be
-                ;
-                std.debug.print(fmt, .{filter});
-                std.process.exit(1);
-            }
-            for (target_group.?) |t| {
+            for (target_group) |t| {
                 addUnitTest(b, path, modules, optimize, test_steps, t);
             }
         }
@@ -215,12 +217,19 @@ fn addTest(
 
 fn findTargetGroup(
     filter: []const u8,
-) ?[]const std.Target.Query {
+) []const std.Target.Query {
     if (std.mem.eql(u8, filter, "native")) return &.{test_targets[0]};
     if (std.mem.eql(u8, filter, "arm")) return &.{test_targets[1]};
     if (std.mem.eql(u8, filter, "aarch64")) return &.{test_targets[2]};
     if (std.mem.eql(u8, filter, "aarch64_be")) return &.{test_targets[3]};
-    return null;
+    if (std.mem.eql(u8, filter, "personal")) return &.{test_targets[4]};
+
+    const fmt =
+        \\Invalid filter: {s}
+        \\Valid filters: native, arm, aarch64, aarch64_be and personal
+    ;
+    std.debug.print(fmt, .{filter});
+    std.process.exit(1);
 }
 
 fn addUnitTest(

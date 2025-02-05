@@ -44,3 +44,4 @@ jobs:
       - name: Build and Test
         run: |
           make test
+          DEBUG=1 make test

@@ -8,7 +8,7 @@ Zeon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64` ar
 
 ## Status
 
-🚧 This project is under active development(502/3803 implemented). Contributions and feedback are welcome!
+🚧 This project is under active development(522/3803 implemented). Contributions and feedback are welcome!
 
 ## Roadmap
 

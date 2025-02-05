@@ -539,6 +539,8 @@ fn testIntrinsic(
                 .sm4 = comptime aarch64.hasFeatures(&.{.sm4}),
                 .crypto = comptime aarch64.hasFeatures(&.{.crypto}),
                 .sve = comptime aarch64.hasFeatures(&.{.sve}),
+                .sme = comptime aarch64.hasFeatures(&.{.sme}),
+                .fullfp16 = comptime aarch64.hasFeatures(&.{.fullfp16}),
             };
         } else if (is_arm) {
             break :blk .{
@@ -4954,6 +4956,38 @@ test vcage_f32 {
 }
 
 /// Floating-point absolute compare greater than or equal
+pub inline fn vcage_f64(a: f64x1, b: f64x1) u64x1 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("facge %[ret:d], %[a:d], %[b:d]"
+            : [ret] "=w" (-> u64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.facge.v1i64.v1f64"(f64x1, f64x1) u64x1;
+        }.@"llvm.aarch64.neon.facge.v1i64.v1f64"(a, b);
+    } else {
+        const abs_mask: u64x1 = @splat(0x7fffffffffffffff);
+
+        const abs_a: f64x1 = @bitCast(@as(u64x1, @bitCast(a)) & abs_mask);
+        const abs_b: f64x1 = @bitCast(@as(u64x1, @bitCast(b)) & abs_mask);
+
+        const comparison = abs_a >= abs_b;
+
+        return @select(u64, comparison, @as(u64x1, @splat(0xffffffffffffffff)), @as(f64x1, @splat(0x0000000000000000)));
+    }
+}
+
+test vcage_f64 {
+    const a = f64x1{-2.0};
+    const b = f64x1{2.0};
+    const expected = u64x1{0xffffffffffffffff};
+
+    try testIntrinsic("vcage_f64", vcage_f64, expected, .{ a, b }, null);
+}
+
+/// Floating-point absolute compare greater than or equal
 pub inline fn vcageq_f32(a: f32x4, b: f32x4) u32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("facge %[ret].4s, %[a].4s, %[b].4s"
@@ -5063,6 +5097,36 @@ test vcagt_f32 {
     const expected = u32x2{ 0xffffffff, 0x00000000 };
 
     try testIntrinsic("vcagt_f32", vcagt_f32, expected, .{ a, b }, null);
+}
+
+/// Floating-point absolute compare greater than
+pub inline fn vcagt_f64(a: f64x1, b: f64x1) u64x1 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("facgt %[ret:d], %[a:d], %[b:d]"
+            : [ret] "=w" (-> u64x1),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.facgt.v1i64.v1f64"(f64x1, f64x1) u64x1;
+        }.@"llvm.aarch64.neon.facgt.v1i64.v1f64"(a, b);
+    } else {
+        const abs_a: f64x1 = @abs(a);
+        const abs_b: f64x1 = @abs(b);
+
+        const comparison = abs_a > abs_b;
+
+        return @select(u64, comparison, @as(u64x1, @splat(0xffffffffffffffff)), @as(u64x1, @splat(0x0000000000000000)));
+    }
+}
+
+test vcagt_f64 {
+    const a = f64x1{ -1.2 };
+    const b = f64x1{ -1.1 };
+    const expected = u64x1{ 0xffffffffffffffff };
+
+    try testIntrinsic("vcagt_f64", vcagt_f64, expected, .{ a, b }, null);
 }
 
 /// Shift right
@@ -7353,6 +7417,27 @@ test vzip1q_s32 {
 }
 
 /// Zip vectors
+pub inline fn vzip1q_s64(a: i64x2, b: i64x2) i64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vzip1q_s64 {
+    const a: i64x2 = .{ 0, 2 };
+    const b: i64x2 = .{ 1, 3 };
+    const expected: i64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vzip1q_s64", vzip1q_s64, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
 pub inline fn vzip1q_u8(a: u8x16, b: u8x16) u8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("zip1 %[ret].16b, %[a].16b, %[b].16b"
@@ -7416,6 +7501,27 @@ test vzip1q_u32 {
 }
 
 /// Zip vectors
+pub inline fn vzip1q_u64(a: u64x2, b: u64x2) u64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vzip1q_u64 {
+    const a: u64x2 = .{ 0, 2 };
+    const b: u64x2 = .{ 1, 3 };
+    const expected: u64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vzip1q_u64", vzip1q_u64, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
 pub inline fn vzip1q_f32(a: f32x4, b: f32x4) f32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("zip1 %[ret].4s, %[a].4s, %[b].4s"
@@ -7428,12 +7534,96 @@ pub inline fn vzip1q_f32(a: f32x4, b: f32x4) f32x4 {
     }
 }
 
+/// Zip vectors
+pub inline fn vzip1q_p8(a: p8x16, b: p8x16) p8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> u8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u8, a, b, i8x16{ 0, ~@as(i8, 0), 1, ~@as(i8, 1), 2, ~@as(i8, 2), 3, ~@as(i8, 3), 4, ~@as(i8, 4), 5, ~@as(i8, 5), 6, ~@as(i8, 6), 7, ~@as(i8, 7) });
+    }
+}
+
+test vzip1q_p8 {
+    const a: u8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: u8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip1q_u8", vzip1q_u8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_p16(a: p16x8, b: p16x8) p16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> u16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u16, a, b, i16x8{ 0, ~@as(i16, 0), 1, ~@as(i16, 1), 2, ~@as(i16, 2), 3, ~@as(i16, 3) });
+    }
+}
+
+test vzip1q_p16 {
+    const a: u16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: u16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: u16x8 = .{ 0, 1, 2, 3, 4, 5, 6, 7 };
+
+    try testIntrinsic("vzip1q_u16", vzip1q_u16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_p64(a: p64x2, b: p64x2) p64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vzip1q_p64 {
+    const a: u64x2 = .{ 0, 2 };
+    const b: u64x2 = .{ 1, 3 };
+    const expected: u64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vzip1q_p64", vzip1q_p64, expected, .{ a, b }, null);
+}
+
 test vzip1q_f32 {
     const a: f32x4 = .{ 0, 2, 4, 6 };
     const b: f32x4 = .{ 1, 3, 5, 7 };
     const expected: f32x4 = .{ 0, 1, 2, 3 };
 
     try testIntrinsic("vzip1q_f32", vzip1q_f32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip1q_f64(a: f64x2, b: f64x2) f64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip1 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> f64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f64, a, b, i64x2{ 0, ~@as(i64, 0) });
+    }
+}
+
+test vzip1q_f64 {
+    const a: f64x2 = .{ 0, 2 };
+    const b: f64x2 = .{ 1, 3 };
+    const expected: f64x2 = .{ 0, 1 };
+
+    try testIntrinsic("vzip1q_f64", vzip1q_f64, expected, .{ a, b }, null);
 }
 
 /// Zip vectors
@@ -7500,6 +7690,27 @@ test vzip2q_s32 {
 }
 
 /// Zip vectors
+pub inline fn vzip2q_s64(a: i64x2, b: i64x2) i64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> i64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(i64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
+
+test vzip2q_s64 {
+    const a: i64x2 = .{ 0, 2 };
+    const b: i64x2 = .{ 1, 3 };
+    const expected: i64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vzip2q_s64", vzip2q_s64, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
 pub inline fn vzip2q_u8(a: u8x16, b: u8x16) u8x16 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("zip2 %[ret].16b, %[a].16b, %[b].16b"
@@ -7563,6 +7774,27 @@ test vzip2q_u32 {
 }
 
 /// Zip vectors
+pub inline fn vzip2q_u64(a: u64x2, b: u64x2) u64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> u64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(u64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
+
+test vzip2q_u64 {
+    const a: u64x2 = .{ 0, 2 };
+    const b: u64x2 = .{ 1, 3 };
+    const expected: u64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vzip1q_u64", vzip2q_u64, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
 pub inline fn vzip2q_f32(a: f32x4, b: f32x4) f32x4 {
     if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
         return asm ("zip2 %[ret].4s, %[a].4s, %[b].4s"
@@ -7573,6 +7805,69 @@ pub inline fn vzip2q_f32(a: f32x4, b: f32x4) f32x4 {
     } else {
         return @shuffle(f32, a, b, i32x4{ 2, ~@as(i32, 2), 3, ~@as(i32, 3) });
     }
+}
+
+/// Zip vectors
+pub inline fn vzip2q_p8(a: p8x16, b: p8x16) p8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].16b, %[a].16b, %[b].16b"
+            : [ret] "=w" (-> p8x16),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(p8, a, b, i8x16{ 8, ~@as(i8, 8), 9, ~@as(i8, 9), 10, ~@as(i8, 10), 11, ~@as(i8, 11), 12, ~@as(i8, 12), 13, ~@as(i8, 13), 14, ~@as(i8, 14), 15, ~@as(i8, 15) });
+    }
+}
+
+test vzip2q_p8 {
+    const a: p8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: p8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: i8x16 = .{ 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
+
+    try testIntrinsic("vzip2q_s8", vzip2q_s8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_p16(a: p16x8, b: p16x8) p16x8 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].8h, %[a].8h, %[b].8h"
+            : [ret] "=w" (-> p16x8),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(p16, a, b, i16x8{ 4, ~@as(i16, 4), 5, ~@as(i16, 5), 6, ~@as(i16, 6), 7, ~@as(i16, 7) });
+    }
+}
+
+test vzip2q_p16 {
+    const a: p16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: p16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: p16x8 = .{ 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    try testIntrinsic("vzip2q_p16", vzip2q_p16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzip2q_p64(a: p64x2, b: p64x2) p64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> p64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(p64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
+
+test vzip2q_p64 {
+    const a: p64x2 = .{ 0, 2 };
+    const b: p64x2 = .{ 1, 3 };
+    const expected: p64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vzip1q_p64", vzip2q_p64, expected, .{ a, b }, null);
 }
 
 test vzip2q_f32 {
@@ -7592,9 +7887,77 @@ test vzip2_f32 {
 }
 
 /// Zip vectors
-// pub inline fn vzipq_u8(a: u8x16, b: u8x16) u8x16x2 {
+pub inline fn vzip2q_f64(a: f64x2, b: f64x2) f64x2 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("zip2 %[ret].2d, %[a].2d, %[b].2d"
+            : [ret] "=w" (-> f64x2),
+            : [a] "w" (a),
+              [b] "w" (b),
+        );
+    } else {
+        return @shuffle(f64, a, b, i64x2{ 1, ~@as(i64, 1) });
+    }
+}
 
-// }
+test vzip2q_f64 {
+    const a: f64x2 = .{ 0, 2 };
+    const b: f64x2 = .{ 1, 3 };
+    const expected: f64x2 = .{ 2, 3 };
+
+    try testIntrinsic("vzip1q_f64", vzip2q_f64, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzipq_u8(a: u8x16, b: u8x16) u8x16x2 {
+    return .{ vzip1q_u8(a, b), vzip2q_u8(a, b) };
+}
+
+test vzipq_u8 {
+    const a: u8x16 = .{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 };
+    const b: u8x16 = .{ 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 };
+    const expected: u8x16x2 = .{ .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, .{ 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 } };
+
+    try testIntrinsic("vzipq_u8", vzipq_u8, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzipq_u16(a: u16x8, b: u16x8) u16x8x2 {
+    return .{ vzip1q_u16(a, b), vzip2q_u16(a, b) };
+}
+
+test vzipq_u16 {
+    const a: u16x8 = .{ 0, 2, 4, 6, 8, 10, 12, 14 };
+    const b: u16x8 = .{ 1, 3, 5, 7, 9, 11, 13, 15 };
+    const expected: u16x8x2 = .{ .{ 0, 1, 2, 3, 4, 5, 6, 7 }, .{ 8, 9, 10, 11, 12, 13, 14, 15 } };
+
+    try testIntrinsic("vzipq_u16", vzipq_u16, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzipq_u32(a: u32x4, b: u32x4) u32x4x2 {
+    return .{ vzip1q_u32(a, b), vzip2q_u32(a, b) };
+}
+
+test vzipq_u32 {
+    const a: u32x4 = .{ 0, 2, 4, 6 };
+    const b: u32x4 = .{ 1, 3, 5, 7 };
+    const expected: u32x4x2 = .{ .{ 0, 1, 2, 3 }, .{ 4, 5, 6, 7 } };
+
+    try testIntrinsic("vzipq_u32", vzipq_u32, expected, .{ a, b }, null);
+}
+
+/// Zip vectors
+pub inline fn vzipq_u64(a: u64x2, b: u64x2) u64x2x2 {
+    return .{ vzip1q_u64(a, b), vzip2q_u64(a, b) };
+}
+
+test vzipq_u64 {
+    const a: u64x2 = .{ 0, 2 };
+    const b: u64x2 = .{ 1, 3 };
+    const expected: u64x2x2 = .{ .{ 0, 1 }, .{ 2, 3 } };
+
+    try testIntrinsic("vzipq_u64", vzipq_u64, expected, .{ a, b }, null);
+}
 
 /// Transpose vectors
 pub inline fn vtrn1q_s8(a: i8x16, b: i8x16) i8x16 {
@@ -9531,6 +9894,109 @@ test vst1q_f64 {
     const expected: [2]f64 = .{ 8.485324487224609e+307, 1.0542911763881099e+308 };
 
     try testIntrinsic("vst1q_f64", vst1q_f64, expected, .{ result[0..].ptr, vec }, &result);
+}
+
+/// Table look-up
+pub inline fn vqtbl1q_s8(t: i8x16, idx: i8x16) i8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("tbl %[ret].16b, {%[t].16b}, %[idx].16b"
+            : [ret] "=w" (-> i8x16),
+            : [t] "w" (t),
+              [idx] "w" (idx),
+        );
+    } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.tbl1.v16i8"(i8x16, i8x16) i8x16;
+        }.@"llvm.aarch64.neon.tbl1.v16i8"(t, idx);
+    } else {
+        // @shuffle would be great here, but mask
+        // needs to be comptime known. Zig does
+        // optimize this down to its required
+        // instruction despite the loop.
+        var result: i8x16 = undefined;
+        inline for (0..16) |i| {
+            result[i] = t[idx[i]];
+        }
+
+        return result;
+    }
+}
+
+test vqtbl1q_s8 {
+    {
+        const t: i8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+        const idx: i8x16 = .{ 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+        const expected: i8x16 = .{ 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+
+        try testIntrinsic("vqtbl1q_s8", vqtbl1q_s8, expected, .{ t, idx }, null);
+    }
+    {
+        const t: i8x16 = .{ 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127 };
+        const idx: i8x16 = .{ 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+        const expected: i8x16 = .{ 127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112 };
+
+        try testIntrinsic("vqtbl1q_s8", vqtbl1q_s8, expected, .{ t, idx }, null);
+    }
+}
+
+/// Table look-up
+pub inline fn vqtbl1q_u8(t: u8x16, idx: u8x16) u8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("tbl %[ret].16b, {%[t].16b}, %[idx].16b"
+            : [ret] "=w" (-> u8x16),
+            : [t] "w" (t),
+              [idx] "w" (idx),
+        );
+    } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.tbl1.v16i8"(u8x16, u8x16) u8x16;
+        }.@"llvm.aarch64.neon.tbl1.v16i8"(t, idx);
+    } else {
+        var result: u8x16 = undefined;
+        inline for (0..16) |i| {
+            result[i] = t[idx[i]];
+        }
+
+        return result;
+    }
+}
+
+test vqtbl1q_u8 {
+    const t: u8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    const idx: u8x16 = .{ 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+    const expected: u8x16 = .{ 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+
+    try testIntrinsic("vqtbl1q_u8", vqtbl1q_u8, expected, .{ t, idx }, null);
+}
+
+/// Table look-up
+pub inline fn vqtbl1q_p8(t: p8x16, idx: p8x16) p8x16 {
+    if (use_asm and comptime aarch64.hasFeatures(&.{.neon})) {
+        return asm ("tbl %[ret].16b, {%[t].16b}, %[idx].16b"
+            : [ret] "=w" (-> p8x16),
+            : [t] "w" (t),
+              [idx] "w" (idx),
+        );
+    } else if (use_builtins and comptime aarch64.hasFeatures(&.{.neon})) {
+        return struct {
+            extern fn @"llvm.aarch64.neon.tbl1.v16i8"(p8x16, p8x16) p8x16;
+        }.@"llvm.aarch64.neon.tbl1.v16i8"(t, idx);
+    } else {
+        var result: p8x16 = undefined;
+        inline for (0..16) |i| {
+            result[i] = t[idx[i]];
+        }
+
+        return result;
+    }
+}
+
+test vqtbl1q_p8 {
+    const t: p8x16 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    const idx: p8x16 = .{ 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+    const expected: p8x16 = .{ 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+
+    try testIntrinsic("vqtbl1q_p8", vqtbl1q_p8, expected, .{ t, idx }, null);
 }
 
 test {
