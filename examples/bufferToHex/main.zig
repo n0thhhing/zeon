@@ -74,15 +74,11 @@ test buftohex {
         0xee, 0xcc, 0x63, 0xee,
     };
     const expected = "0c6268f87129d764ac73f77b1a4f95f5166783a7e41efc8302f61030eecc63ee";
-    
-    var result: [64]u8 = undefined;
-    inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opt| {
-        neon.use_asm = opt[0];
-        neon.use_builtins = opt[1];
-        buftohex(buf[0..].ptr, result[0..].ptr, 32);
 
-        try std.testing.expectEqualStrings(expected, &result);
-    }
+    var result: [64]u8 = undefined;
+    buftohex(buf[0..].ptr, result[0..].ptr, 32);
+
+    try std.testing.expectEqualStrings(expected, &result);
 }
 
 pub fn main() void {

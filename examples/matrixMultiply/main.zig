@@ -100,13 +100,9 @@ test matmul4x4 {
         560, 502, 444, 386,
     };
 
-    inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opt| {
-        neon.use_asm = opt[0];
-        neon.use_builtins = opt[1];
-        matmul4x4(a[0..].ptr, b[0..].ptr, &result);
+    matmul4x4(a[0..].ptr, b[0..].ptr, &result);
 
-        try std.testing.expectEqual(expected, result);
-    }
+    try std.testing.expectEqual(expected, result);
 }
 
 pub fn main() void {

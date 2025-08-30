@@ -12,41 +12,48 @@ Zeon aims to provide high-performance `Neon` intrinsics for `ARM` and `ARM64` ar
 
 ## Roadmap
 
- - [ ] Complete inline assembly/LLVM builtin implementations.
- - [ ] Write thorough tests for all functions to ensure correctness.
- - [ ] Refactor into multiple files.
- - [ ] Eliminate repetitive patterns to improve maintainability.
- - [ ] Implement fallbacks for non-ARM architectures.
- - [ ] Instruction Stripping e.g, Functions like `vget_lane_f64` should compile down to nothing more than accessing the appropriate register (e.g., s0 for vec in v0). Currently, we are explicitly inserting instructions, which prevents the compiler from optimizing them away when not needed.
- - [ ] Add support for Big Endian arm/aarch64, and add tests for it.
- - [ ] For Vector Load intrinsics, dont assume the input length is the exact length of the output vector.
- - [ ] Test against C/C++ implementation.
- - [ ] Add a better way to switch between implementations(like assembly, builtins and the fallback).
- - [ ] Use the fallback instead of assembly implementation when not in release.
+- [ ] Complete inline assembly/LLVM builtin implementations.
+- [ ] Write thorough tests for all functions to ensure correctness.
+- [ ] Refactor into multiple files.
+- [ ] Eliminate repetitive patterns to improve maintainability.
+- [ ] Implement fallbacks for non-ARM architectures.
+- [ ] Instruction Stripping e.g, Functions like `vget_lane_f64` should compile down to nothing more than accessing the appropriate register (e.g., s0 for vec in v0). Currently, we are explicitly inserting instructions, which prevents the compiler from optimizing them away when not needed.
+- [ ] Add support for Big Endian arm/aarch64, and add tests for it.
+- [ ] For Vector Load intrinsics, dont assume the input length is the exact length of the output vector.
+- [ ] Test against C/C++ implementation.
+- [ ] Use the fallback instead of assembly implementation when not in release.
+- [ ] Figure out a better way to test each implementation.
 
 ## Notes
- - When using `vld1*` on non-ARM architectures(or if use_asm and use_builtins is off), it assumes the underlying type fits the size of the vector.
- - Some intrinsics wont have inline assembly because the fallback implementation is either faster or the same as the assembly implementation. If the target function does not use inline assembly, then it wont be optimized to the target neon intrinsic unless your in `ReleaseFast`.
+
+- Builtins take priority over assembly implementation
+- Zig can really optimize inline assembly because we are explicitly inserting instructions (e.g. certain instructions like `vld1*` cannot be optimized using a Post-index; they require a separate add instruction to increment the pointer instead)
+- When using `vld1*` on non-ARM architectures(or if use_asm and use_builtins is off), it assumes the underlying type fits the size of the vector.
+- Some intrinsics wont have inline assembly because the fallback implementation is either faster or the same as the assembly implementation. If the target function does not use inline assembly, then it wont be optimized to the target neon intrinsic unless your in `ReleaseFast`.
 
 ## Getting Started
 
 ### Requirements
+
 To test and simulate ARM/ARM64 environments, `QEMU user mode` is required. Make sure QEMU is properly installed and configured before running tests. You'll also need `Make` for build and test automation.
 For usage examples, see [examples](examples/).
 
 ### Installation and Usage
+
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/n0thhhing/zeon
    cd zeon
    ```
 
-3. Run tests:
+2. Run tests:
+
    ```bash
    make test
    ```
 
-4. Run examples:
+3. Run examples:
    ```bash
    make examples
    ```

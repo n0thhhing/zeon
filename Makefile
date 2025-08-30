@@ -13,4 +13,4 @@ test:
 
 .PHONY: examples
 examples:
-	zig build run $(RUN_FLAGS)
+	zig build run $(RUN_FLAGS) -Drelease=true

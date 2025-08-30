@@ -4,3 +4,4 @@ tests/
 aarch64_simd.h
 impl
 .DS_Store
+#old/

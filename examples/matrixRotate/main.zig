@@ -142,54 +142,50 @@ test matrot4x4 {
     };
 
     var result: [16]f32 = undefined;
-    inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opt| {
-        neon.use_asm = opt[0];
-        neon.use_builtins = opt[1];
-        {
-            const expected: [16]f32 = .{
-                13, 9,  5, 1,
-                14, 10, 6, 2,
-                15, 11, 7, 3,
-                16, 12, 8, 4,
-            };
-            matrot4x4(a[0..].ptr, &result, 1, .CW);
+    {
+        const expected: [16]f32 = .{
+            13, 9,  5, 1,
+            14, 10, 6, 2,
+            15, 11, 7, 3,
+            16, 12, 8, 4,
+        };
+        matrot4x4(a[0..].ptr, &result, 1, .CW);
 
-            try std.testing.expectEqual(expected, result);
+        try std.testing.expectEqual(expected, result);
 
-            matrot4x4(a[0..].ptr, &result, 3, .CCW);
+        matrot4x4(a[0..].ptr, &result, 3, .CCW);
 
-            try std.testing.expectEqual(expected, result);
-        }
-        {
-            const expected: [16]f32 = .{
-                16, 15, 14, 13,
-                12, 11, 10, 9,
-                8,  7,  6,  5,
-                4,  3,  2,  1,
-            };
-            matrot4x4(a[0..].ptr, &result, 2, .CW);
+        try std.testing.expectEqual(expected, result);
+    }
+    {
+        const expected: [16]f32 = .{
+            16, 15, 14, 13,
+            12, 11, 10, 9,
+            8,  7,  6,  5,
+            4,  3,  2,  1,
+        };
+        matrot4x4(a[0..].ptr, &result, 2, .CW);
 
-            try std.testing.expectEqual(expected, result);
+        try std.testing.expectEqual(expected, result);
 
-            matrot4x4(a[0..].ptr, &result, 2, .CCW);
+        matrot4x4(a[0..].ptr, &result, 2, .CCW);
 
-            try std.testing.expectEqual(expected, result);
-        }
-        {
-            const expected: [16]f32 = .{
-                4, 8, 12, 16,
-                3, 7, 11, 15,
-                2, 6, 10, 14,
-                1, 5, 9,  13,
-            };
-            matrot4x4(a[0..].ptr, &result, 3, .CW);
+        try std.testing.expectEqual(expected, result);
+    }
+    {
+        const expected: [16]f32 = .{
+            4, 8, 12, 16,
+            3, 7, 11, 15,
+            2, 6, 10, 14,
+            1, 5, 9,  13,
+        };
+        matrot4x4(a[0..].ptr, &result, 3, .CW);
 
-            try std.testing.expectEqual(expected, result);
+        try std.testing.expectEqual(expected, result);
 
-            matrot4x4(a[0..].ptr, &result, 1, .CCW);
+        matrot4x4(a[0..].ptr, &result, 1, .CCW);
 
-            try std.testing.expectEqual(expected, result);
-        }
+        try std.testing.expectEqual(expected, result);
     }
 }
 

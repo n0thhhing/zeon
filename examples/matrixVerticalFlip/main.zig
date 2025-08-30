@@ -30,7 +30,7 @@ fn printMatrix(matrix: [*]const f32, w: usize, h: usize) void {
     std.debug.print("\n", .{});
 }
 
-fn vertical_flip4x4(
+export fn vertical_flip4x4(
     input: [*]const f32,
     output: [*]f32,
 ) void {
@@ -56,24 +56,18 @@ test vertical_flip4x4 {
     };
 
     var result: [16]f32 = undefined;
-    inline for (.{ .{ true, false }, .{ false, true }, .{ false, false } }) |opt| {
-        neon.use_asm = opt[0];
-        neon.use_builtins = opt[1];
-
-        const expected: [16]f32 = .{
-            13, 14, 15, 16,
-            9,  10, 11, 12,
-            5,  6,  7,  8,
-            1,  2,  3,  4,
-        };
-        vertical_flip4x4(a[0..].ptr, &result);
-
-        try std.testing.expectEqual(expected, result);
-    }
+    const expected: [16]f32 = .{
+        13, 14, 15, 16,
+        9,  10, 11, 12,
+        5,  6,  7,  8,
+        1,  2,  3,  4,
+    };
+    vertical_flip4x4(a[0..].ptr, &result);
+    try std.testing.expectEqual(expected, result);
 }
 
 pub fn main() void {
-    std.debug.print("Matrix Vertical Flip:\n", .{});
+    //std.debug.print("Matrix Vertical Flip:\n", .{});
     const a: [16]f32 = .{
         1.0,  2.0,  3.0,  4.0,
         5.0,  6.0,  7.0,  8.0,
@@ -83,7 +77,7 @@ pub fn main() void {
 
     var result: [16]f32 = undefined;
 
-    vertical_flip4x4(a[0..].ptr, &result);
+    vertical_flip4x4(&a, &result);
 
     printMatrix(result[0..].ptr, 4, 4);
 }
