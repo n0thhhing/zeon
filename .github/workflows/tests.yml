@@ -10,9 +10,9 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        zig-version: [0.15.1]
+    # strategy:
+    #   matrix:
+    #     zig-version: [0.15.1]
 
     steps:
       - name: Checkout Code
