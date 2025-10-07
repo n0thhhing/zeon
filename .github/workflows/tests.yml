@@ -37,7 +37,7 @@ jobs:
           qemu-aarch64_be -version
 
       - name: Install Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ matrix.zig-version }}
 
