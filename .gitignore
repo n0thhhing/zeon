@@ -1,7 +1,12 @@
 .zig-cache/
 zig-out/
-tests/
-aarch64_simd.h
-impl
+# tests/
+scripts/*.h
+scripts/ALL
+scripts/AARCH64
+scripts/ARM
+scripts/UNIMPL
 .DS_Store
 #old/
+.gemini/
+.agents/

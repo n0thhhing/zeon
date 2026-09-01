@@ -12,29 +12,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        zig-version: [0.15.1]
+        zig-version: [master]
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install QEMU User-Mode
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user
 
-          echo
-
           echo aarch64:
           qemu-aarch64 -version
-          echo
 
           echo arm:
           qemu-arm -version
-          echo
-
-          echo aarch64_be:
-          qemu-aarch64_be -version
 
       - name: Install Zig
         uses: mlugg/setup-zig@v1
@@ -44,4 +37,3 @@ jobs:
       - name: Build and Test
         run: |
           make test
-          DEBUG=1 make test

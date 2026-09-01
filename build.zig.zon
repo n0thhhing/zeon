@@ -1,7 +1,7 @@
 .{
     .name = .zeon,
-    .version = "0.0.1",
-    .minimum_zig_version = "0.15.1",
+    .version = "0.1.0",
+    .minimum_zig_version = "0.16.0",
     .fingerprint = 0x23b5ad18e019a6d1,
     .dependencies = .{},
     .paths = .{
