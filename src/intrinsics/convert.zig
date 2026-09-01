@@ -96,18 +96,100 @@ pub inline fn vmovn_u64(a: u64x2) u32x2 {
 // --- Float / Integer Conversion ---
 pub inline fn vcvt_f32_s32(a: i32x2) f32x2 { return @floatFromInt(a); }
 pub inline fn vcvt_f32_u32(a: u32x2) f32x2 { return @floatFromInt(a); }
-pub inline fn vcvt_s32_f32(a: f32x2) i32x2 { return @intFromFloat(a); }
-pub inline fn vcvt_u32_f32(a: f32x2) u32x2 { return @intFromFloat(a); }
+pub inline fn vcvt_s32_f32(a: f32x2) i32x2 {
+    if (comptime @import("builtin").cpu.arch == .aarch64) {
+        return asm ("fcvtzs %[res].2s, %[a].2s" : [res] "=w" (-> i32x2) : [a] "w" (a));
+    }
+    var res: i32x2 = undefined;
+    inline for (0..2) |i| {
+        const v = a[i];
+        if (v >= @as(f32, @floatFromInt(std.math.maxInt(i32))) or v <= @as(f32, @floatFromInt(std.math.minInt(i32)))) {
+            res[i] = if (v < 0.0) std.math.minInt(i32) else std.math.maxInt(i32);
+        } else {
+            res[i] = @intFromFloat(v);
+        }
+    }
+    return res;
+}
+pub inline fn vcvt_u32_f32(a: f32x2) u32x2 {
+    if (comptime @import("builtin").cpu.arch == .aarch64) {
+        return asm ("fcvtzu %[res].2s, %[a].2s" : [res] "=w" (-> u32x2) : [a] "w" (a));
+    }
+    var res: u32x2 = undefined;
+    inline for (0..2) |i| {
+        const v = a[i];
+        if (v < 0.0 or v > @as(f32, @floatFromInt(std.math.maxInt(u32)))) {
+            res[i] = if (v < 0.0) 0 else std.math.maxInt(u32);
+        } else {
+            res[i] = @intFromFloat(v);
+        }
+    }
+    return res;
+}
 
 pub inline fn vcvtq_f32_s32(a: i32x4) f32x4 { return @floatFromInt(a); }
 pub inline fn vcvtq_f32_u32(a: u32x4) f32x4 { return @floatFromInt(a); }
-pub inline fn vcvtq_s32_f32(a: f32x4) i32x4 { return @intFromFloat(a); }
-pub inline fn vcvtq_u32_f32(a: f32x4) u32x4 { return @intFromFloat(a); }
+pub inline fn vcvtq_s32_f32(a: f32x4) i32x4 {
+    if (comptime @import("builtin").cpu.arch == .aarch64) {
+        return asm ("fcvtzs %[res].4s, %[a].4s" : [res] "=w" (-> i32x4) : [a] "w" (a));
+    }
+    var res: i32x4 = undefined;
+    inline for (0..4) |i| {
+        const v = a[i];
+        if (v >= @as(f32, @floatFromInt(std.math.maxInt(i32))) or v <= @as(f32, @floatFromInt(std.math.minInt(i32)))) {
+            res[i] = if (v < 0.0) std.math.minInt(i32) else std.math.maxInt(i32);
+        } else {
+            res[i] = @intFromFloat(v);
+        }
+    }
+    return res;
+}
+pub inline fn vcvtq_u32_f32(a: f32x4) u32x4 {
+    if (comptime @import("builtin").cpu.arch == .aarch64) {
+        return asm ("fcvtzu %[res].4s, %[a].4s" : [res] "=w" (-> u32x4) : [a] "w" (a));
+    }
+    var res: u32x4 = undefined;
+    inline for (0..4) |i| {
+        const v = a[i];
+        if (v < 0.0 or v > @as(f32, @floatFromInt(std.math.maxInt(u32)))) {
+            res[i] = if (v < 0.0) 0 else std.math.maxInt(u32);
+        } else {
+            res[i] = @intFromFloat(v);
+        }
+    }
+    return res;
+}
 
 pub inline fn vcvtq_f64_s64(a: i64x2) f64x2 { return @floatFromInt(a); }
 pub inline fn vcvtq_f64_u64(a: u64x2) f64x2 { return @floatFromInt(a); }
-pub inline fn vcvtq_s64_f64(a: f64x2) i64x2 { return @intFromFloat(a); }
-pub inline fn vcvtq_u64_f64(a: f64x2) u64x2 { return @intFromFloat(a); }
+pub inline fn vcvtq_s64_f64(a: f64x2) i64x2 {
+    if (comptime @import("builtin").cpu.arch == .aarch64) {
+        return asm ("fcvtzs %[res].2d, %[a].2d" : [res] "=w" (-> i64x2) : [a] "w" (a));
+    }
+    var res: i64x2 = undefined;
+    inline for (0..2) |i| {
+        if (a[i] >= @as(f64, std.math.maxInt(i64)) or a[i] <= @as(f64, std.math.minInt(i64))) {
+            res[i] = if (a[i] < 0) std.math.minInt(i64) else std.math.maxInt(i64);
+        } else {
+            res[i] = @intFromFloat(a[i]);
+        }
+    }
+    return res;
+}
+pub inline fn vcvtq_u64_f64(a: f64x2) u64x2 {
+    if (comptime @import("builtin").cpu.arch == .aarch64) {
+        return asm ("fcvtzu %[res].2d, %[a].2d" : [res] "=w" (-> u64x2) : [a] "w" (a));
+    }
+    var res: u64x2 = undefined;
+    inline for (0..2) |i| {
+        if (a[i] < 0.0 or a[i] > @as(f64, @floatFromInt(std.math.maxInt(u64)))) {
+            res[i] = if (a[i] < 0.0) 0 else std.math.maxInt(u64);
+        } else {
+            res[i] = @intFromFloat(a[i]);
+        }
+    }
+    return res;
+}
 
 // --- Reinterpret Casts ---
 pub inline fn vreinterpret_s8_u8(a: u8x8) i8x8 { return @bitCast(a); }

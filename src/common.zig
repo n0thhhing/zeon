@@ -9,6 +9,7 @@ pub const arm = @import("arch/arm.zig");
 
 pub const is_arm = arm.is_arm;
 pub const is_aarch64 = aarch64.is_aarch64;
+pub const is_portable = !is_arm and !is_aarch64;
 
 pub const VEC_MAX_BITSIZE: u32 = 128;
 
@@ -75,6 +76,24 @@ pub const GF_MUL_TABLE: [256][256]u8 = blk: {
 
     break :blk table;
 };
+
+test "architecture detection matches the target" {
+    const current_arch = builtin.target.cpu.arch;
+
+    if (current_arch == .arm or current_arch == .armeb or current_arch == .thumb or current_arch == .thumbeb) {
+        try std.testing.expect(is_arm);
+        try std.testing.expect(!is_aarch64);
+        try std.testing.expect(!is_portable);
+    } else if (current_arch == .aarch64 or current_arch == .aarch64_be) {
+        try std.testing.expect(!is_arm);
+        try std.testing.expect(is_aarch64);
+        try std.testing.expect(!is_portable);
+    } else {
+        try std.testing.expect(!is_arm);
+        try std.testing.expect(!is_aarch64);
+        try std.testing.expect(is_portable);
+    }
+}
 
 /// Gets the length of a vector
 pub inline fn vecLen(comptime T: type) usize {

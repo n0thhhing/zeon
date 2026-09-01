@@ -402,7 +402,9 @@ pub inline fn vqsubq_u64(a: u64x2, b: u64x2) u64x2 { return a -| b; }
 
 pub inline fn vqsubs_s32(a: i32, b: i32) i32 {
     const diff: i64 = @as(i64, a) - @as(i64, b);
-    return @intCast(std.math.clamp(diff, std.math.minInt(i32), std.math.maxInt(i32)));
+    if (diff > std.math.maxInt(i32)) return std.math.maxInt(i32);
+    if (diff < std.math.minInt(i32)) return std.math.minInt(i32);
+    return @intCast(diff);
 }
 pub inline fn vqsubs_u32(a: u32, b: u32) u32 {
     if (a < b) return 0;
@@ -410,7 +412,9 @@ pub inline fn vqsubs_u32(a: u32, b: u32) u32 {
 }
 pub inline fn vqsubd_s64(a: i64, b: i64) i64 {
     const diff: i128 = @as(i128, a) - @as(i128, b);
-    return @intCast(std.math.clamp(diff, std.math.minInt(i64), std.math.maxInt(i64)));
+    if (diff > std.math.maxInt(i64)) return std.math.maxInt(i64);
+    if (diff < std.math.minInt(i64)) return std.math.minInt(i64);
+    return @intCast(diff);
 }
 pub inline fn vqsubd_u64(a: u64, b: u64) u64 {
     if (a < b) return 0;

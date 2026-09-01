@@ -15,6 +15,15 @@ pub inline fn hasFeatures(comptime aarch64_features: []const std.Target.aarch64.
     return true;
 }
 
+test "aarch64 feature checks are consistent with the target" {
+    const ok = comptime hasFeatures(&.{});
+    if (is_aarch64) {
+        try std.testing.expect(ok);
+    } else {
+        try std.testing.expect(!ok);
+    }
+}
+
 test {
     std.testing.refAllDecls(@This());
 }

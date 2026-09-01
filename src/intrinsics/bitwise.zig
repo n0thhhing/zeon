@@ -226,16 +226,58 @@ pub inline fn vcntq_p8(a: p8x16) p8x16 { return @popCount(a); }
 pub inline fn vclz_u8(a: u8x8) u8x8 { return @clz(a); }
 pub inline fn vclz_u16(a: u16x4) u16x4 { return @clz(a); }
 pub inline fn vclz_u32(a: u32x2) u32x2 { return @clz(a); }
-pub inline fn vclz_s8(a: i8x8) i8x8 { return @as(i8x8, @intCast(@clz(@as(u8x8, @bitCast(a))))); }
-pub inline fn vclz_s16(a: i16x4) i16x4 { return @as(i16x4, @intCast(@clz(@as(u16x4, @bitCast(a))))); }
-pub inline fn vclz_s32(a: i32x2) i32x2 { return @as(i32x2, @intCast(@clz(@as(u32x2, @bitCast(a))))); }
+pub inline fn vclz_s8(a: i8x8) i8x8 {
+    var res: i8x8 = undefined;
+    inline for (0..8) |i| {
+        const bits: u8 = @bitCast(a[i]);
+        res[i] = @intCast(@clz(bits));
+    }
+    return res;
+}
+pub inline fn vclz_s16(a: i16x4) i16x4 {
+    var res: i16x4 = undefined;
+    inline for (0..4) |i| {
+        const bits: u16 = @bitCast(a[i]);
+        res[i] = @intCast(@clz(bits));
+    }
+    return res;
+}
+pub inline fn vclz_s32(a: i32x2) i32x2 {
+    var res: i32x2 = undefined;
+    inline for (0..2) |i| {
+        const bits: u32 = @bitCast(a[i]);
+        res[i] = @intCast(@clz(bits));
+    }
+    return res;
+}
 
 pub inline fn vclzq_u8(a: u8x16) u8x16 { return @clz(a); }
 pub inline fn vclzq_u16(a: u16x8) u16x8 { return @clz(a); }
 pub inline fn vclzq_u32(a: u32x4) u32x4 { return @clz(a); }
-pub inline fn vclzq_s8(a: i8x16) i8x16 { return @as(i8x16, @intCast(@clz(@as(u8x16, @bitCast(a))))); }
-pub inline fn vclzq_s16(a: i16x8) i16x8 { return @as(i16x8, @intCast(@clz(@as(u16x8, @bitCast(a))))); }
-pub inline fn vclzq_s32(a: i32x4) i32x4 { return @as(i32x4, @intCast(@clz(@as(u32x4, @bitCast(a))))); }
+pub inline fn vclzq_s8(a: i8x16) i8x16 {
+    var res: i8x16 = undefined;
+    inline for (0..16) |i| {
+        const bits: u8 = @bitCast(a[i]);
+        res[i] = @intCast(@clz(bits));
+    }
+    return res;
+}
+pub inline fn vclzq_s16(a: i16x8) i16x8 {
+    var res: i16x8 = undefined;
+    inline for (0..8) |i| {
+        const bits: u16 = @bitCast(a[i]);
+        res[i] = @intCast(@clz(bits));
+    }
+    return res;
+}
+pub inline fn vclzq_s32(a: i32x4) i32x4 {
+    var res: i32x4 = undefined;
+    inline for (0..4) |i| {
+        const bits: u32 = @bitCast(a[i]);
+        res[i] = @intCast(@clz(bits));
+    }
+    return res;
+}
 
 test "bitwise intrinsics" {
     const a: u8x8 = @splat(0b10101010);

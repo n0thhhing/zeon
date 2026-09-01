@@ -15,6 +15,15 @@ pub inline fn hasFeatures(comptime arm_features: []const std.Target.arm.Feature)
     return true;
 }
 
+test "arm feature checks are consistent with the target" {
+    const ok = comptime hasFeatures(&.{});
+    if (is_arm) {
+        try std.testing.expect(ok);
+    } else {
+        try std.testing.expect(!ok);
+    }
+}
+
 test {
     std.testing.refAllDecls(@This());
 }

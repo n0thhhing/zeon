@@ -355,20 +355,37 @@ pub inline fn vrev64q_f32(a: f32x4) f32x4 {
 // --- Table Lookup (VTBL / VQTBL) ---
 pub inline fn vqtbl1q_u8(t: u8x16, idx: u8x16) u8x16 {
     var res: u8x16 = undefined;
-    const t_arr: [16]u8 = t;
+    const t_arr: [16]u8 = @bitCast(t);
+    const t_ptr: [*]const u8 = &t_arr;
     inline for (0..16) |i| {
         const index = idx[i];
-        res[i] = if (index < 16) t_arr[index] else 0;
+        res[i] = if (index < 16) t_ptr[index] else 0;
     }
     return res;
 }
 pub inline fn vqtbl1q_s8(t: i8x16, idx: i8x16) i8x16 {
     const t_u: u8x16 = @bitCast(t);
     const idx_u: u8x16 = @bitCast(idx);
-    return @bitCast(vqtbl1q_u8(t_u, idx_u));
+    var res: u8x16 = undefined;
+    const t_arr: [16]u8 = @bitCast(t_u);
+    const t_ptr: [*]const u8 = &t_arr;
+    inline for (0..16) |i| {
+        const index = idx_u[i];
+        res[i] = if (index < 16) t_ptr[index] else 0;
+    }
+    return @bitCast(res);
 }
 pub inline fn vqtbl1q_p8(t: p8x16, idx: p8x16) p8x16 {
-    return vqtbl1q_u8(t, idx);
+    const t_u: u8x16 = @bitCast(t);
+    const idx_u: u8x16 = @bitCast(idx);
+    var res: u8x16 = undefined;
+    const t_arr: [16]u8 = @bitCast(t_u);
+    const t_ptr: [*]const u8 = &t_arr;
+    inline for (0..16) |i| {
+        const index = idx_u[i];
+        res[i] = if (index < 16) t_ptr[index] else 0;
+    }
+    return @bitCast(res);
 }
 
 test "permute intrinsics" {
