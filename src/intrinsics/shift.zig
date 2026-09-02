@@ -1,3 +1,4 @@
+const arch = @import("../arch.zig");
 const std = @import("std");
 const types = @import("../types.zig");
 const common = @import("../common.zig");
@@ -22,14 +23,20 @@ const u64x2 = types.u64x2;
 
 // --- Immediate Right Shift (VSHR_N / VSHRQ_N) ---
 pub inline fn vshr_n_s8(a: i8x8, comptime n: usize) i8x8 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("sshr %[res].8b, %[a].8b, #%[b]" : [res] "=w" (-> i8x8) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i8x8 = @splat(@intCast(n));
     return a >> shift;
 }
 pub inline fn vshr_n_s16(a: i16x4, comptime n: usize) i16x4 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("sshr %[res].4h, %[a].4h, #%[b]" : [res] "=w" (-> i16x4) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i16x4 = @splat(@intCast(n));
     return a >> shift;
 }
 pub inline fn vshr_n_s32(a: i32x2, comptime n: usize) i32x2 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("sshr %[res].2s, %[a].2s, #%[b]" : [res] "=w" (-> i32x2) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i32x2 = @splat(@intCast(n));
     return a >> shift;
 }
@@ -39,14 +46,20 @@ pub inline fn vshr_n_s64(a: i64x1, comptime n: usize) i64x1 {
 }
 
 pub inline fn vshr_n_u8(a: u8x8, comptime n: usize) u8x8 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("ushr %[res].8b, %[a].8b, #%[b]" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u8x8 = @splat(@intCast(n));
     return a >> shift;
 }
 pub inline fn vshr_n_u16(a: u16x4, comptime n: usize) u16x4 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("ushr %[res].4h, %[a].4h, #%[b]" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u16x4 = @splat(@intCast(n));
     return a >> shift;
 }
 pub inline fn vshr_n_u32(a: u32x2, comptime n: usize) u32x2 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("ushr %[res].2s, %[a].2s, #%[b]" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u32x2 = @splat(@intCast(n));
     return a >> shift;
 }
@@ -91,14 +104,20 @@ pub inline fn vshrq_n_u64(a: u64x2, comptime n: usize) u64x2 {
 
 // --- Immediate Left Shift (VSHL_N / VSHLQ_N) ---
 pub inline fn vshl_n_s8(a: i8x8, comptime n: usize) i8x8 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].8b, %[a].8b, #%[b]" : [res] "=w" (-> i8x8) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i8x8 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshl_n_s16(a: i16x4, comptime n: usize) i16x4 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].4h, %[a].4h, #%[b]" : [res] "=w" (-> i16x4) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i16x4 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshl_n_s32(a: i32x2, comptime n: usize) i32x2 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].2s, %[a].2s, #%[b]" : [res] "=w" (-> i32x2) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i32x2 = @splat(@intCast(n));
     return a << shift;
 }
@@ -108,14 +127,20 @@ pub inline fn vshl_n_s64(a: i64x1, comptime n: usize) i64x1 {
 }
 
 pub inline fn vshl_n_u8(a: u8x8, comptime n: usize) u8x8 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].8b, %[a].8b, #%[b]" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u8x8 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshl_n_u16(a: u16x4, comptime n: usize) u16x4 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].4h, %[a].4h, #%[b]" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u16x4 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshl_n_u32(a: u32x2, comptime n: usize) u32x2 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].2s, %[a].2s, #%[b]" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u32x2 = @splat(@intCast(n));
     return a << shift;
 }
@@ -125,57 +150,73 @@ pub inline fn vshl_n_u64(a: u64x1, comptime n: usize) u64x1 {
 }
 
 pub inline fn vshlq_n_s8(a: i8x16, comptime n: usize) i8x16 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].16b, %[a].16b, #%[b]" : [res] "=w" (-> i8x16) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i8x16 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshlq_n_s16(a: i16x8, comptime n: usize) i16x8 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].8h, %[a].8h, #%[b]" : [res] "=w" (-> i16x8) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i16x8 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshlq_n_s32(a: i32x4, comptime n: usize) i32x4 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].4s, %[a].4s, #%[b]" : [res] "=w" (-> i32x4) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i32x4 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshlq_n_s64(a: i64x2, comptime n: usize) i64x2 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].2d, %[a].2d, #%[b]" : [res] "=w" (-> i64x2) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: i64x2 = @splat(@intCast(n));
     return a << shift;
 }
 
 pub inline fn vshlq_n_u8(a: u8x16, comptime n: usize) u8x16 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].16b, %[a].16b, #%[b]" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u8x16 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshlq_n_u16(a: u16x8, comptime n: usize) u16x8 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].8h, %[a].8h, #%[b]" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u16x8 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshlq_n_u32(a: u32x4, comptime n: usize) u32x4 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].4s, %[a].4s, #%[b]" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u32x4 = @splat(@intCast(n));
     return a << shift;
 }
 pub inline fn vshlq_n_u64(a: u64x2, comptime n: usize) u64x2 {
+    if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a; return asm ("shl %[res].2d, %[a].2d, #%[b]" : [res] "=w" (-> u64x2) : [a] "w" (a), [b] "i" (comptime n)); }
+
     const shift: u64x2 = @splat(@intCast(n));
     return a << shift;
 }
 
 // --- Shift Right and Accumulate (VSRA / VSRAQ) ---
-pub inline fn vsra_n_s8(a: i8x8, b: i8x8, comptime n: usize) i8x8 { return a +% vshr_n_s8(b, n); }
-pub inline fn vsra_n_s16(a: i16x4, b: i16x4, comptime n: usize) i16x4 { return a +% vshr_n_s16(b, n); }
-pub inline fn vsra_n_s32(a: i32x2, b: i32x2, comptime n: usize) i32x2 { return a +% vshr_n_s32(b, n); }
+pub inline fn vsra_n_s8(a: i8x8, b: i8x8, comptime n: usize) i8x8 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("ssra %[res].8b, %[b].8b, #%[c]" : [res] "=w" (-> i8x8) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshr_n_s8(b, n); }
+pub inline fn vsra_n_s16(a: i16x4, b: i16x4, comptime n: usize) i16x4 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("ssra %[res].4h, %[b].4h, #%[c]" : [res] "=w" (-> i16x4) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshr_n_s16(b, n); }
+pub inline fn vsra_n_s32(a: i32x2, b: i32x2, comptime n: usize) i32x2 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("ssra %[res].2s, %[b].2s, #%[c]" : [res] "=w" (-> i32x2) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshr_n_s32(b, n); }
 pub inline fn vsra_n_s64(a: i64x1, b: i64x1, comptime n: usize) i64x1 { return a +% vshr_n_s64(b, n); }
-pub inline fn vsra_n_u8(a: u8x8, b: u8x8, comptime n: usize) u8x8 { return a +% vshr_n_u8(b, n); }
-pub inline fn vsra_n_u16(a: u16x4, b: u16x4, comptime n: usize) u16x4 { return a +% vshr_n_u16(b, n); }
-pub inline fn vsra_n_u32(a: u32x2, b: u32x2, comptime n: usize) u32x2 { return a +% vshr_n_u32(b, n); }
+pub inline fn vsra_n_u8(a: u8x8, b: u8x8, comptime n: usize) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("usra %[res].8b, %[b].8b, #%[c]" : [res] "=w" (-> u8x8) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshr_n_u8(b, n); }
+pub inline fn vsra_n_u16(a: u16x4, b: u16x4, comptime n: usize) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("usra %[res].4h, %[b].4h, #%[c]" : [res] "=w" (-> u16x4) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshr_n_u16(b, n); }
+pub inline fn vsra_n_u32(a: u32x2, b: u32x2, comptime n: usize) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("usra %[res].2s, %[b].2s, #%[c]" : [res] "=w" (-> u32x2) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshr_n_u32(b, n); }
 pub inline fn vsra_n_u64(a: u64x1, b: u64x1, comptime n: usize) u64x1 { return a +% vshr_n_u64(b, n); }
 
-pub inline fn vsraq_n_s8(a: i8x16, b: i8x16, comptime n: usize) i8x16 { return a +% vshrq_n_s8(b, n); }
-pub inline fn vsraq_n_s16(a: i16x8, b: i16x8, comptime n: usize) i16x8 { return a +% vshrq_n_s16(b, n); }
-pub inline fn vsraq_n_s32(a: i32x4, b: i32x4, comptime n: usize) i32x4 { return a +% vshrq_n_s32(b, n); }
-pub inline fn vsraq_n_s64(a: i64x2, b: i64x2, comptime n: usize) i64x2 { return a +% vshrq_n_s64(b, n); }
-pub inline fn vsraq_n_u8(a: u8x16, b: u8x16, comptime n: usize) u8x16 { return a +% vshrq_n_u8(b, n); }
-pub inline fn vsraq_n_u16(a: u16x8, b: u16x8, comptime n: usize) u16x8 { return a +% vshrq_n_u16(b, n); }
-pub inline fn vsraq_n_u32(a: u32x4, b: u32x4, comptime n: usize) u32x4 { return a +% vshrq_n_u32(b, n); }
-pub inline fn vsraq_n_u64(a: u64x2, b: u64x2, comptime n: usize) u64x2 { return a +% vshrq_n_u64(b, n); }
+pub inline fn vsraq_n_s8(a: i8x16, b: i8x16, comptime n: usize) i8x16 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("ssra %[res].16b, %[b].16b, #%[c]" : [res] "=w" (-> i8x16) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshrq_n_s8(b, n); }
+pub inline fn vsraq_n_s16(a: i16x8, b: i16x8, comptime n: usize) i16x8 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("ssra %[res].8h, %[b].8h, #%[c]" : [res] "=w" (-> i16x8) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshrq_n_s16(b, n); }
+pub inline fn vsraq_n_s32(a: i32x4, b: i32x4, comptime n: usize) i32x4 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("ssra %[res].4s, %[b].4s, #%[c]" : [res] "=w" (-> i32x4) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshrq_n_s32(b, n); }
+pub inline fn vsraq_n_s64(a: i64x2, b: i64x2, comptime n: usize) i64x2 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("ssra %[res].2d, %[b].2d, #%[c]" : [res] "=w" (-> i64x2) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshrq_n_s64(b, n); }
+pub inline fn vsraq_n_u8(a: u8x16, b: u8x16, comptime n: usize) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("usra %[res].16b, %[b].16b, #%[c]" : [res] "=w" (-> u8x16) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshrq_n_u8(b, n); }
+pub inline fn vsraq_n_u16(a: u16x8, b: u16x8, comptime n: usize) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("usra %[res].8h, %[b].8h, #%[c]" : [res] "=w" (-> u16x8) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshrq_n_u16(b, n); }
+pub inline fn vsraq_n_u32(a: u32x4, b: u32x4, comptime n: usize) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("usra %[res].4s, %[b].4s, #%[c]" : [res] "=w" (-> u32x4) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshrq_n_u32(b, n); }
+pub inline fn vsraq_n_u64(a: u64x2, b: u64x2, comptime n: usize) u64x2 { if (!@inComptime() and comptime arch.is_aarch64) { if (comptime n == 0) return a +% b; return asm ("usra %[res].2d, %[b].2d, #%[c]" : [res] "=w" (-> u64x2) : [a_in] "0" (a), [b] "w" (b), [c] "i" (comptime n)); }  return a +% vshrq_n_u64(b, n); }
 
 // --- Narrowing Shift Right (VSHRN_N) ---
 pub inline fn vshrn_n_s16(a: i16x8, comptime n: usize) i8x8 {
@@ -239,23 +280,23 @@ inline fn vshlPortable(comptime V: type, a: V, b: anytype) V {
     return @bitCast(@select(UElem, b_pos_mask, left, right));
 }
 pub inline fn vshl_s8(a: i8x8, b: i8x8) i8x8 {
-    if (comptime @import("builtin").cpu.arch == .aarch64)
-        return asm ("sshl %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> i8x8) : [a] "w" (a), [b] "w" (b));
+    if (!@inComptime() and comptime arch.is_aarch64) { return asm ("sshl %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> i8x8) : [a] "w" (a), [b] "w" (b)); }
+
     return vshlPortable(i8x8, a, b);
 }
 pub inline fn vshl_u8(a: u8x8, b: i8x8) u8x8 {
-    if (comptime @import("builtin").cpu.arch == .aarch64)
-        return asm ("ushl %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b));
+    if (!@inComptime() and comptime arch.is_aarch64) { return asm ("ushl %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }
+
     return vshlPortable(u8x8, a, b);
 }
 pub inline fn vshlq_s8(a: i8x16, b: i8x16) i8x16 {
-    if (comptime @import("builtin").cpu.arch == .aarch64)
-        return asm ("sshl %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> i8x16) : [a] "w" (a), [b] "w" (b));
+    if (!@inComptime() and comptime arch.is_aarch64) { return asm ("sshl %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> i8x16) : [a] "w" (a), [b] "w" (b)); }
+
     return vshlPortable(i8x16, a, b);
 }
 pub inline fn vshlq_u8(a: u8x16, b: i8x16) u8x16 {
-    if (comptime @import("builtin").cpu.arch == .aarch64)
-        return asm ("ushl %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b));
+    if (!@inComptime() and comptime arch.is_aarch64) { return asm ("ushl %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }
+
     return vshlPortable(u8x16, a, b);
 }
 

@@ -1,3 +1,4 @@
+const arch = @import("../arch.zig");
 const std = @import("std");
 const types = @import("../types.zig");
 const common = @import("../common.zig");
@@ -40,94 +41,94 @@ inline fn boolToMask(comptime Out: type, pred: anytype) Out {
 }
 
 // --- Vector Equality (VCEQ / VCEQQ) ---
-pub inline fn vceq_s8(a: i8x8, b: i8x8) u8x8 { return boolToMask(u8x8, a == b); }
-pub inline fn vceq_s16(a: i16x4, b: i16x4) u16x4 { return boolToMask(u16x4, a == b); }
-pub inline fn vceq_s32(a: i32x2, b: i32x2) u32x2 { return boolToMask(u32x2, a == b); }
-pub inline fn vceq_u8(a: u8x8, b: u8x8) u8x8 { return boolToMask(u8x8, a == b); }
-pub inline fn vceq_u16(a: u16x4, b: u16x4) u16x4 { return boolToMask(u16x4, a == b); }
-pub inline fn vceq_u32(a: u32x2, b: u32x2) u32x2 { return boolToMask(u32x2, a == b); }
-pub inline fn vceq_f32(a: f32x2, b: f32x2) u32x2 { return boolToMask(u32x2, a == b); }
+pub inline fn vceq_s8(a: i8x8, b: i8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x8, a == b); }
+pub inline fn vceq_s16(a: i16x4, b: i16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].4h, %[a].4h, %[b].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x4, a == b); }
+pub inline fn vceq_s32(a: i32x2, b: i32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].2s, %[a].2s, %[b].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x2, a == b); }
+pub inline fn vceq_u8(a: u8x8, b: u8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x8, a == b); }
+pub inline fn vceq_u16(a: u16x4, b: u16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].4h, %[a].4h, %[b].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x4, a == b); }
+pub inline fn vceq_u32(a: u32x2, b: u32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].2s, %[a].2s, %[b].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x2, a == b); }
+pub inline fn vceq_f32(a: f32x2, b: f32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmeq %[res].2s, %[a].2s, %[b].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x2, a == b); }
 
-pub inline fn vceqq_s8(a: i8x16, b: i8x16) u8x16 { return boolToMask(u8x16, a == b); }
-pub inline fn vceqq_s16(a: i16x8, b: i16x8) u16x8 { return boolToMask(u16x8, a == b); }
-pub inline fn vceqq_s32(a: i32x4, b: i32x4) u32x4 { return boolToMask(u32x4, a == b); }
-pub inline fn vceqq_u8(a: u8x16, b: u8x16) u8x16 { return boolToMask(u8x16, a == b); }
-pub inline fn vceqq_u16(a: u16x8, b: u16x8) u16x8 { return boolToMask(u16x8, a == b); }
-pub inline fn vceqq_u32(a: u32x4, b: u32x4) u32x4 { return boolToMask(u32x4, a == b); }
-pub inline fn vceqq_f32(a: f32x4, b: f32x4) u32x4 { return boolToMask(u32x4, a == b); }
-pub inline fn vceqq_f64(a: f64x2, b: f64x2) u64x2 { return boolToMask(u64x2, a == b); }
+pub inline fn vceqq_s8(a: i8x16, b: i8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x16, a == b); }
+pub inline fn vceqq_s16(a: i16x8, b: i16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].8h, %[a].8h, %[b].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x8, a == b); }
+pub inline fn vceqq_s32(a: i32x4, b: i32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].4s, %[a].4s, %[b].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x4, a == b); }
+pub inline fn vceqq_u8(a: u8x16, b: u8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x16, a == b); }
+pub inline fn vceqq_u16(a: u16x8, b: u16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].8h, %[a].8h, %[b].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x8, a == b); }
+pub inline fn vceqq_u32(a: u32x4, b: u32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmeq %[res].4s, %[a].4s, %[b].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x4, a == b); }
+pub inline fn vceqq_f32(a: f32x4, b: f32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmeq %[res].4s, %[a].4s, %[b].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x4, a == b); }
+pub inline fn vceqq_f64(a: f64x2, b: f64x2) u64x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmeq %[res].2d, %[a].2d, %[b].2d" : [res] "=w" (-> u64x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u64x2, a == b); }
 
 // --- Vector Greater Than or Equal (VCGE / VCGEQ) ---
-pub inline fn vcge_s8(a: i8x8, b: i8x8) u8x8 { return boolToMask(u8x8, a >= b); }
-pub inline fn vcge_s16(a: i16x4, b: i16x4) u16x4 { return boolToMask(u16x4, a >= b); }
-pub inline fn vcge_s32(a: i32x2, b: i32x2) u32x2 { return boolToMask(u32x2, a >= b); }
-pub inline fn vcge_u8(a: u8x8, b: u8x8) u8x8 { return boolToMask(u8x8, a >= b); }
-pub inline fn vcge_u16(a: u16x4, b: u16x4) u16x4 { return boolToMask(u16x4, a >= b); }
-pub inline fn vcge_u32(a: u32x2, b: u32x2) u32x2 { return boolToMask(u32x2, a >= b); }
-pub inline fn vcge_f32(a: f32x2, b: f32x2) u32x2 { return boolToMask(u32x2, a >= b); }
+pub inline fn vcge_s8(a: i8x8, b: i8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x8, a >= b); }
+pub inline fn vcge_s16(a: i16x4, b: i16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].4h, %[a].4h, %[b].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x4, a >= b); }
+pub inline fn vcge_s32(a: i32x2, b: i32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].2s, %[a].2s, %[b].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x2, a >= b); }
+pub inline fn vcge_u8(a: u8x8, b: u8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x8, a >= b); }
+pub inline fn vcge_u16(a: u16x4, b: u16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].4h, %[a].4h, %[b].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x4, a >= b); }
+pub inline fn vcge_u32(a: u32x2, b: u32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].2s, %[a].2s, %[b].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x2, a >= b); }
+pub inline fn vcge_f32(a: f32x2, b: f32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmge %[res].2s, %[a].2s, %[b].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x2, a >= b); }
 
-pub inline fn vcgeq_s8(a: i8x16, b: i8x16) u8x16 { return boolToMask(u8x16, a >= b); }
-pub inline fn vcgeq_s16(a: i16x8, b: i16x8) u16x8 { return boolToMask(u16x8, a >= b); }
-pub inline fn vcgeq_s32(a: i32x4, b: i32x4) u32x4 { return boolToMask(u32x4, a >= b); }
-pub inline fn vcgeq_u8(a: u8x16, b: u8x16) u8x16 { return boolToMask(u8x16, a >= b); }
-pub inline fn vcgeq_u16(a: u16x8, b: u16x8) u16x8 { return boolToMask(u16x8, a >= b); }
-pub inline fn vcgeq_u32(a: u32x4, b: u32x4) u32x4 { return boolToMask(u32x4, a >= b); }
-pub inline fn vcgeq_f32(a: f32x4, b: f32x4) u32x4 { return boolToMask(u32x4, a >= b); }
-pub inline fn vcgeq_f64(a: f64x2, b: f64x2) u64x2 { return boolToMask(u64x2, a >= b); }
+pub inline fn vcgeq_s8(a: i8x16, b: i8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x16, a >= b); }
+pub inline fn vcgeq_s16(a: i16x8, b: i16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].8h, %[a].8h, %[b].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x8, a >= b); }
+pub inline fn vcgeq_s32(a: i32x4, b: i32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].4s, %[a].4s, %[b].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x4, a >= b); }
+pub inline fn vcgeq_u8(a: u8x16, b: u8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x16, a >= b); }
+pub inline fn vcgeq_u16(a: u16x8, b: u16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].8h, %[a].8h, %[b].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x8, a >= b); }
+pub inline fn vcgeq_u32(a: u32x4, b: u32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].4s, %[a].4s, %[b].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x4, a >= b); }
+pub inline fn vcgeq_f32(a: f32x4, b: f32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmge %[res].4s, %[a].4s, %[b].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x4, a >= b); }
+pub inline fn vcgeq_f64(a: f64x2, b: f64x2) u64x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmge %[res].2d, %[a].2d, %[b].2d" : [res] "=w" (-> u64x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u64x2, a >= b); }
 
 // --- Vector Greater Than (VCGT / VCGTQ) ---
-pub inline fn vcgt_s8(a: i8x8, b: i8x8) u8x8 { return boolToMask(u8x8, a > b); }
-pub inline fn vcgt_s16(a: i16x4, b: i16x4) u16x4 { return boolToMask(u16x4, a > b); }
-pub inline fn vcgt_s32(a: i32x2, b: i32x2) u32x2 { return boolToMask(u32x2, a > b); }
-pub inline fn vcgt_u8(a: u8x8, b: u8x8) u8x8 { return boolToMask(u8x8, a > b); }
-pub inline fn vcgt_u16(a: u16x4, b: u16x4) u16x4 { return boolToMask(u16x4, a > b); }
-pub inline fn vcgt_u32(a: u32x2, b: u32x2) u32x2 { return boolToMask(u32x2, a > b); }
-pub inline fn vcgt_f32(a: f32x2, b: f32x2) u32x2 { return boolToMask(u32x2, a > b); }
+pub inline fn vcgt_s8(a: i8x8, b: i8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x8, a > b); }
+pub inline fn vcgt_s16(a: i16x4, b: i16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].4h, %[a].4h, %[b].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x4, a > b); }
+pub inline fn vcgt_s32(a: i32x2, b: i32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].2s, %[a].2s, %[b].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x2, a > b); }
+pub inline fn vcgt_u8(a: u8x8, b: u8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].8b, %[a].8b, %[b].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x8, a > b); }
+pub inline fn vcgt_u16(a: u16x4, b: u16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].4h, %[a].4h, %[b].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x4, a > b); }
+pub inline fn vcgt_u32(a: u32x2, b: u32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].2s, %[a].2s, %[b].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x2, a > b); }
+pub inline fn vcgt_f32(a: f32x2, b: f32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmgt %[res].2s, %[a].2s, %[b].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x2, a > b); }
 
-pub inline fn vcgtq_s8(a: i8x16, b: i8x16) u8x16 { return boolToMask(u8x16, a > b); }
-pub inline fn vcgtq_s16(a: i16x8, b: i16x8) u16x8 { return boolToMask(u16x8, a > b); }
-pub inline fn vcgtq_s32(a: i32x4, b: i32x4) u32x4 { return boolToMask(u32x4, a > b); }
-pub inline fn vcgtq_u8(a: u8x16, b: u8x16) u8x16 { return boolToMask(u8x16, a > b); }
-pub inline fn vcgtq_u16(a: u16x8, b: u16x8) u16x8 { return boolToMask(u16x8, a > b); }
-pub inline fn vcgtq_u32(a: u32x4, b: u32x4) u32x4 { return boolToMask(u32x4, a > b); }
-pub inline fn vcgtq_f32(a: f32x4, b: f32x4) u32x4 { return boolToMask(u32x4, a > b); }
-pub inline fn vcgtq_f64(a: f64x2, b: f64x2) u64x2 { return boolToMask(u64x2, a > b); }
+pub inline fn vcgtq_s8(a: i8x16, b: i8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x16, a > b); }
+pub inline fn vcgtq_s16(a: i16x8, b: i16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].8h, %[a].8h, %[b].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x8, a > b); }
+pub inline fn vcgtq_s32(a: i32x4, b: i32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].4s, %[a].4s, %[b].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x4, a > b); }
+pub inline fn vcgtq_u8(a: u8x16, b: u8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].16b, %[a].16b, %[b].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u8x16, a > b); }
+pub inline fn vcgtq_u16(a: u16x8, b: u16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].8h, %[a].8h, %[b].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u16x8, a > b); }
+pub inline fn vcgtq_u32(a: u32x4, b: u32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].4s, %[a].4s, %[b].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x4, a > b); }
+pub inline fn vcgtq_f32(a: f32x4, b: f32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmgt %[res].4s, %[a].4s, %[b].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u32x4, a > b); }
+pub inline fn vcgtq_f64(a: f64x2, b: f64x2) u64x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmgt %[res].2d, %[a].2d, %[b].2d" : [res] "=w" (-> u64x2) : [a] "w" (a), [b] "w" (b)); }  return boolToMask(u64x2, a > b); }
 
 // --- Vector Less Than or Equal (VCLE / VCLEQ) ---
-pub inline fn vcle_s8(a: i8x8, b: i8x8) u8x8 { return vcge_s8(b, a); }
-pub inline fn vcle_s16(a: i16x4, b: i16x4) u16x4 { return vcge_s16(b, a); }
-pub inline fn vcle_s32(a: i32x2, b: i32x2) u32x2 { return vcge_s32(b, a); }
-pub inline fn vcle_u8(a: u8x8, b: u8x8) u8x8 { return vcge_u8(b, a); }
-pub inline fn vcle_u16(a: u16x4, b: u16x4) u16x4 { return vcge_u16(b, a); }
-pub inline fn vcle_u32(a: u32x2, b: u32x2) u32x2 { return vcge_u32(b, a); }
-pub inline fn vcle_f32(a: f32x2, b: f32x2) u32x2 { return vcge_f32(b, a); }
+pub inline fn vcle_s8(a: i8x8, b: i8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].8b, %[b].8b, %[a].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return vcge_s8(b, a); }
+pub inline fn vcle_s16(a: i16x4, b: i16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].4h, %[b].4h, %[a].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return vcge_s16(b, a); }
+pub inline fn vcle_s32(a: i32x2, b: i32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].2s, %[b].2s, %[a].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return vcge_s32(b, a); }
+pub inline fn vcle_u8(a: u8x8, b: u8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].8b, %[b].8b, %[a].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return vcge_u8(b, a); }
+pub inline fn vcle_u16(a: u16x4, b: u16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].4h, %[b].4h, %[a].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return vcge_u16(b, a); }
+pub inline fn vcle_u32(a: u32x2, b: u32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].2s, %[b].2s, %[a].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return vcge_u32(b, a); }
+pub inline fn vcle_f32(a: f32x2, b: f32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmge %[res].2s, %[b].2s, %[a].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return vcge_f32(b, a); }
 
-pub inline fn vcleq_s8(a: i8x16, b: i8x16) u8x16 { return vcgeq_s8(b, a); }
-pub inline fn vcleq_s16(a: i16x8, b: i16x8) u16x8 { return vcgeq_s16(b, a); }
-pub inline fn vcleq_s32(a: i32x4, b: i32x4) u32x4 { return vcgeq_s32(b, a); }
-pub inline fn vcleq_u8(a: u8x16, b: u8x16) u8x16 { return vcgeq_u8(b, a); }
-pub inline fn vcleq_u16(a: u16x8, b: u16x8) u16x8 { return vcgeq_u16(b, a); }
-pub inline fn vcleq_u32(a: u32x4, b: u32x4) u32x4 { return vcgeq_u32(b, a); }
-pub inline fn vcleq_f32(a: f32x4, b: f32x4) u32x4 { return vcgeq_f32(b, a); }
-pub inline fn vcleq_f64(a: f64x2, b: f64x2) u64x2 { return vcgeq_f64(b, a); }
+pub inline fn vcleq_s8(a: i8x16, b: i8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].16b, %[b].16b, %[a].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return vcgeq_s8(b, a); }
+pub inline fn vcleq_s16(a: i16x8, b: i16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].8h, %[b].8h, %[a].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return vcgeq_s16(b, a); }
+pub inline fn vcleq_s32(a: i32x4, b: i32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].4s, %[b].4s, %[a].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return vcgeq_s32(b, a); }
+pub inline fn vcleq_u8(a: u8x16, b: u8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].16b, %[b].16b, %[a].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return vcgeq_u8(b, a); }
+pub inline fn vcleq_u16(a: u16x8, b: u16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].8h, %[b].8h, %[a].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return vcgeq_u16(b, a); }
+pub inline fn vcleq_u32(a: u32x4, b: u32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmge %[res].4s, %[b].4s, %[a].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return vcgeq_u32(b, a); }
+pub inline fn vcleq_f32(a: f32x4, b: f32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmge %[res].4s, %[b].4s, %[a].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return vcgeq_f32(b, a); }
+pub inline fn vcleq_f64(a: f64x2, b: f64x2) u64x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmge %[res].2d, %[b].2d, %[a].2d" : [res] "=w" (-> u64x2) : [a] "w" (a), [b] "w" (b)); }  return vcgeq_f64(b, a); }
 
 // --- Vector Less Than (VCLT / VCLTQ) ---
-pub inline fn vclt_s8(a: i8x8, b: i8x8) u8x8 { return vcgt_s8(b, a); }
-pub inline fn vclt_s16(a: i16x4, b: i16x4) u16x4 { return vcgt_s16(b, a); }
-pub inline fn vclt_s32(a: i32x2, b: i32x2) u32x2 { return vcgt_s32(b, a); }
-pub inline fn vclt_u8(a: u8x8, b: u8x8) u8x8 { return vcgt_u8(b, a); }
-pub inline fn vclt_u16(a: u16x4, b: u16x4) u16x4 { return vcgt_u16(b, a); }
-pub inline fn vclt_u32(a: u32x2, b: u32x2) u32x2 { return vcgt_u32(b, a); }
-pub inline fn vclt_f32(a: f32x2, b: f32x2) u32x2 { return vcgt_f32(b, a); }
+pub inline fn vclt_s8(a: i8x8, b: i8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].8b, %[b].8b, %[a].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return vcgt_s8(b, a); }
+pub inline fn vclt_s16(a: i16x4, b: i16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].4h, %[b].4h, %[a].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return vcgt_s16(b, a); }
+pub inline fn vclt_s32(a: i32x2, b: i32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].2s, %[b].2s, %[a].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return vcgt_s32(b, a); }
+pub inline fn vclt_u8(a: u8x8, b: u8x8) u8x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].8b, %[b].8b, %[a].8b" : [res] "=w" (-> u8x8) : [a] "w" (a), [b] "w" (b)); }  return vcgt_u8(b, a); }
+pub inline fn vclt_u16(a: u16x4, b: u16x4) u16x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].4h, %[b].4h, %[a].4h" : [res] "=w" (-> u16x4) : [a] "w" (a), [b] "w" (b)); }  return vcgt_u16(b, a); }
+pub inline fn vclt_u32(a: u32x2, b: u32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].2s, %[b].2s, %[a].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return vcgt_u32(b, a); }
+pub inline fn vclt_f32(a: f32x2, b: f32x2) u32x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmgt %[res].2s, %[b].2s, %[a].2s" : [res] "=w" (-> u32x2) : [a] "w" (a), [b] "w" (b)); }  return vcgt_f32(b, a); }
 
-pub inline fn vcltq_s8(a: i8x16, b: i8x16) u8x16 { return vcgtq_s8(b, a); }
-pub inline fn vcltq_s16(a: i16x8, b: i16x8) u16x8 { return vcgtq_s16(b, a); }
-pub inline fn vcltq_s32(a: i32x4, b: i32x4) u32x4 { return vcgtq_s32(b, a); }
-pub inline fn vcltq_u8(a: u8x16, b: u8x16) u8x16 { return vcgtq_u8(b, a); }
-pub inline fn vcltq_u16(a: u16x8, b: u16x8) u16x8 { return vcgtq_u16(b, a); }
-pub inline fn vcltq_u32(a: u32x4, b: u32x4) u32x4 { return vcgtq_u32(b, a); }
-pub inline fn vcltq_f32(a: f32x4, b: f32x4) u32x4 { return vcgtq_f32(b, a); }
-pub inline fn vcltq_f64(a: f64x2, b: f64x2) u64x2 { return vcgtq_f64(b, a); }
+pub inline fn vcltq_s8(a: i8x16, b: i8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].16b, %[b].16b, %[a].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return vcgtq_s8(b, a); }
+pub inline fn vcltq_s16(a: i16x8, b: i16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].8h, %[b].8h, %[a].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return vcgtq_s16(b, a); }
+pub inline fn vcltq_s32(a: i32x4, b: i32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].4s, %[b].4s, %[a].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return vcgtq_s32(b, a); }
+pub inline fn vcltq_u8(a: u8x16, b: u8x16) u8x16 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].16b, %[b].16b, %[a].16b" : [res] "=w" (-> u8x16) : [a] "w" (a), [b] "w" (b)); }  return vcgtq_u8(b, a); }
+pub inline fn vcltq_u16(a: u16x8, b: u16x8) u16x8 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].8h, %[b].8h, %[a].8h" : [res] "=w" (-> u16x8) : [a] "w" (a), [b] "w" (b)); }  return vcgtq_u16(b, a); }
+pub inline fn vcltq_u32(a: u32x4, b: u32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("cmgt %[res].4s, %[b].4s, %[a].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return vcgtq_u32(b, a); }
+pub inline fn vcltq_f32(a: f32x4, b: f32x4) u32x4 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmgt %[res].4s, %[b].4s, %[a].4s" : [res] "=w" (-> u32x4) : [a] "w" (a), [b] "w" (b)); }  return vcgtq_f32(b, a); }
+pub inline fn vcltq_f64(a: f64x2, b: f64x2) u64x2 { if (!@inComptime() and comptime arch.is_aarch64) { return asm ("fcmgt %[res].2d, %[b].2d, %[a].2d" : [res] "=w" (-> u64x2) : [a] "w" (a), [b] "w" (b)); }  return vcgtq_f64(b, a); }
 
 // --- Absolute Comparison (VCAGE / VCAGT) ---
 pub inline fn vcage_f32(a: f32x2, b: f32x2) u32x2 { return boolToMask(u32x2, @abs(a) >= @abs(b)); }

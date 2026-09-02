@@ -4,9 +4,22 @@ pub const types = @import("types.zig");
 pub const common = @import("common.zig");
 pub const arm = @import("arch/arm.zig");
 pub const aarch64 = @import("arch/aarch64.zig");
+pub const x86_64 = @import("arch/x86_64.zig");
+pub const riscv64 = @import("arch/riscv64.zig");
+pub const ppc64le = @import("arch/ppc64le.zig");
+pub const la64 = @import("arch/la64.zig");
+pub const wasm32 = @import("arch/wasm32.zig");
+pub const wasm = wasm32;
 
 pub const is_arm = common.is_arm;
 pub const is_aarch64 = common.is_aarch64;
+pub const is_x86_64 = common.is_x86_64;
+pub const is_riscv64 = common.is_riscv64;
+pub const is_ppc64le = common.is_ppc64le;
+pub const is_la64 = common.is_la64;
+pub const is_wasm32 = common.is_wasm32;
+pub const is_wasm64 = common.is_wasm64;
+pub const is_wasm = common.is_wasm;
 pub const is_portable = common.is_portable;
 
 pub const load_store = @import("intrinsics/load_store.zig");
@@ -1493,8 +1506,14 @@ pub const vmull_p64 = crypto.vmull_p64;
 test {
     _ = @import("types.zig");
     _ = @import("common.zig");
+    _ = @import("arch.zig");
     _ = @import("arch/arm.zig");
     _ = @import("arch/aarch64.zig");
+    _ = @import("arch/x86_64.zig");
+    _ = @import("arch/riscv64.zig");
+    _ = @import("arch/ppc64le.zig");
+    _ = @import("arch/la64.zig");
+    _ = @import("arch/wasm32.zig");
     _ = @import("intrinsics/load_store.zig");
     _ = @import("intrinsics/arithmetic.zig");
     _ = @import("intrinsics/bitwise.zig");

@@ -8,32 +8,106 @@ on:
   workflow_dispatch:
 
 jobs:
-  tests:
+  # ── ASM Verification ──────────────────────────────────────────────────────
+  # Cross-compile to each target and verify every intrinsic lowers inline.
+  asm-verify:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        zig-version: [master]
+        include:
+          - target: aarch64-linux
+            mcpu: generic+aes
+            make: check-asm-aarch64
+          - target: arm-linux-gnueabihf
+            mcpu: generic+neon+crypto
+            make: check-asm-arm
+          - target: x86_64-linux
+            mcpu: x86_64_v2
+            make: check-asm-x86_64
+          - target: riscv64-linux
+            mcpu: generic_rv64+v
+            make: check-asm-riscv64
+          - target: powerpc64le-linux
+            mcpu: pwr9
+            make: check-asm-ppc64le
+          - target: loongarch64-linux
+            mcpu: generic_la64+lsx
+            make: check-asm-la64
+          - target: wasm32-wasi
+            mcpu: generic+simd128
+            make: check-asm-wasm32
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Install QEMU User-Mode
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user
-
-          echo aarch64:
-          qemu-aarch64 -version
-
-          echo arm:
-          qemu-arm -version
+      - uses: actions/checkout@v4
 
       - name: Install Zig
         uses: mlugg/setup-zig@v1
         with:
-          version: ${{ matrix.zig-version }}
+          version: master
 
-      - name: Build and Test
+      - name: ASM Verification (${{ matrix.target }})
+        run: make ${{ matrix.make }}
+
+  # ── Unit Tests ────────────────────────────────────────────────────────────
+  # Execute the test suite natively + under QEMU for each ARM/RISC-V/PPC target.
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Native x86_64
+          - name: x86_64 (native)
+            zig_flags: ""
+            qemu: ""
+
+          # AArch64 via QEMU
+          - name: aarch64 (QEMU)
+            zig_flags: "-Dtarget=aarch64-linux -Dcpu=generic+aes"
+            qemu: "qemu-aarch64"
+            sysroot: /usr/aarch64-linux-gnu
+
+          # ARM32 via QEMU
+          - name: arm32 (QEMU)
+            zig_flags: "-Dtarget=arm-linux-gnueabihf -Dcpu=generic+neon+crypto"
+            qemu: "qemu-arm"
+            sysroot: /usr/arm-linux-gnueabihf
+
+          # RISC-V 64 via QEMU
+          - name: riscv64 (QEMU)
+            zig_flags: "-Dtarget=riscv64-linux -Dcpu=generic_rv64+v"
+            qemu: "qemu-riscv64"
+            sysroot: /usr/riscv64-linux-gnu
+
+          # PowerPC64le via QEMU
+          - name: ppc64le (QEMU)
+            zig_flags: "-Dtarget=powerpc64le-linux -Dcpu=pwr9"
+            qemu: "qemu-ppc64le"
+            sysroot: /usr/powerpc64le-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install QEMU and cross-compile sysroots
         run: |
-          make test
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            qemu-user \
+            gcc-aarch64-linux-gnu      libc6-dev-arm64-cross \
+            gcc-arm-linux-gnueabihf    libc6-dev-armhf-cross \
+            gcc-riscv64-linux-gnu      libc6-dev-riscv64-cross \
+            gcc-powerpc64le-linux-gnu  libc6-dev-ppc64el-cross
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: master
+
+      - name: Unit Tests (${{ matrix.name }})
+        run: |
+          if [ -n "${{ matrix.zig_flags }}" ]; then
+            zig build test ${{ matrix.zig_flags }} -fqemu --summary all
+          else
+            zig build test --summary all
+          fi

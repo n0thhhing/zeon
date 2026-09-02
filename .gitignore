@@ -7,7 +7,9 @@ scripts/AARCH64
 scripts/ARM
 scripts/UNIMPL
 .DS_Store
-./tests/asm_verification/*
+tests/asm_verification/
+*.o
+*.s
 #old/
 .gemini/
 .agents/

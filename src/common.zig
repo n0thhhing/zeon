@@ -6,9 +6,22 @@ const expectEqual = std.testing.expectEqual;
 
 pub const aarch64 = @import("arch/aarch64.zig");
 pub const arm = @import("arch/arm.zig");
+pub const x86_64 = @import("arch/x86_64.zig");
+pub const riscv64 = @import("arch/riscv64.zig");
+pub const ppc64le = @import("arch/ppc64le.zig");
+pub const la64 = @import("arch/la64.zig");
+pub const wasm32 = @import("arch/wasm32.zig");
+pub const wasm = wasm32;
 
 pub const is_arm = arm.is_arm;
 pub const is_aarch64 = aarch64.is_aarch64;
+pub const is_x86_64 = x86_64.is_x86_64;
+pub const is_riscv64 = riscv64.is_riscv64;
+pub const is_ppc64le = ppc64le.is_ppc64le;
+pub const is_la64 = la64.is_la64;
+pub const is_wasm32 = wasm32.is_wasm32;
+pub const is_wasm64 = wasm32.is_wasm64;
+pub const is_wasm = wasm32.is_wasm;
 pub const is_portable = !is_arm and !is_aarch64;
 
 pub const VEC_MAX_BITSIZE: u32 = 128;
@@ -173,26 +186,21 @@ pub inline fn abdGeneric(a: anytype, b: anytype) @TypeOf(a, b) {
     const T = @TypeOf(a, b);
     const Child = std.meta.Child(T);
     const type_info = @typeInfo(Child);
+
     if (type_info == .int) {
-        switch (type_info.int.signedness) {
-            .unsigned => {
-                const max_v: T = @max(a, b);
-                const min_v: T = @min(a, b);
-                return max_v - min_v;
-            },
-            .signed => {
-                const P = comptime PromoteVector(T);
-                const a_p: P = a;
-                const b_p: P = b;
-                const diff: P = a_p -% b_p;
-                const abs_diff = @abs(diff);
-                const abs_diff_signed: P = @bitCast(abs_diff);
-                return @truncate(abs_diff_signed);
-            },
-        }
-    } else {
+        const hi = @select(Child, a >= b, a, b);
+        const lo = @select(Child, a >= b, b, a);
+        const diff = @subWithOverflow(hi, lo);
+        const max_vec: T = @splat(std.math.maxInt(Child));
+        const ones: @Vector(@typeInfo(T).vector.len, u1) = @splat(1);
+        return @select(Child, diff[1] == ones, max_vec, diff[0]);
+    }
+
+    if (type_info == .float) {
         return @abs(a - b);
     }
+
+    @compileError("Unsupported type for abd");
 }
 
 /// Saturated addition for signed/unsigned integers
@@ -202,21 +210,14 @@ pub inline fn qaddGeneric(a: anytype, b: anytype) @TypeOf(a, b) {
     const min_val = std.math.minInt(Child);
     const max_val = std.math.maxInt(Child);
 
-    var res: T = undefined;
-    const len = comptime vecLen(T);
-    inline for (0..len) |i| {
-        const val_a: i128 = a[i];
-        const val_b: i128 = b[i];
-        const sum = val_a + val_b;
-        if (sum > max_val) {
-            res[i] = max_val;
-        } else if (sum < min_val) {
-            res[i] = min_val;
-        } else {
-            res[i] = @intCast(sum);
-        }
-    }
-    return res;
+    const sum = @addWithOverflow(a, b);
+    const zero: T = @splat(0);
+    const min_vec: T = @splat(min_val);
+    const max_vec: T = @splat(max_val);
+    const ones: @Vector(@typeInfo(T).vector.len, u1) = @splat(1);
+    
+    const saturated = @select(Child, a < zero, min_vec, max_vec);
+    return @select(Child, sum[1] == ones, saturated, sum[0]);
 }
 
 /// Saturated subtraction for signed/unsigned integers
@@ -226,21 +227,13 @@ pub inline fn qsubGeneric(a: anytype, b: anytype) @TypeOf(a, b) {
     const min_val = std.math.minInt(Child);
     const max_val = std.math.maxInt(Child);
 
-    var res: T = undefined;
-    const len = comptime vecLen(T);
-    inline for (0..len) |i| {
-        const val_a: i128 = a[i];
-        const val_b: i128 = b[i];
-        const diff = val_a - val_b;
-        if (diff > max_val) {
-            res[i] = max_val;
-        } else if (diff < min_val) {
-            res[i] = min_val;
-        } else {
-            res[i] = @intCast(diff);
-        }
-    }
-    return res;
+    const diff = @subWithOverflow(a, b);
+    const min_vec: T = @splat(min_val);
+    const max_vec: T = @splat(max_val);
+    const ones: @Vector(@typeInfo(T).vector.len, u1) = @splat(1);
+    
+    const saturated = @select(Child, a < b, min_vec, max_vec);
+    return @select(Child, diff[1] == ones, saturated, diff[0]);
 }
 
 test "common helpers" {
@@ -252,4 +245,56 @@ test "common helpers" {
     const b: @Vector(4, i16) = .{ 5, 20, -30, 40 };
     const diff = abdGeneric(a, b);
     try expectEqual(@Vector(4, i16){ 5, 40, 60, 80 }, diff);
+}
+pub inline fn vldGeneric(comptime N: usize, comptime RetT: type, ptr: anytype) RetT {
+    const VecT = std.meta.fields(RetT)[0].type;
+    const Child = std.meta.Child(VecT);
+    const len = @typeInfo(VecT).vector.len;
+    
+    const total_len = N * len;
+    const p: [*]const Child = @ptrCast(ptr);
+    const raw_vec: @Vector(total_len, Child) = p[0..total_len].*;
+    
+    comptime var masks: [N]@Vector(len, i32) = undefined;
+    inline for (0..N) |vec_idx| {
+        inline for (0..len) |i| {
+            masks[vec_idx][i] = @intCast(i * N + vec_idx);
+        }
+    }
+    
+    if (N == 2) {
+        return .{
+            @shuffle(Child, raw_vec, undefined, masks[0]),
+            @shuffle(Child, raw_vec, undefined, masks[1]),
+        };
+    } else if (N == 3) {
+        return .{
+            @shuffle(Child, raw_vec, undefined, masks[0]),
+            @shuffle(Child, raw_vec, undefined, masks[1]),
+            @shuffle(Child, raw_vec, undefined, masks[2]),
+        };
+    } else if (N == 4) {
+        return .{
+            @shuffle(Child, raw_vec, undefined, masks[0]),
+            @shuffle(Child, raw_vec, undefined, masks[1]),
+            @shuffle(Child, raw_vec, undefined, masks[2]),
+            @shuffle(Child, raw_vec, undefined, masks[3]),
+        };
+    } else {
+        @compileError("Unsupported N for vldGeneric");
+    }
+}
+
+pub inline fn vstGeneric(comptime N: usize, comptime ArgT: type, ptr: anytype, val: ArgT) void {
+    const VecT = std.meta.fields(ArgT)[0].type;
+    const Child = std.meta.Child(VecT);
+    const len = @typeInfo(VecT).vector.len;
+    
+    const p: [*]Child = @ptrCast(ptr);
+    
+    inline for (0..len) |i| {
+        inline for (0..N) |v| {
+            p[i * N + v] = val[v][i];
+        }
+    }
 }

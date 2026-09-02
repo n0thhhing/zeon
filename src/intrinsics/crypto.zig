@@ -1,3 +1,4 @@
+const arch = @import("../arch.zig");
 const std = @import("std");
 const types = @import("../types.zig");
 const common = @import("../common.zig");
@@ -134,7 +135,7 @@ pub inline fn vaesimcq_u8(data: u8x16) u8x16 {
 
 /// Carryless Polynomial Multiplication (VMULL_P8)
 pub inline fn vmull_p8(a: p8x8, b: p8x8) p16x8 {
-    if (comptime @import("builtin").cpu.arch == .aarch64)
+    if (!@inComptime() and comptime @import("builtin").cpu.arch == .aarch64)
         return asm ("pmull %[res].8h, %[a].8b, %[b].8b" : [res] "=w" (-> p16x8) : [a] "w" (a), [b] "w" (b));
     // Portable: carryless multiply per element
     var res: p16x8 = undefined;
@@ -152,7 +153,7 @@ pub inline fn vmull_p8(a: p8x8, b: p8x8) p16x8 {
 
 /// Carryless Polynomial Multiplication (VMULL_P64)
 pub inline fn vmull_p64(a: p64, b: p64) p128 {
-    if (comptime @import("builtin").cpu.arch == .aarch64) {
+    if (!@inComptime() and comptime @import("builtin").cpu.arch == .aarch64) {
         const va: @Vector(1, p64) = .{a};
         const vb: @Vector(1, p64) = .{b};
         const vres = asm ("pmull %[res].1q, %[a].1d, %[b].1d" : [res] "=w" (-> @Vector(1, p128)) : [a] "w" (va), [b] "w" (vb));
