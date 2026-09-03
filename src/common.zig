@@ -64,19 +64,22 @@ test fmtFn {
 }
 
 /// Helps test builtins and inline assembly
-//
-/// If `result_ptr` is specified as anything other than null,
-/// `testIntrinsic` will not use the return value of the function
-/// being tested. Instead, it will use the provided `result_ptr`.
-/// This is useful for testing functions that store their result
-/// directly in one of the provided arguments (e.g., in-place modifications).
-pub fn testIntrinsic(
-    comptime fn_name: []const u8,
-    func: anytype,
-    expected: anytype,
-    args: anytype,
-    result_ptr: anytype,
-) !void {
+///
+/// Accepts an options struct with fields:
+/// - `.func`: the intrinsic function to call
+/// - `.expected`: the expected return value (or memory contents)
+/// - `.args`: tuple of arguments to pass to the function
+/// - `.result_ptr` (optional): pointer to memory where the result was written (for in-place / store intrinsics)
+/// - `.name` (optional): function name override for error reporting
+pub fn testIntrinsic(opts: anytype) !void {
+    const OptsType = @TypeOf(opts);
+    const is_struct_opts = @hasField(OptsType, "func");
+
+    const func = if (is_struct_opts) opts.func else opts[1];
+    const expected = if (is_struct_opts) opts.expected else opts[2];
+    const args = if (is_struct_opts) opts.args else opts[3];
+    const result_ptr = if (is_struct_opts) (if (@hasField(OptsType, "result_ptr")) opts.result_ptr else null) else opts[4];
+
     const arch_features = blk: {
         if (arch.is_aarch64) {
             break :blk .{
@@ -111,16 +114,17 @@ pub fn testIntrinsic(
 
     const ptr_info = @typeInfo(@TypeOf(result_ptr));
     const result = blk: {
-        const result = @call(.auto, func, args);
+        const res = @call(.auto, func, args);
         if (ptr_info != .null) {
             assert(ptr_info == .pointer);
             break :blk result_ptr.*;
         } else {
-            break :blk result;
+            break :blk res;
         }
     };
 
     expectEqual(expected, result) catch |err| {
+        const fn_name = if (is_struct_opts) (if (@hasField(OptsType, "name")) opts.name else "") else opts[0];
         printError(fn_name, func, expected, result, args, arch_features);
         return err;
     };
@@ -249,7 +253,7 @@ test toLarge {
 
 /// Absolute difference between arguments
 ///
-/// TODO: If we are using AArch/arch.arm, then we can
+/// TODO: If we are using AArch64/Aarm, then we can
 ///       dynamically build an instruction based
 ///       on the current cpu, that way we can
 ///       reduce at least some of the repetitiveness.
@@ -317,4 +321,73 @@ test abdGeneric {
         const b: i8x2 = .{ 65, 75 };
         try expectEqual(i8x2{ -126, -106 }, abdGeneric(a, b));
     }
+}
+
+/// Decode 8-bit float into 32-bit float based on FP8 format (E4M3 or E5M2)
+pub inline fn decodeFp8(val: u8, is_e5m2: bool) f32 {
+    if (is_e5m2) {
+        const sign: u32 = @as(u32, val >> 7) << 31;
+        const exp: u32 = (val >> 2) & 0x1F;
+        const mant: u32 = val & 0x3;
+        if (exp == 0) {
+            if (mant == 0) return @bitCast(sign);
+            const f = @as(f32, @floatFromInt(mant)) * (1.0 / 65536.0);
+            return if (sign != 0) -f else f;
+        } else if (exp == 31) {
+            return if (mant == 0) (if (sign != 0) -std.math.inf(f32) else std.math.inf(f32)) else std.math.nan(f32);
+        }
+        const f32_exp = (exp + 127 - 15) << 23;
+        const f32_mant = mant << (23 - 2);
+        return @bitCast(sign | f32_exp | f32_mant);
+    } else {
+        const sign: u32 = @as(u32, val >> 7) << 31;
+        const exp: u32 = (val >> 3) & 0xF;
+        const mant: u32 = val & 0x7;
+        if (exp == 0) {
+            if (mant == 0) return @bitCast(sign);
+            const f = @as(f32, @floatFromInt(mant)) * (1.0 / 512.0);
+            return if (sign != 0) -f else f;
+        } else if (exp == 15 and mant == 7) {
+            return std.math.nan(f32);
+        }
+        const f32_exp = (exp + 127 - 7) << 23;
+        const f32_mant = mant << (23 - 3);
+        return @bitCast(sign | f32_exp | f32_mant);
+    }
+}
+
+/// Encode 32-bit float into 8-bit float based on FP8 format (E4M3 or E5M2)
+pub inline fn encodeFp8(val: f32, is_e5m2: bool) u8 {
+    if (std.math.isNan(val)) return 0x7F;
+    const bits: u32 = @bitCast(val);
+    const sign: u8 = @truncate((bits >> 31) << 7);
+    const abs_val = @abs(val);
+    if (abs_val == 0) return sign;
+    if (is_e5m2) {
+        const exp = @as(i32, @intCast((bits >> 23) & 0xFF)) - 127 + 15;
+        if (exp >= 31) return sign | 0x7C;
+        if (exp <= 0) return sign;
+        const mant: u8 = @truncate((bits >> 21) & 0x3);
+        return sign | (@as(u8, @intCast(exp)) << 2) | mant;
+    } else {
+        const exp = @as(i32, @intCast((bits >> 23) & 0xFF)) - 127 + 7;
+        if (exp >= 15) return sign | 0x78;
+        if (exp <= 0) return sign;
+        const mant: u8 = @truncate((bits >> 20) & 0x7);
+        return sign | (@as(u8, @intCast(exp)) << 3) | mant;
+    }
+}
+
+test "decodeFp8 and encodeFp8" {
+    // E4M3
+    try expectEqual(@as(f32, 0.0), decodeFp8(0x00, false));
+    try expectEqual(@as(u8, 0x00), encodeFp8(0.0, false));
+    try expectEqual(@as(f32, 1.0), decodeFp8(0x38, false));
+    try expectEqual(@as(u8, 0x38), encodeFp8(1.0, false));
+
+    // E5M2
+    try expectEqual(@as(f32, 0.0), decodeFp8(0x00, true));
+    try expectEqual(@as(u8, 0x00), encodeFp8(0.0, true));
+    try expectEqual(@as(f32, 1.0), decodeFp8(0x3C, true));
+    try expectEqual(@as(u8, 0x3C), encodeFp8(1.0, true));
 }

@@ -1,6 +1,15 @@
+//! # Matrix Vertical Flip 4x4 (ARM NEON)
+//!
+//! Demonstrates inverting the rows of a 4x4 matrix using vector load/store instructions.
+//!
+//! ### Technique:
+//! - Loads 4 contiguous rows into four 128-bit vector registers (`vld1q_f32`).
+//! - Stores the rows in inverted order (`vst1q_f32`) into the destination buffer.
+
 const std = @import("std");
 const neon = @import("zeon");
 
+/// Formats and prints a `w` x `h` matrix to standard debug output in a tabular grid.
 fn printMatrix(matrix: [*]const f32, w: usize, h: usize) void {
     std.debug.print("   |", .{});
 
@@ -30,17 +39,18 @@ fn printMatrix(matrix: [*]const f32, w: usize, h: usize) void {
     std.debug.print("\n", .{});
 }
 
+/// Flips the rows of a 4x4 matrix vertically (row 0 <-> row 3, row 1 <-> row 2).
 export fn vertical_flip4x4(
     input: [*]const f32,
     output: [*]f32,
 ) void {
     // Load all rows into NEON registers at once
-    const R0 = neon.vld1q_f32(input); // First row
-    const R1 = neon.vld1q_f32(input + 4); // Second row
-    const R2 = neon.vld1q_f32(input + 8); // Third row
-    const R3 = neon.vld1q_f32(input + 12); // Fourth row
+    const R0 = neon.vld1q_f32(input); // Row 0
+    const R1 = neon.vld1q_f32(input + 4); // Row 1
+    const R2 = neon.vld1q_f32(input + 8); // Row 2
+    const R3 = neon.vld1q_f32(input + 12); // Row 3
 
-    // Store them in reverse order to output
+    // Store in reverse vertical row order
     neon.vst1q_f32(output, R3);
     neon.vst1q_f32(output + 4, R2);
     neon.vst1q_f32(output + 8, R1);
@@ -67,7 +77,7 @@ test vertical_flip4x4 {
 }
 
 pub fn main() void {
-    //std.debug.print("Matrix Vertical Flip:\n", .{});
+    std.debug.print("Matrix Vertical Flip:\n", .{});
     const a: [16]f32 = .{
         1.0,  2.0,  3.0,  4.0,
         5.0,  6.0,  7.0,  8.0,

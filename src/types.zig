@@ -2,6 +2,9 @@ pub const p8 = u8;
 pub const p16 = u16;
 pub const p64 = u64;
 pub const p128 = u128;
+pub const bf16 = u16;
+pub const mf8 = u8;
+pub const fpm = u64;
 
 pub const i8x8 = @Vector(8, i8);
 pub const i8x16 = @Vector(16, i8);
@@ -35,6 +38,11 @@ pub const p16x8 = @Vector(8, p16);
 pub const p64x1 = @Vector(1, p64);
 pub const p64x2 = @Vector(2, p64);
 
+pub const bf16x4 = @Vector(4, bf16);
+pub const bf16x8 = @Vector(8, bf16);
+pub const mf8x8 = @Vector(8, mf8);
+pub const mf8x16 = @Vector(16, mf8);
+
 pub const i8x8x2 = struct { i8x8, i8x8 };
 pub const i8x16x2 = struct { i8x16, i8x16 };
 pub const i16x4x2 = struct { i16x4, i16x4 };
@@ -66,6 +74,11 @@ pub const p16x4x2 = struct { p16x4, p16x4 };
 pub const p16x8x2 = struct { p16x8, p16x8 };
 pub const p64x1x2 = struct { p64x1, p64x1 };
 pub const p64x2x2 = struct { p64x2, p64x2 };
+
+pub const bf16x4x2 = struct { bf16x4, bf16x4 };
+pub const bf16x8x2 = struct { bf16x8, bf16x8 };
+pub const mf8x8x2 = struct { mf8x8, mf8x8 };
+pub const mf8x16x2 = struct { mf8x16, mf8x16 };
 
 pub const i8x8x3 = struct { i8x8, i8x8, i8x8 };
 pub const i8x16x3 = struct { i8x16, i8x16, i8x16 };
@@ -99,6 +112,11 @@ pub const p16x8x3 = struct { p16x8, p16x8, p16x8 };
 pub const p64x1x3 = struct { p64x1, p64x1, p64x1 };
 pub const p64x2x3 = struct { p64x2, p64x2, p64x2 };
 
+pub const bf16x4x3 = struct { bf16x4, bf16x4, bf16x4 };
+pub const bf16x8x3 = struct { bf16x8, bf16x8, bf16x8 };
+pub const mf8x8x3 = struct { mf8x8, mf8x8, mf8x8 };
+pub const mf8x16x3 = struct { mf8x16, mf8x16, mf8x16 };
+
 pub const i8x8x4 = struct { i8x8, i8x8, i8x8, i8x8 };
 pub const i8x16x4 = struct { i8x16, i8x16, i8x16, i8x16 };
 pub const i16x4x4 = struct { i16x4, i16x4, i16x4, i16x4 };
@@ -130,6 +148,11 @@ pub const p16x4x4 = struct { p16x4, p16x4, p16x4, p16x4 };
 pub const p16x8x4 = struct { p16x8, p16x8, p16x8, p16x8 };
 pub const p64x1x4 = struct { p64x1, p64x1, p64x1, p64x1 };
 pub const p64x2x4 = struct { p64x2, p64x2, p64x2, p64x2 };
+
+pub const bf16x4x4 = struct { bf16x4, bf16x4, bf16x4, bf16x4 };
+pub const bf16x8x4 = struct { bf16x8, bf16x8, bf16x8, bf16x8 };
+pub const mf8x8x4 = struct { mf8x8, mf8x8, mf8x8, mf8x8 };
+pub const mf8x16x4 = struct { mf8x16, mf8x16, mf8x16, mf8x16 };
 
 pub const poly8 = p8;
 pub const poly16 = p16;
@@ -396,6 +419,30 @@ pub const poly16x4x4_t = p16x4x4;
 pub const poly16x8x4_t = p16x8x4;
 pub const poly64x1x4_t = p64x1x4;
 pub const poly64x2x4_t = p64x2x4;
+
+pub const bfloat16_t = bf16;
+pub const mfloat8_t = mf8;
+pub const fpm_t = fpm;
+
+pub const bfloat16x4_t = bf16x4;
+pub const bfloat16x8_t = bf16x8;
+pub const mfloat8x8_t = mf8x8;
+pub const mfloat8x16_t = mf8x16;
+
+pub const bfloat16x4x2_t = bf16x4x2;
+pub const bfloat16x8x2_t = bf16x8x2;
+pub const mfloat8x8x2_t = mf8x8x2;
+pub const mfloat8x16x2_t = mf8x16x2;
+
+pub const bfloat16x4x3_t = bf16x4x3;
+pub const bfloat16x8x3_t = bf16x8x3;
+pub const mfloat8x8x3_t = mf8x8x3;
+pub const mfloat8x16x3_t = mf8x16x3;
+
+pub const bfloat16x4x4_t = bf16x4x4;
+pub const bfloat16x8x4_t = bf16x8x4;
+pub const mfloat8x8x4_t = mf8x8x4;
+pub const mfloat8x16x4_t = mf8x16x4;
 
 pub const v8i8 = u8x8;
 pub const v16i8 = u8x16;

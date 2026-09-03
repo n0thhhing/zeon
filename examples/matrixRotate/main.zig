@@ -1,6 +1,18 @@
+//! # Matrix Rotation 4x4 (ARM NEON)
+//!
+//! Demonstrates 90-degree clockwise (CW) and counterclockwise (CCW) rotations
+//! of 4x4 single-precision floating-point matrices using NEON intrinsics.
+//!
+//! ### Technique:
+//! - Loads matrix rows into 128-bit vector registers with `vld1q_f32`.
+//! - Transposes elements using vector transpose intrinsics (`vtrnq_f32`).
+//! - Combines low and high vector halves using `vcombine_f32` to finalize transposed rows.
+//! - Swaps or reverses rows depending on rotation direction (CW vs CCW) or flip symmetry.
+
 const std = @import("std");
 const neon = @import("zeon");
 
+/// Formats and prints a `w` x `h` matrix to standard debug output in a tabular grid.
 fn printMatrix(matrix: [*]const f32, w: usize, h: usize) void {
     std.debug.print("   |", .{});
 
@@ -41,26 +53,44 @@ const RotationDir = enum {
         }
     }
 };
+/// Rotates a 4x4 single-precision floating-point matrix by `n * 90` degrees in `dir` direction.
+///
+/// ### Mathematical Foundation:
+/// A 90-degree 2D matrix rotation is equivalent to a matrix transpose combined with reflection:
+/// - **Clockwise 90°**: `Rotate_CW(M) = ReverseRows(Transpose(M))`
+/// - **Counter-Clockwise 90°**: `Rotate_CCW(M) = ReverseCols(Transpose(M))`
+/// - **180° Rotation (`n % 2 == 0`)**: Equivalent to flipping horizontally and vertically,
+///   which can be accelerated directly without full transposition.
 fn matrot4x4(
     input: [*]const f32,
     output: [*]f32,
     comptime n: usize,
     comptime dir: RotationDir,
 ) void {
-    // Early optimization for special cases
+    // Fast path: A 180-degree rotation (n is even) does not require a full 2D transpose.
     if (n % 2 == 0) {
         return horizontal_flip4x4(input, output);
     }
 
+    // 270-degree rotation (3 x 90°) in one direction is equivalent to 90° in the reverse direction.
     const direction = if (n % 3 == 0) dir.flip() else dir;
 
-    // Load the 4x4 block of the matrix
-    const R0 = neon.vld1q_f32(input); // Row 0
-    const R1 = neon.vld1q_f32(input + 4); // Row 1
-    const R2 = neon.vld1q_f32(input + 8); // Row 2
-    const R3 = neon.vld1q_f32(input + 12); // Row 3
+    // Step 1: Load Rows of 4x4 Matrix into 128-bit NEON Registers
+    // R0 = [ m00, m01, m02, m03 ] (Row 0)
+    // R1 = [ m10, m11, m12, m13 ] (Row 1)
+    // R2 = [ m20, m21, m22, m23 ] (Row 2)
+    // R3 = [ m30, m31, m32, m33 ] (Row 3)
+    const R0 = neon.vld1q_f32(input);
+    const R1 = neon.vld1q_f32(input + 4);
+    const R2 = neon.vld1q_f32(input + 8);
+    const R3 = neon.vld1q_f32(input + 12);
 
-    // Transpose the 4x4 matrix
+    // Step 2: 2x2 Sub-block Transposition using vtrnq_f32
+    // vtrnq_f32 transposes alternating 32-bit elements across a pair of vectors:
+    // T0[0] = [ R1[0], R0[0], R1[2], R0[2] ]
+    // T0[1] = [ R1[1], R0[1], R1[3], R0[3] ]
+    // T1[0] = [ R3[0], R2[0], R3[2], R2[2] ]
+    // T1[1] = [ R3[1], R2[1], R3[3], R2[3] ]
     var T0: [2]neon.f32x4 = undefined;
     var T1: [2]neon.f32x4 = undefined;
 
@@ -72,61 +102,72 @@ fn matrot4x4(
         T1 = neon.vtrnq_f32(R2, R3);
     }
 
-    const TT0 = neon.vcombine_f32(neon.vget_low_f32(T0[0]), neon.vget_low_f32(T1[0])); // First row of transposed matrix
-    const TT1 = neon.vcombine_f32(neon.vget_low_f32(T0[1]), neon.vget_low_f32(T1[1])); // Second row
-    const TT2 = neon.vcombine_f32(neon.vget_high_f32(T0[0]), neon.vget_high_f32(T1[0])); // Third row
-    const TT3 = neon.vcombine_f32(neon.vget_high_f32(T0[1]), neon.vget_high_f32(T1[1])); // Fourth row
+    // Step 3: Combine 64-bit Halves to Complete Full 4x4 Transposition
+    // Stitches lower 64 bits (vget_low_f32) and upper 64 bits (vget_high_f32)
+    // using vcombine_f32 into complete transposed 4-element rows TT0..TT3.
+    const TT0 = neon.vcombine_f32(neon.vget_low_f32(T0[0]), neon.vget_low_f32(T1[0]));
+    const TT1 = neon.vcombine_f32(neon.vget_low_f32(T0[1]), neon.vget_low_f32(T1[1]));
+    const TT2 = neon.vcombine_f32(neon.vget_high_f32(T0[0]), neon.vget_high_f32(T1[0]));
+    const TT3 = neon.vcombine_f32(neon.vget_high_f32(T0[1]), neon.vget_high_f32(T1[1]));
 
     var rotated0: neon.f32x4 = undefined;
     var rotated1: neon.f32x4 = undefined;
     var rotated2: neon.f32x4 = undefined;
     var rotated3: neon.f32x4 = undefined;
 
-    // Rotate the transposed matrix based on direction
+    // Step 4: Permute / Reverse Vector Halves for Final Rotation
     if (direction == RotationDir.CW) {
-        // Clockwise rotation
+        // Clockwise: Reflect columns by swapping high and low 64-bit vector halves
         rotated0 = neon.vcombine_f32(neon.vget_high_f32(TT3), neon.vget_low_f32(TT3));
         rotated1 = neon.vcombine_f32(neon.vget_high_f32(TT2), neon.vget_low_f32(TT2));
         rotated2 = neon.vcombine_f32(neon.vget_high_f32(TT1), neon.vget_low_f32(TT1));
         rotated3 = neon.vcombine_f32(neon.vget_high_f32(TT0), neon.vget_low_f32(TT0));
     } else {
-        // Counterclockwise rotation
+        // Counter-Clockwise: Combine in inverse lane ordering
         rotated0 = neon.vcombine_f32(neon.vget_low_f32(TT0), neon.vget_high_f32(TT0));
         rotated1 = neon.vcombine_f32(neon.vget_low_f32(TT1), neon.vget_high_f32(TT1));
         rotated2 = neon.vcombine_f32(neon.vget_low_f32(TT2), neon.vget_high_f32(TT2));
         rotated3 = neon.vcombine_f32(neon.vget_low_f32(TT3), neon.vget_high_f32(TT3));
     }
 
-    // Store the rotated 4x4 matrix into the output
+    // Step 5: Store Rotated Rows into Destination Memory
     neon.vst1q_f32(output + 12, rotated0);
     neon.vst1q_f32(output + 8, rotated1);
     neon.vst1q_f32(output + 4, rotated2);
     neon.vst1q_f32(output, rotated3);
 }
 
+/// Inverts elements horizontally within each row of a 4x4 matrix.
+///
+/// ### NEON Inversion Technique:
+/// 1. `vrev64q_f32` reverses 32-bit float pairs within each 64-bit half:
+///    `[a, b, c, d] -> [b, a, d, c]`
+/// 2. `vcombine_f32(high, low)` swaps the 64-bit halves:
+///    `[b, a, d, c] -> [d, c, b, a]`
+/// This reverses all 4 elements of the row in only 2 vector operations!
 fn horizontal_flip4x4(
     input: [*]const f32,
     output: [*]f32,
 ) void {
-    // Load each row of the 4x4 matrix into NEON registers
-    const R0 = neon.vld1q_f32(input); // Row 0
-    const R1 = neon.vld1q_f32(input + 4); // Row 1
-    const R2 = neon.vld1q_f32(input + 8); // Row 2
-    const R3 = neon.vld1q_f32(input + 12); // Row 3
+    // Load rows
+    const R0 = neon.vld1q_f32(input);
+    const R1 = neon.vld1q_f32(input + 4);
+    const R2 = neon.vld1q_f32(input + 8);
+    const R3 = neon.vld1q_f32(input + 12);
 
-    // Reverse elements in each row using vrev64q
+    // Step 1: Reverse 32-bit floats within 64-bit lanes: [0, 1, 2, 3] -> [1, 0, 3, 2]
     const flipped0 = neon.vrev64q_f32(R0);
     const flipped1 = neon.vrev64q_f32(R1);
     const flipped2 = neon.vrev64q_f32(R2);
     const flipped3 = neon.vrev64q_f32(R3);
 
-    // Swap the high and low halves of the vectors
+    // Step 2: Swap the upper and lower 64-bit halves: [1, 0, 3, 2] -> [3, 2, 1, 0]
     const final0 = neon.vcombine_f32(neon.vget_high_f32(flipped0), neon.vget_low_f32(flipped0));
     const final1 = neon.vcombine_f32(neon.vget_high_f32(flipped1), neon.vget_low_f32(flipped1));
     const final2 = neon.vcombine_f32(neon.vget_high_f32(flipped2), neon.vget_low_f32(flipped2));
     const final3 = neon.vcombine_f32(neon.vget_high_f32(flipped3), neon.vget_low_f32(flipped3));
 
-    // Store the flipped rows into the output
+    // Store the fully reversed rows into output memory
     neon.vst1q_f32(output + 12, final0);
     neon.vst1q_f32(output + 8, final1);
     neon.vst1q_f32(output + 4, final2);

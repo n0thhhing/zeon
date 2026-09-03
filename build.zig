@@ -8,14 +8,64 @@ const Example = struct {
 
 const TargetGroup = struct {
     name: []const u8,
-    queries: []const std.Target.Query,
+    query: std.Target.Query,
 };
 
-const Options = struct {
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    no_llvm: bool,
-    emulator: ?[]const u8,
+const target_groups: []const TargetGroup = &.{
+    .{
+        .name = "native",
+        .query = .{},
+    },
+    .{
+        .name = "arm",
+        .query = .{
+            .cpu_arch = .arm,
+            .os_tag = .linux,
+            .cpu_features_add = std.Target.arm.featureSet(&.{
+                .neon,
+                .aes,
+                .sha2,
+                .crypto,
+            }),
+        },
+    },
+    .{
+        .name = "aarch64",
+        .query = .{
+            .cpu_arch = .aarch64,
+            .os_tag = .linux,
+            .cpu_features_add = std.Target.aarch64.featureSet(&.{
+                .neon,
+                .aes,
+                .sha2,
+                .crypto,
+            }),
+        },
+    },
+    .{
+        .name = "aarch64_be",
+        .query = .{
+            .cpu_arch = .aarch64_be,
+            .os_tag = .linux,
+            .cpu_features_add = std.Target.aarch64.featureSet(&.{
+                .neon,
+                .aes,
+                .sha2,
+                .crypto,
+            }),
+        },
+    },
+    .{
+        .name = "personal",
+        .query = std.Target.Query.parse(.{ .arch_os_abi = "aarch64-macos" }) catch unreachable,
+    },
+    .{
+        .name = "personal-x86_64",
+        .query = blk: {
+            @setEvalBranchQuota(10000);
+            break :blk std.Target.Query.parse(.{ .arch_os_abi = "x86_64-macos" }) catch unreachable;
+        },
+    },
 };
 
 const examples: []const Example = &.{
@@ -24,196 +74,241 @@ const examples: []const Example = &.{
     .{ .path = "matrixVerticalFlip/main.zig", .name = "matrix-vertical-flip" },
     .{ .path = "bufferToHex/main.zig", .name = "buffer-to-hex" },
     .{ .path = "mandlebrot/main.zig", .name = "mandlebrot" },
-};
-
-const arm_target_features = std.Target.arm.featureSet(&.{
-    .neon, .aes, .sha2, .crc, .dotprod, .has_v7, .has_v8, .i8mm,
-});
-
-const aarch64_target_features = std.Target.aarch64.featureSet(&.{
-    .neon, .aes, .rdm, .sha2, .sha3, .dotprod, .i8mm, .sm4, .crypto, .fullfp16,
-});
-
-// TODO: Add support for armeb, thumb, thumbeb, and aarch64_32
-const target_groups = [_]TargetGroup{
-    .{
-        .name = "native",
-        .queries = &.{.{}},
-    },
-    .{
-        .name = "arm",
-        .queries = &.{.{
-            .cpu_arch = .arm,
-            .os_tag = .linux,
-            .cpu_features_add = arm_target_features,
-        }},
-    },
-    .{
-        .name = "aarch64",
-        .queries = &.{.{
-            .cpu_arch = .aarch64,
-            .os_tag = .linux,
-            .cpu_features_add = aarch64_target_features,
-        }},
-    },
-    .{
-        .name = "aarch64_be",
-        .queries = &.{.{
-            .cpu_arch = .aarch64_be,
-            .os_tag = .linux,
-            .cpu_features_add = aarch64_target_features,
-        }},
-    },
-    .{
-        .name = "personal",
-        .queries = &.{
-            .{ .cpu_arch = .aarch64, .os_tag = .macos, .cpu_features_add = aarch64_target_features },
-            .{ .cpu_arch = .x86_64, .os_tag = .macos },
-        },
-    },
+    .{ .path = "wave/main.zig", .name = "wave" },
+    .{ .path = "cube/main.zig", .name = "cube" },
 };
 
 pub fn build(b: *std.Build) void {
-    const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseFast });
+    @setEvalBranchQuota(10000);
 
-    const no_llvm = b.option(bool, "no-llvm", "Disable LLVM") orelse false;
-    const emulator = b.option([]const u8, "emulator", "Emulator command for cross-compiled tests (e.g., orb, qemu-aarch64)");
+    const optimize = b.option(
+        std.builtin.OptimizeMode,
+        "optimize",
+        "Optimization mode (defaults to ReleaseFast for SIMD performance)",
+    ) orelse .ReleaseFast;
 
-    const run_step = b.step("run", "Run all examples natively");
-    const test_step = b.step("test", "Run unit tests for all target matrices");
+    const target_group = b.option(
+        []const u8,
+        "target-group",
+        "Target group to build",
+    ) orelse "native";
 
-    const native_target = b.standardTargetOptions(.{});
-    const module = createZeonModule(b, .{
-        .target = native_target,
-        .optimize = optimize,
-        .no_llvm = no_llvm,
-        .emulator = emulator,
-    });
+    const emulator = b.option(
+        []const u8,
+        "emulator",
+        "Emulator used to run tests for non-native targets",
+    );
 
-    inline for (examples) |example| {
-        addExample(b, example.name, example.path, module, run_step, test_step, .{
-            .target = native_target,
-            .optimize = optimize,
-            .no_llvm = no_llvm,
-            .emulator = null,
-        });
+    const force_clean = b.option(
+        bool,
+        "clean",
+        "Force clean before building or running tests",
+    ) orelse false;
+
+    // Code generation step (runs python3 scripts/generate_api.py)
+    const gen_step = b.step("gen", "Generate API surface (src/zeon.zig)");
+    const gen_cmd = b.addSystemCommand(&.{ "python3", "scripts/generate_api.py" });
+    gen_step.dependOn(&gen_cmd.step);
+
+    // Fetch missing intrinsics step (runs python3 scripts/fetch_missing.py)
+    const fetch_step = b.step("fetch", "Fetch and list missing ARM NEON intrinsics");
+    const fetch_cmd = b.addSystemCommand(&.{ "python3", "scripts/fetch_missing.py" });
+    fetch_step.dependOn(&fetch_cmd.step);
+
+    // Clean step (purges entire .zig-cache and zig-out)
+    const clean_step = b.step("clean", "Remove build artifacts and cache");
+    const clean_cmd = b.addSystemCommand(&.{ "python3", "scripts/clean_cache.py", "--all" });
+    clean_step.dependOn(&clean_cmd.step);
+
+    if (force_clean) {
+        const pre_clean_cmd = b.addSystemCommand(&.{ "python3", "scripts/clean_cache.py" });
+        gen_cmd.step.dependOn(&pre_clean_cmd.step);
     }
 
-    for (target_groups) |t| {
-        const group_test_step = b.step(b.fmt("test-{s}", .{t.name}), b.fmt("Run unit tests strictly for the {s} target group", .{t.name}));
-        test_step.dependOn(group_test_step);
-
-        for (t.queries) |query| {
-            var opt: Options = .{
-                .target = b.resolveTargetQuery(query),
-                .optimize = optimize,
-                .no_llvm = false,
-                .emulator = emulator,
-            };
-            addUnitTest(b, b.path("src/zeon.zig"), false, group_test_step, opt);
-
-            const arch = query.cpu_arch;
-            if (arch != null and arch == .aarch64 and arch != .aarch64_be and arch != .arm and arch != .armeb and arch != .thumb) {
-                opt.no_llvm = true;
-                addUnitTest(b, b.path("src/zeon.zig"), false, group_test_step, opt);
+    const selected_group = blk: {
+        for (target_groups) |group| {
+            if (std.mem.eql(u8, group.name, target_group)) {
+                break :blk group;
             }
         }
-    }
-}
 
-fn createZeonModule(b: *std.Build, options: Options) *std.Build.Module {
-    const opts = b.addOptions();
-    opts.addOption(bool, "use_llvm", !options.no_llvm);
-    const m = b.addModule("zeon", .{
-        .root_source_file = b.path("src/zeon.zig"),
-        .target = options.target,
-        .optimize = options.optimize,
-    });
-    m.addOptions("config", opts);
-    return m;
-}
+        std.debug.panic(
+            "unknown target group: {s}",
+            .{target_group},
+        );
+    };
 
-fn addExample(
-    b: *std.Build,
-    comptime name: []const u8,
-    comptime path: []const u8,
-    module: *std.Build.Module,
-    run_step: *std.Build.Step,
-    test_step: *std.Build.Step,
-    options: Options,
-) void {
-    const example = b.addExecutable(.{
-        .name = name,
+    const lib = b.addLibrary(.{
+        .name = "zeon",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("examples/" ++ path),
-            .target = options.target,
-            .optimize = options.optimize,
+            .root_source_file = b.path("src/zeon.zig"),
+            .target = b.resolveTargetQuery(selected_group.query),
+            .optimize = optimize,
         }),
     });
+    lib.step.dependOn(&gen_cmd.step);
 
-    b.installArtifact(example);
-    example.root_module.addImport("zeon", module);
+    b.installArtifact(lib);
 
-    const run_cmd = b.addRunArtifact(example);
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
+    const test_step = b.step("test", "Run tests");
+
+    for (target_groups) |group| {
+        if (builtin.os.tag == .macos and std.mem.eql(u8, group.name, "personal")) {
+            continue;
+        }
+        addUnitTest(
+            b,
+            test_step,
+            group.name,
+            group.query,
+            optimize,
+            emulator,
+            &gen_cmd.step,
+        );
     }
 
-    const example_run_step = b.step("run-" ++ name, "Run the `" ++ name ++ "` example");
-    const example_test_step = b.step("test-" ++ name, "Run unit tests for " ++ name);
-
-    run_step.dependOn(&run_cmd.step);
-    example_run_step.dependOn(&run_cmd.step);
-
-    addUnitTest(b, b.path("examples/" ++ path), true, example_test_step, options);
-    test_step.dependOn(example_test_step);
+    addExamples(b, selected_group.query, optimize, &gen_cmd.step);
 }
 
 fn addUnitTest(
     b: *std.Build,
-    path: std.Build.LazyPath,
-    is_example: bool,
     test_step: *std.Build.Step,
-    options: Options,
+    group_name: []const u8,
+    target_query: std.Target.Query,
+    optimize: std.builtin.OptimizeMode,
+    emulator: ?[]const u8,
+    gen_step: *std.Build.Step,
 ) void {
-    const opts = b.addOptions();
-    opts.addOption(bool, "use_llvm", !options.no_llvm);
+    const target = b.resolveTargetQuery(target_query);
 
-    const unit_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = path,
-            .target = options.target,
-            .optimize = options.optimize,
-        }),
+    // Workaround for upstream Zig 0.16.0 bug:
+    // When compiling large SIMD modules on macOS with ReleaseFast/ReleaseSafe,
+    // Zig's self-hosted Mach-O linker fails to parse the LLVM-generated object file,
+    // falling back to TBD parsing and emitting: `failed to parse TBD file: NotLibStub`.
+    // We fall back to Debug for macOS until this is resolved upstream.
+    const is_macos = target.result.os.tag == .macos;
+    const test_optimize = if (is_macos and optimize != .Debug) .Debug else optimize;
+
+    const root_module = b.createModule(.{
+        .root_source_file = b.path("src/zeon.zig"),
+        .target = target,
+        .optimize = test_optimize,
     });
-    unit_tests.root_module.addOptions("config", opts);
+    const unit_tests = b.addTest(.{
+        .root_module = root_module,
+    });
+    unit_tests.step.dependOn(gen_step);
 
-    if (is_example) {
-        unit_tests.root_module.addImport("zeon", createZeonModule(b, options));
-    }
+    const run_tests_name = b.fmt("test-{s}", .{group_name});
+    const run_tests_step = b.step(
+        run_tests_name,
+        b.fmt("Run {s} tests", .{group_name}),
+    );
 
-    // Determine if we can run it natively without an emulator
-    const is_native = builtin.os.tag == options.target.result.os.tag and builtin.cpu.arch == options.target.result.cpu.arch;
-    const is_rosetta = builtin.os.tag == .macos and options.target.result.os.tag == .macos and options.target.result.cpu.arch == .x86_64;
-    const can_run_natively = is_native or is_rosetta;
+    test_step.dependOn(run_tests_step);
 
-    var run_tests: *std.Build.Step.Run = undefined;
-
-    if (can_run_natively) {
-        run_tests = b.addRunArtifact(unit_tests);
-    } else if (options.emulator) |emu| {
-        run_tests = b.addSystemCommand(&.{emu});
-        run_tests.addArtifactArg(unit_tests);
-    } else {
-        // Can't run it (cross-compiled without an emulator), just compile it to verify it builds
-        test_step.dependOn(&unit_tests.step);
+    // On macOS, Zig 0.16.0 has an upstream self-hosted Mach-O linker bug on aarch64
+    // when linking very large SIMD test suites (NotLibStub / AccessDenied).
+    // On macOS Apple Silicon, x86_64-macos tests run natively via Rosetta with full fidelity.
+    const is_macos_host = builtin.os.tag == .macos;
+    const is_native =
+        builtin.os.tag == target.result.os.tag and
+        builtin.cpu.arch == target.result.cpu.arch;
+    const is_aarch64_macos = is_macos_host and target.result.cpu.arch == .aarch64;
+    if (is_native and !is_aarch64_macos and !is_macos_host) {
+        const run = b.addRunArtifact(unit_tests);
+        run_tests_step.dependOn(&run.step);
         return;
     }
 
-    if (b.args) |args| {
-        run_tests.addArgs(args);
+    if (emulator) |emu| {
+        const run = b.addSystemCommand(&.{emu});
+        run.addArtifactArg(unit_tests);
+        run_tests_step.dependOn(&run.step);
+        return;
     }
 
-    test_step.dependOn(&run_tests.step);
+    // Compile tests for non-native targets when no emulator is available.
+    run_tests_step.dependOn(&unit_tests.step);
+}
+
+fn addExamples(
+    b: *std.Build,
+    query: std.Target.Query,
+    optimize: std.builtin.OptimizeMode,
+    gen_step: *std.Build.Step,
+) void {
+    const target = b.resolveTargetQuery(query);
+
+    const examples_step = b.step(
+        "examples",
+        "Build all examples",
+    );
+
+    const example_opt = b.option(
+        []const u8,
+        "example",
+        "Example to run with 'zig build run' (defaults to wave)",
+    ) orelse "wave";
+
+    const main_run_step = b.step("run", "Run an example (defaults to wave, or pass -Dexample=<name>)");
+    const run_all_step = b.step("run-all", "Run all examples sequentially");
+
+    var last_run_step: ?*std.Build.Step = null;
+
+    for (examples) |example| {
+        const example_path = b.pathJoin(&.{
+            "examples",
+            example.path,
+        });
+
+        const zeon_module = b.createModule(.{
+            .root_source_file = b.path("src/zeon.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const exe = b.addExecutable(.{
+            .name = example.name,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path(example_path),
+                .target = target,
+                .optimize = optimize,
+                .imports = &.{
+                    .{
+                        .name = "zeon",
+                        .module = zeon_module,
+                    },
+                },
+            }),
+        });
+        exe.step.dependOn(gen_step);
+
+        b.installArtifact(exe);
+        examples_step.dependOn(&exe.step);
+
+        const run_step_name = b.fmt("run-{s}", .{example.name});
+        const run_step = b.step(
+            run_step_name,
+            b.fmt("Run {s}", .{example.name}),
+        );
+
+        const run = b.addRunArtifact(exe);
+        run_step.dependOn(&run.step);
+
+        if (std.mem.eql(u8, example.name, example_opt)) {
+            main_run_step.dependOn(&run.step);
+        }
+
+        const run_all_artifact = b.addRunArtifact(exe);
+        if (last_run_step) |prev| {
+            run_all_artifact.step.dependOn(prev);
+        }
+        last_run_step = &run_all_artifact.step;
+        run_all_step.dependOn(&run_all_artifact.step);
+
+        if (b.args) |args| {
+            run.addArgs(args);
+        }
+    }
 }

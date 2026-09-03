@@ -227,7 +227,7 @@ pub inline fn vaddv_f32(a: types.f32x2) f32 {
 test vaddv_f32 {
     const a: types.f32x2 = @splat(1.0);
     const expected: f32 = 2;
-    try common.testIntrinsic("vaddv_f32", vaddv_f32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vaddv_f32, .expected = expected, .args = .{a} });
 }
 
 /// Signed Add Long across Vector
@@ -334,7 +334,7 @@ pub inline fn vaddvq_f32(a: types.f32x4) f32 {
 test vaddvq_f32 {
     const a: types.f32x4 = @splat(1.0);
     const expected: f32 = 4;
-    try common.testIntrinsic("vaddvq_f32", vaddvq_f32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vaddvq_f32, .expected = expected, .args = .{a} });
 }
 
 /// Unsigned Add Long across Vector
@@ -345,7 +345,7 @@ pub inline fn vaddvq_f64(a: types.f64x2) f64 {
 test vaddvq_f64 {
     const a: types.f64x2 = @splat(1.0);
     const expected: f64 = 2;
-    try common.testIntrinsic("vaddvq_f64", vaddvq_f64, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vaddvq_f64, .expected = expected, .args = .{a} });
 }
 
 /// Floating-point maximum number across vector
@@ -380,7 +380,7 @@ pub inline fn vmaxv_s8(a: types.i8x8) i8 {
 test vmaxv_s8 {
     const a: types.i8x8 = @splat(1);
     const expected: i8 = 1;
-    try common.testIntrinsic("vmaxv_s8", vmaxv_s8, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxv_s8, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -391,7 +391,7 @@ pub inline fn vmaxv_s16(a: types.i16x4) i16 {
 test vmaxv_s16 {
     const a: types.i16x4 = @splat(1);
     const expected: i16 = 1;
-    try common.testIntrinsic("vmaxv_s16", vmaxv_s16, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxv_s16, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -402,7 +402,7 @@ pub inline fn vmaxv_s32(a: types.i32x2) i32 {
 test vmaxv_s32 {
     const a: types.i32x2 = @splat(1);
     const expected: i32 = 1;
-    try common.testIntrinsic("vmaxv_s32", vmaxv_s32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxv_s32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -413,7 +413,7 @@ pub inline fn vmaxv_u8(a: types.u8x8) u8 {
 test vmaxv_u8 {
     const a: types.u8x8 = @splat(1);
     const expected: u8 = 1;
-    try common.testIntrinsic("vmaxv_u8", vmaxv_u8, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxv_u8, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -424,7 +424,7 @@ pub inline fn vmaxv_u16(a: types.u16x4) u16 {
 test vmaxv_u16 {
     const a: types.u16x4 = @splat(1);
     const expected: u16 = 1;
-    try common.testIntrinsic("vmaxv_u16", vmaxv_u16, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxv_u16, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -435,7 +435,7 @@ pub inline fn vmaxv_u32(a: types.u32x2) u32 {
 test vmaxv_u32 {
     const a: types.u32x2 = @splat(1);
     const expected: u32 = 1;
-    try common.testIntrinsic("vmaxv_u32", vmaxv_u32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxv_u32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -446,7 +446,7 @@ pub inline fn vmaxvq_s8(a: types.i8x16) i8 {
 test vmaxvq_s8 {
     const a: types.i8x16 = @splat(1);
     const expected: i8 = 1;
-    try common.testIntrinsic("vmaxvq_s8", vmaxvq_s8, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxvq_s8, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -457,7 +457,7 @@ pub inline fn vmaxvq_s16(a: types.i16x8) i16 {
 test vmaxvq_s16 {
     const a: types.i16x8 = @splat(1);
     const expected: i16 = 1;
-    try common.testIntrinsic("vmaxvq_s16", vmaxvq_s16, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxvq_s16, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -468,7 +468,7 @@ pub inline fn vmaxvq_s32(a: types.i32x4) i32 {
 test vmaxvq_s32 {
     const a: types.i32x4 = @splat(1);
     const expected: i32 = 1;
-    try common.testIntrinsic("vmaxvq_s32", vmaxvq_s32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxvq_s32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -479,7 +479,7 @@ pub inline fn vmaxvq_u8(a: types.u8x16) u8 {
 test vmaxvq_u8 {
     const a: types.u8x16 = @splat(1);
     const expected: u8 = 1;
-    try common.testIntrinsic("vmaxvq_u8", vmaxvq_u8, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxvq_u8, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -490,7 +490,7 @@ pub inline fn vmaxvq_u16(a: types.u16x8) u16 {
 test vmaxvq_u16 {
     const a: types.u16x8 = @splat(1);
     const expected: u16 = 1;
-    try common.testIntrinsic("vmaxvq_u16", vmaxvq_u16, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxvq_u16, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -501,7 +501,7 @@ pub inline fn vmaxvq_u32(a: types.u32x4) u32 {
 test vmaxvq_u32 {
     const a: types.u32x4 = @splat(1);
     const expected: u32 = 1;
-    try common.testIntrinsic("vmaxvq_u32", vmaxvq_u32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxvq_u32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -512,7 +512,7 @@ pub inline fn vmaxvq_f32(a: types.f32x4) f32 {
 test vmaxvq_f32 {
     const a: types.f32x4 = @splat(1.0);
     const expected: f32 = 1;
-    try common.testIntrinsic("vmaxvq_f32", vmaxvq_f32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxvq_f32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector max
@@ -523,7 +523,7 @@ pub inline fn vmaxvq_f64(a: types.f64x2) f64 {
 test vmaxvq_f64 {
     const a: types.f64x2 = @splat(1.0);
     const expected: f64 = 1;
-    try common.testIntrinsic("vmaxvq_f64", vmaxvq_f64, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vmaxvq_f64, .expected = expected, .args = .{a} });
 }
 
 /// Floating-point maximum number across vector
@@ -558,7 +558,7 @@ pub inline fn vminv_s8(a: types.i8x8) i8 {
 test vminv_s8 {
     const a: types.i8x8 = @splat(1);
     const expected: i8 = 1;
-    try common.testIntrinsic("vminv_s8", vminv_s8, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminv_s8, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -569,7 +569,7 @@ pub inline fn vminv_s16(a: types.i16x4) i16 {
 test vminv_s16 {
     const a: types.i16x4 = @splat(1);
     const expected: i16 = 1;
-    try common.testIntrinsic("vminv_s16", vminv_s16, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminv_s16, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -580,7 +580,7 @@ pub inline fn vminv_s32(a: types.i32x2) i32 {
 test vminv_s32 {
     const a: types.i32x2 = @splat(1);
     const expected: i32 = 1;
-    try common.testIntrinsic("vminv_s32", vminv_s32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminv_s32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -591,7 +591,7 @@ pub inline fn vminv_u8(a: types.u8x8) u8 {
 test vminv_u8 {
     const a: types.u8x8 = @splat(1);
     const expected: u8 = 1;
-    try common.testIntrinsic("vminv_u8", vminv_u8, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminv_u8, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -602,7 +602,7 @@ pub inline fn vminv_u16(a: types.u16x4) u16 {
 test vminv_u16 {
     const a: types.u16x4 = @splat(1);
     const expected: u16 = 1;
-    try common.testIntrinsic("vminv_u16", vminv_u16, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminv_u16, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -613,7 +613,7 @@ pub inline fn vminv_u32(a: types.u32x2) u32 {
 test vminv_u32 {
     const a: types.u32x2 = @splat(1);
     const expected: u32 = 1;
-    try common.testIntrinsic("vminv_u32", vminv_u32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminv_u32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -624,7 +624,7 @@ pub inline fn vminvq_s8(a: types.i8x16) i8 {
 test vminvq_s8 {
     const a: types.i8x16 = @splat(1);
     const expected: i8 = 1;
-    try common.testIntrinsic("vminvq_s8", vminvq_s8, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminvq_s8, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -635,7 +635,7 @@ pub inline fn vminvq_s16(a: types.i16x8) i16 {
 test vminvq_s16 {
     const a: types.i16x8 = @splat(1);
     const expected: i16 = 1;
-    try common.testIntrinsic("vminvq_s16", vminvq_s16, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminvq_s16, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -646,7 +646,7 @@ pub inline fn vminvq_s32(a: types.i32x4) i32 {
 test vminvq_s32 {
     const a: types.i32x4 = @splat(1);
     const expected: i32 = 1;
-    try common.testIntrinsic("vminvq_s32", vminvq_s32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminvq_s32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -657,7 +657,7 @@ pub inline fn vminvq_u8(a: types.u8x16) u8 {
 test vminvq_u8 {
     const a: types.u8x16 = @splat(1);
     const expected: u8 = 1;
-    try common.testIntrinsic("vminvq_u8", vminvq_u8, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminvq_u8, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -668,7 +668,7 @@ pub inline fn vminvq_u16(a: types.u16x8) u16 {
 test vminvq_u16 {
     const a: types.u16x8 = @splat(1);
     const expected: u16 = 1;
-    try common.testIntrinsic("vminvq_u16", vminvq_u16, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminvq_u16, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -679,7 +679,7 @@ pub inline fn vminvq_u32(a: types.u32x4) u32 {
 test vminvq_u32 {
     const a: types.u32x4 = @splat(1);
     const expected: u32 = 1;
-    try common.testIntrinsic("vminvq_u32", vminvq_u32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminvq_u32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -690,7 +690,7 @@ pub inline fn vminvq_f32(a: types.f32x4) f32 {
 test vminvq_f32 {
     const a: types.f32x4 = @splat(1.0);
     const expected: f32 = 1;
-    try common.testIntrinsic("vminvq_f32", vminvq_f32, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminvq_f32, .expected = expected, .args = .{a} });
 }
 
 /// Horizontal vector min
@@ -701,5 +701,5 @@ pub inline fn vminvq_f64(a: types.f64x2) f64 {
 test vminvq_f64 {
     const a: types.f64x2 = @splat(1.0);
     const expected: f64 = 1;
-    try common.testIntrinsic("vminvq_f64", vminvq_f64, expected, .{a}, null);
+    try common.testIntrinsic(.{ .func = vminvq_f64, .expected = expected, .args = .{a} });
 }
