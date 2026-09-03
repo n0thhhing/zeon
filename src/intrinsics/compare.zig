@@ -1189,3 +1189,107 @@ test vcgeqq_f64 {
     const expected = @as(types.u64x2, @splat(0xffffffffffffffff));
     try common.testIntrinsic("vcgeqq_f64", vcgeqq_f64, expected, .{ a, b }, null);
 }
+
+/// Compare greater than (f32x2)
+pub inline fn vcgt_f32(a: types.f32x2, b: types.f32x2) types.u32x2 {
+    const comparison = a > b;
+    return @select(u32, comparison, @as(types.u32x2, @splat(0xffffffff)), @as(types.u32x2, @splat(0)));
+}
+
+test vcgt_f32 {
+    const a = types.f32x2{ 2.0, -1.0 };
+    const b = types.f32x2{ 1.0, 0.0 };
+    const expected = types.u32x2{ 0xffffffff, 0 };
+    try common.testIntrinsic("vcgt_f32", vcgt_f32, expected, .{ a, b }, null);
+}
+
+/// Compare greater than (f32x4)
+pub inline fn vcgtq_f32(a: types.f32x4, b: types.f32x4) types.u32x4 {
+    const comparison = a > b;
+    return @select(u32, comparison, @as(types.u32x4, @splat(0xffffffff)), @as(types.u32x4, @splat(0)));
+}
+
+test vcgtq_f32 {
+    const a = types.f32x4{ 2.0, -1.0, 0.0, 5.0 };
+    const b = types.f32x4{ 1.0, 0.0, 0.0, 4.0 };
+    const expected = types.u32x4{ 0xffffffff, 0, 0, 0xffffffff };
+    try common.testIntrinsic("vcgtq_f32", vcgtq_f32, expected, .{ a, b }, null);
+}
+
+/// Compare greater than (f64x1)
+pub inline fn vcgt_f64(a: types.f64x1, b: types.f64x1) types.u64x1 {
+    const comparison = a > b;
+    return @select(u64, comparison, @as(types.u64x1, @splat(0xffffffffffffffff)), @as(types.u64x1, @splat(0)));
+}
+
+test vcgt_f64 {
+    const a = types.f64x1{2.0};
+    const b = types.f64x1{1.0};
+    const expected = types.u64x1{0xffffffffffffffff};
+    try common.testIntrinsic("vcgt_f64", vcgt_f64, expected, .{ a, b }, null);
+}
+
+/// Compare greater than (f64x2)
+pub inline fn vcgtq_f64(a: types.f64x2, b: types.f64x2) types.u64x2 {
+    const comparison = a > b;
+    return @select(u64, comparison, @as(types.u64x2, @splat(0xffffffffffffffff)), @as(types.u64x2, @splat(0)));
+}
+
+test vcgtq_f64 {
+    const a = types.f64x2{ 2.0, -1.0 };
+    const b = types.f64x2{ 1.0, 0.0 };
+    const expected = types.u64x2{ 0xffffffffffffffff, 0 };
+    try common.testIntrinsic("vcgtq_f64", vcgtq_f64, expected, .{ a, b }, null);
+}
+
+/// Compare greater than (s32x2)
+pub inline fn vcgt_s32(a: types.i32x2, b: types.i32x2) types.u32x2 {
+    const comparison = a > b;
+    return @select(u32, comparison, @as(types.u32x2, @splat(0xffffffff)), @as(types.u32x2, @splat(0)));
+}
+
+test vcgt_s32 {
+    const a = types.i32x2{ 2, -1 };
+    const b = types.i32x2{ 1, 0 };
+    const expected = types.u32x2{ 0xffffffff, 0 };
+    try common.testIntrinsic("vcgt_s32", vcgt_s32, expected, .{ a, b }, null);
+}
+
+/// Compare greater than (s32x4)
+pub inline fn vcgtq_s32(a: types.i32x4, b: types.i32x4) types.u32x4 {
+    const comparison = a > b;
+    return @select(u32, comparison, @as(types.u32x4, @splat(0xffffffff)), @as(types.u32x4, @splat(0)));
+}
+
+test vcgtq_s32 {
+    const a = types.i32x4{ 2, -1, 0, 5 };
+    const b = types.i32x4{ 1, 0, 0, 4 };
+    const expected = types.u32x4{ 0xffffffff, 0, 0, 0xffffffff };
+    try common.testIntrinsic("vcgtq_s32", vcgtq_s32, expected, .{ a, b }, null);
+}
+
+/// Compare greater than (u32x2)
+pub inline fn vcgt_u32(a: types.u32x2, b: types.u32x2) types.u32x2 {
+    const comparison = a > b;
+    return @select(u32, comparison, @as(types.u32x2, @splat(0xffffffff)), @as(types.u32x2, @splat(0)));
+}
+
+test vcgt_u32 {
+    const a = types.u32x2{ 2, 0 };
+    const b = types.u32x2{ 1, 0 };
+    const expected = types.u32x2{ 0xffffffff, 0 };
+    try common.testIntrinsic("vcgt_u32", vcgt_u32, expected, .{ a, b }, null);
+}
+
+/// Compare greater than (u32x4)
+pub inline fn vcgtq_u32(a: types.u32x4, b: types.u32x4) types.u32x4 {
+    const comparison = a > b;
+    return @select(u32, comparison, @as(types.u32x4, @splat(0xffffffff)), @as(types.u32x4, @splat(0)));
+}
+
+test vcgtq_u32 {
+    const a = types.u32x4{ 2, 0, 0, 5 };
+    const b = types.u32x4{ 1, 0, 0, 4 };
+    const expected = types.u32x4{ 0xffffffff, 0, 0, 0xffffffff };
+    try common.testIntrinsic("vcgtq_u32", vcgtq_u32, expected, .{ a, b }, null);
+}

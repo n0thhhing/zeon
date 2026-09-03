@@ -6,12 +6,20 @@ ifndef DEBUG
     RUN_FLAGS += --release=fast
 endif
 
+.PHONY: fetch
+fetch:
+	python3 scripts/fetch_missing.py
+
+.PHONY: _gen
+_gen:
+	python3 scripts/generate_api.py
+
 .PHONY: test
-test:
+test: _gen
 	zig build test $(TEST_FLAGS)
 
 .PHONY: examples
-examples:
+examples: _gen
 	zig build run $(RUN_FLAGS) -Drelease=true
 
 .PHONY: clean
